@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Talesmith Lang (.tsl) player</title>
+    <link rel="stylesheet" href="../player/tsl.css">
+    <link rel="stylesheet" href="../player/lab.css">
+</head>
+<body>
+    <header class="tsl-lab-header">
+        <div class="tsl-lab-bar">
+            <span class="tsl-lab-mark" aria-hidden="true">TSL</span>
+            <details class="tsl-lab-about">
+                <summary class="tsl-lab-about-summary">
+                    <span class="tsl-lab-about-title">Talesmith Lang</span>
+                </summary>
+                <div class="tsl-lab-about-body">
+                    <p>
+                        Loads <a href="../spec/tsl-spec.tsl">spec/tsl-spec.tsl</a> by default.
+                        Rendering uses <code>player/tsl.css</code> and <code>player/tsl.js</code>.
+                        Preferences persist as <code>reader:prefs</code> on this device.
+                    </p>
+                </div>
+            </details>
+            <label class="tsl-lab-sample-label">
+                <span class="tsl-lab-sample-text">Document</span>
+                <span class="tsl-lab-select-wrap">
+                    <select data-tsl-sample-select>
+                        <option value="">Choose…</option>
+                        <option value="../spec/tsl-spec.tsl" selected>Format specification</option>
+                        <option value="../examples/rich-content.tsl">Rich content blocks</option>
+                        <option value="../examples/print-layout.tsl">Print layout &amp; pages</option>
+                    </select>
+                </span>
+            </label>
+            <label class="tsl-lab-file-label">
+                <span class="tsl-lab-btn tsl-lab-btn-secondary">Open…</span>
+                <input type="file" data-tsl-file accept=".tsl,.html,.htm,application/json,text/html" hidden>
+            </label>
+            <button type="button" class="tsl-lab-btn tsl-lab-btn-ghost" data-tsl-download hidden>Download</button>
+            <button type="button" class="tsl-lab-btn tsl-lab-btn-ghost" data-tsl-reload hidden>Reload</button>
+            <span class="tsl-lab-status" data-tsl-status role="status" aria-live="polite"></span>
+            <div class="tsl-lab-typo-wrap">
+                <button type="button" class="tsl-lab-typo-btn" data-tsl-read-toggle aria-expanded="false" aria-haspopup="dialog" aria-controls="tsl-read-menu" title="Reading settings">
+                    <span class="tsl-lab-typo-icon" aria-hidden="true">T</span>
+                    <span class="visually-hidden">Reading settings</span>
+                </button>
+                <div class="tsl-lab-read-menu" data-tsl-read-menu id="tsl-read-menu" role="dialog" aria-labelledby="tsl-read-menu-title" aria-label="Reading settings" hidden>
+                    <p class="tsl-lab-read-menu-title" id="tsl-read-menu-title">Reading settings</p>
+                    <section class="tsl-lab-read" data-tsl-settings>
+                        <div class="tsl-lab-read-row">
+                            <span class="tsl-lab-read-label">Font</span>
+                            <div class="tsl-lab-seg" role="radiogroup" aria-label="Font">
+                                <button type="button" role="radio" data-tsl-pref="font" data-value="serif">Serif</button>
+                                <button type="button" role="radio" data-tsl-pref="font" data-value="sans">Sans</button>
+                                <button type="button" role="radio" data-tsl-pref="font" data-value="mono">Mono</button>
+                            </div>
+                        </div>
+                        <div class="tsl-lab-read-row">
+                            <span class="tsl-lab-read-label">Size</span>
+                            <div class="tsl-lab-sizes">
+                                <button type="button" class="tsl-lab-size-step" data-tsl-size-step="-1" aria-label="Smaller text">A−</button>
+                                <div class="tsl-lab-steps" role="radiogroup" aria-label="Text size">
+                                    <button type="button" role="radio" data-tsl-pref="size" data-value="14" aria-label="14 pixels"></button>
+                                    <button type="button" role="radio" data-tsl-pref="size" data-value="16" aria-label="16 pixels"></button>
+                                    <button type="button" role="radio" data-tsl-pref="size" data-value="18" aria-label="18 pixels"></button>
+                                    <button type="button" role="radio" data-tsl-pref="size" data-value="20" aria-label="20 pixels"></button>
+                                    <button type="button" role="radio" data-tsl-pref="size" data-value="24" aria-label="24 pixels"></button>
+                                </div>
+                                <button type="button" class="tsl-lab-size-step" data-tsl-size-step="1" aria-label="Larger text">A+</button>
+                            </div>
+                        </div>
+                        <div class="tsl-lab-read-row">
+                            <span class="tsl-lab-read-label">Page colour</span>
+                            <div class="tsl-lab-seg" role="radiogroup" aria-label="Page colour">
+                                <button type="button" role="radio" data-tsl-pref="theme" data-value="light">Light</button>
+                                <button type="button" role="radio" data-tsl-pref="theme" data-value="sepia">Sepia</button>
+                                <button type="button" role="radio" data-tsl-pref="theme" data-value="dark">Dark</button>
+                            </div>
+                        </div>
+                        <div class="tsl-lab-read-row">
+                            <span class="tsl-lab-read-label">Line width</span>
+                            <div class="tsl-lab-seg" role="radiogroup" aria-label="Line width">
+                                <button type="button" role="radio" data-tsl-pref="width" data-value="narrow">Narrow</button>
+                                <button type="button" role="radio" data-tsl-pref="width" data-value="medium">Medium</button>
+                                <button type="button" role="radio" data-tsl-pref="width" data-value="wide">Wide</button>
+                            </div>
+                        </div>
+                        <div class="tsl-lab-read-row">
+                            <span class="tsl-lab-read-label">Layout</span>
+                            <div class="tsl-lab-seg" role="radiogroup" aria-label="Layout">
+                                <button type="button" role="radio" data-tsl-pref="layout" data-value="pages">Pages</button>
+                                <button type="button" role="radio" data-tsl-pref="layout" data-value="scroll">Scroll</button>
+                            </div>
+                        </div>
+                        <div class="tsl-lab-read-foot">
+                            <span>Saved on this device</span>
+                            <button type="button" data-tsl-prefs-reset>Reset</button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </div>
+    </header>
+    <div class="tsl-lab-mount" data-tsl-mount></div>
+    <script src="../player/tsl.js"></script>
+    <script src="lab.js"></script>
+    <div class="tsl-lab-float">
+        <a class="tsl-lab-float-link" href="https://github.com/JonathanCrossland/tsl-reader" rel="noopener noreferrer" target="_blank">
+            <svg class="tsl-lab-float-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path fill="currentColor" d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            <span class="visually-hidden">TSL reader on GitHub</span>
+        </a>
+        <script src="https://liberapay.com/Talesmith/widgets/receiving.js"></script>
+    </div>
+</body>
+</html>

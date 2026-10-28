@@ -1,0 +1,106 @@
+{
+  "format": "talesmith-lang",
+  "version": 1,
+  "header": {
+    "page": {
+      "formatId": "us-novel",
+      "kind": "print",
+      "trimMM": { "width": 139.7, "height": 215.9 },
+      "marginsMM": { "top": 19.05, "bottom": 19.05, "outside": 12.7, "gutter": 22.225 },
+      "headerTopMM": 8,
+      "footerBottomMM": 8,
+      "headerRule": false,
+      "footerRule": false,
+      "rowGapMM": 2,
+      "usePrintGutters": true
+    },
+    "typography": {
+      "fontId": "garamond",
+      "fontFamily": "Garamond, \"EB Garamond\", Georgia, serif",
+      "sizePt": 11,
+      "lineHeight": 1.45,
+      "paragraphAlign": "justify",
+      "paragraphIndentIn": 0.25,
+      "paragraphSpacingPt": 0,
+      "hyphenation": true
+    },
+    "numbering": { "startPage": 1, "pageOffsetStart": 0, "firstPhysicalPageSide": "left" },
+    "theme": "serif",
+    "readMode": true,
+    "metadata": {
+      "title": "Print layout sample",
+      "fields": [{ "name": "Author", "value": "TSL Reader" }]
+    },
+    "mergeFields": {
+      "version": 1,
+      "fields": [],
+      "values": { "title": "Print layout sample", "author": "TSL Reader" }
+    }
+  },
+  "document": {
+    "blocks": [
+      {
+        "id": "ph1",
+        "type": "pageheader",
+        "side": "any",
+        "textLeft": "[Title]",
+        "textCenter": "",
+        "textRight": "[PageNo]"
+      },
+      {
+        "id": "pf1",
+        "type": "pagefooter",
+        "side": "any",
+        "textLeft": "",
+        "textCenter": "[PageNo]",
+        "textRight": ""
+      },
+      {
+        "id": "t1",
+        "type": "title",
+        "align": "center",
+        "text": "Print layout sample"
+      },
+      {
+        "id": "p1",
+        "type": "paragraph",
+        "align": "justify",
+        "text": "US novel trim (5.5×8.5 in) with gutter-aware margins. Running heads and footers use merge tokens such as <code>[Title]</code> and <code>[PageNo]</code>."
+      },
+      {
+        "id": "p2",
+        "type": "paragraph",
+        "align": "justify",
+        "text": "The player breaks pages where the author inserts <code>newpage</code> blocks; it does not reflow overflow automatically."
+      },
+      {
+        "id": "np1",
+        "type": "newpage"
+      },
+      {
+        "id": "h1",
+        "type": "h1",
+        "text": "Full-page spread"
+      },
+      {
+        "id": "p3",
+        "type": "paragraph",
+        "align": "justify",
+        "text": "The next block is a <code>full-page</code> sheet—useful for plates, part openers, or hero art."
+      },
+      {
+        "id": "fp1",
+        "type": "full-page",
+        "hAlign": "center",
+        "vAlign": "center",
+        "text": "Full-page block"
+      },
+      {
+        "id": "p4",
+        "type": "paragraph",
+        "align": "justify",
+        "text": "Content after a full-page block continues on a new sheet."
+      }
+    ]
+  }
+}

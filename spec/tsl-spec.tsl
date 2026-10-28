@@ -1,0 +1,2591 @@
+{
+    "format": "talesmith-lang",
+    "version": 1,
+    "header": {
+        "page": {
+            "formatId": "web",
+            "kind": "web",
+            "trimMM": {
+                "width": 210,
+                "height": 297
+            },
+            "marginsMM": {
+                "top": 12,
+                "bottom": 12,
+                "outside": 15,
+                "gutter": 15
+            },
+            "headerTopMM": 3,
+            "footerBottomMM": 3,
+            "headerRule": true,
+            "footerRule": true,
+            "rowGapMM": 2,
+            "usePrintGutters": true
+        },
+        "typography": {
+            "fontId": "book-serif",
+            "fontFamily": "Georgia, \"Times New Roman\", serif",
+            "sizePt": 11,
+            "lineHeight": 1.4499999999999999555910790149937383830547332763671875,
+            "paragraphAlign": "left",
+            "paragraphIndentIn": 0,
+            "paragraphSpacingPt": 0,
+            "hyphenation": true
+        },
+        "numbering": {
+            "startPage": 1,
+            "pageOffsetStart": 0,
+            "firstPhysicalPageSide": "left"
+        },
+        "theme": "default",
+        "readMode": false,
+        "metadata": {
+            "title": "Talesmith Language",
+            "fields": [
+                {
+                    "name": "Title",
+                    "value": "Talesmith Language"
+                }
+            ]
+        },
+        "mergeFields": {
+            "version": 1,
+            "fields": [],
+            "values": {
+                "title": "Talesmith Language"
+            }
+        }
+    },
+    "document": {
+        "blocks": [
+            {
+                "id": "spec1",
+                "type": "pageheader",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "side": "any",
+                "textLeft": "[Title]",
+                "textCenter": "[RunningHeader]",
+                "textRight": "[PageNo]"
+            },
+            {
+                "id": "spec2",
+                "type": "pagefooter",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "side": "any",
+                "textLeft": "",
+                "textCenter": "",
+                "textRight": "Page [PageNo] of [PageCount]"
+            },
+            {
+                "id": "spec3",
+                "type": "title",
+                "align": "center",
+                "theme": null,
+                "cols": 2,
+                "text": "Talesmith Language"
+            },
+            {
+                "id": "spec4",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Specification for the .tsl file format (version 1, draft)"
+            },
+            {
+                "id": "spec5",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "This document explains Talesmith Language: a JSON-based format for long-form documents written in Studio and read on Talesmith nodes, in Reader, or in the tsl-reader lab (lab/index.html)."
+            },
+            {
+                "id": "spec6",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Read this file in a browser through the tsl-reader lab (lab/index.html, document Format specification), not as raw JSON. What you see here—headings, paragraphs, tables, and code samples—is ordinary TSL content rendered the same way as any published document."
+            },
+            {
+                "id": "spec7",
+                "type": "aside",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Regenerate this file after editing: php tooling/generate_tsl_spec.php",
+                "icon": "📖"
+            },
+            {
+                "id": "spec8",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "1. Introduction"
+            },
+            {
+                "id": "spec9",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Talesmith Language (filename extension .tsl, MIME type application/vnd.talesmith.tsl+json) is a portable document format. One file contains (1) resolved page and typography settings and (2) an ordered sequence of content blocks (headings, paragraphs, images, page breaks, and so on)."
+            },
+            {
+                "id": "spec10",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "The format is plain JSON so any tool can parse it. Authors normally work in Studio; developers may generate or transform .tsl files directly."
+            },
+            {
+                "id": "spec11",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "TSL is not executable code. Block text may include a small subset of HTML when authors need emphasis or links; players sanitize that HTML before display on a node."
+            },
+            {
+                "id": "spec12",
+                "type": "quote",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Design goal: settings in the file are fully resolved (sizes, margins, font stacks) so a reader never needs Studio installed to lay out the document correctly."
+            },
+            {
+                "id": "spec13",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "1.1 Who uses .tsl files"
+            },
+            {
+                "id": "spec14",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Role",
+                        "Typical use"
+                    ],
+                    [
+                        "Author",
+                        "Write in Studio; export or download MyBook.tsl; publish to a node."
+                    ],
+                    [
+                        "Reader",
+                        "Read the published work in the browser. The node usually stores Lean HTML, not the .tsl file, for visitors."
+                    ],
+                    [
+                        "Developer",
+                        "Validate, convert, or render .tsl with the rules in this specification."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec15",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "1.2 Publish path versus source file"
+            },
+            {
+                "id": "spec16",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "When you publish to a Talesmith node, Studio renders your blocks to Lean HTML and stores that as the public reading copy (format id tsl). Visitors read Lean HTML plus shared CSS and JavaScript. The .tsl file remains the editable archival source; owners may download it separately."
+            },
+            {
+                "id": "spec17",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "2. Quick start"
+            },
+            {
+                "id": "spec18",
+                "type": "h3",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "2.1 Preview in the lab"
+            },
+            {
+                "id": "spec19",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Serve the tsl-reader repo statically and open lab/index.html.",
+                "bulletStyle": "number"
+            },
+            {
+                "id": "spec20",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "The lab loads spec/tsl-spec.tsl by default, or use ?tsl=examples/hello-envelope.tsl.",
+                "bulletStyle": "number"
+            },
+            {
+                "id": "spec21",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Use Open file… to load any .tsl; the player parses JSON and renders paginated HTML.",
+                "bulletStyle": "number"
+            },
+            {
+                "id": "spec22",
+                "type": "h3",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "2.2 Minimal valid file"
+            },
+            {
+                "id": "spec23",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Save the following as hello.tsl and open it in the lab."
+            },
+            {
+                "id": "spec24",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{\n  \"format\": \"talesmith-lang\",\n  \"version\": 1,\n  \"header\": {\n    \"page\": {\n      \"formatId\": \"web\", \"kind\": \"web\",\n      \"trimMM\": { \"width\": 210, \"height\": 297 },\n      \"marginsMM\": { \"top\": 12, \"bottom\": 12, \"outside\": 15, \"gutter\": 15 },\n      \"headerTopMM\": 3, \"footerBottomMM\": 3,\n      \"headerRule\": true, \"footerRule\": true, \"rowGapMM\": 2, \"usePrintGutters\": true\n    },\n    \"typography\": {\n      \"fontId\": \"book-serif\", \"fontFamily\": \"Georgia, serif\",\n      \"sizePt\": 12, \"lineHeight\": 1.5,\n      \"paragraphAlign\": \"left\", \"paragraphIndentIn\": 0,\n      \"paragraphSpacingPt\": 0, \"hyphenation\": true\n    },\n    \"numbering\": { \"startPage\": 1, \"pageOffsetStart\": 0, \"firstPhysicalPageSide\": \"left\" },\n    \"theme\": \"default\", \"readMode\": false,\n    \"metadata\": { \"title\": \"Hello\", \"fields\": [] }\n  },\n  \"document\": {\n    \"blocks\": [\n      { \"id\": \"b1\", \"type\": \"title\", \"align\": \"center\", \"cols\": 2, \"text\": \"Hello\" },\n      { \"id\": \"b2\", \"type\": \"paragraph\", \"cols\": 2, \"text\": \"Your first Talesmith Language document.\" }\n    ]\n  }\n}"
+            },
+            {
+                "id": "spec25",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "3. File envelope"
+            },
+            {
+                "id": "spec26",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "A canonical .tsl file is one JSON object with four top-level keys. Together they form the envelope around your document."
+            },
+            {
+                "id": "spec27",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Field",
+                        "Type",
+                        "Required",
+                        "Description"
+                    ],
+                    [
+                        "format",
+                        "string",
+                        "yes",
+                        "Must be the literal string talesmith-lang."
+                    ],
+                    [
+                        "version",
+                        "integer",
+                        "yes",
+                        "Format version. Only 1 is defined today (draft)."
+                    ],
+                    [
+                        "header",
+                        "object",
+                        "yes*",
+                        "Resolved settings (section 4). *Omit only in legacy editor JSON (section 3.1)."
+                    ],
+                    [
+                        "document",
+                        "object",
+                        "yes",
+                        "Must contain blocks (section 6). In canonical files, document holds blocks only; settings live in header."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec28",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Canonical detection: if format is talesmith-lang and header is a non-null object with page and typography, treat the file as canonical. The player uses header as-is (after optional mergeFields synthesis). Legacy detection: if format and header are absent but a blocks array exists at the root or under document, call resolveHeader() on the editor-shaped object (blocks plus sibling keys such as pageFormat). If both a canonical header and legacy sibling keys appear (for example header.page and top-level pageFormat), header wins; legacy keys are ignored for layout."
+            },
+            {
+                "id": "spec29",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Studio writes pretty-printed UTF-8 JSON with a trailing newline. Parsers should accept any valid JSON whitespace."
+            },
+            {
+                "id": "spec30",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "3.1 Legacy editor JSON"
+            },
+            {
+                "id": "spec31",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Studio Source tab and older saves use a single JSON object: a blocks array plus sibling setting keys (pageFormat, typography, customFormat, theme, startPage, and so on). There is no format, version, header, or document wrapper; the blocks array sits at the top level next to pageFormat. Players and the lab pass this object to resolveHeader() and treat the result like header plus document.blocks."
+            },
+            {
+                "id": "spec32",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{\n  \"blocks\": [\n    { \"id\": \"b1\", \"type\": \"h1\", \"cols\": 2, \"text\": \"Chapter\" },\n    { \"id\": \"b2\", \"type\": \"paragraph\", \"cols\": 2, \"text\": \"Body text.\" }\n  ],\n  \"pageFormat\": \"web\",\n  \"typography\": { \"fontId\": \"book-serif\", \"sizePt\": 11 }\n}"
+            },
+            {
+                "id": "spec33",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "4. Header object"
+            },
+            {
+                "id": "spec34",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "The header stores effective layout and typography: numbers and font stacks already expanded from presets. On export, Studio moves document settings out of the editor model and into header (see section 9)."
+            },
+            {
+                "id": "spec35",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "4.1 header.page"
+            },
+            {
+                "id": "spec36",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Describes the notional page box used for pagination and print preview."
+            },
+            {
+                "id": "spec37",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Field",
+                        "Description"
+                    ],
+                    [
+                        "formatId",
+                        "web, custom, or a print preset id (section 8.1)."
+                    ],
+                    [
+                        "kind",
+                        "web or print."
+                    ],
+                    [
+                        "trimMM",
+                        "Page width and height in millimetres (always present)."
+                    ],
+                    [
+                        "trimIn",
+                        "Print/custom only: trim width and height in inches (provenance; paired with trimMM)."
+                    ],
+                    [
+                        "marginsMM",
+                        "top, bottom, outside, gutter in millimetres (always present)."
+                    ],
+                    [
+                        "marginsIn",
+                        "Print/custom only: same four margins in inches (provenance; paired with marginsMM)."
+                    ],
+                    [
+                        "usePrintGutters",
+                        "On print, alternate inside margins on left and right pages."
+                    ],
+                    [
+                        "headerTopMM, footerBottomMM",
+                        "Space for running header and footer bands (millimetres)."
+                    ],
+                    [
+                        "headerRule, footerRule",
+                        "Whether to draw rules between bands and body."
+                    ],
+                    [
+                        "rowGapMM",
+                        "Vertical gap between stacked blocks on a print page (mm). Default 2; web and print presets use 2 unless a player overrides."
+                    ],
+                    [
+                        "unusedCustomFormat",
+                        "When formatId is not custom, the saved custom trim/margins kept for round-trip (section 8.1)."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec38",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "4.2 header.typography"
+            },
+            {
+                "id": "spec39",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Field",
+                        "Description"
+                    ],
+                    [
+                        "fontId",
+                        "Logical font name; see section 8.2."
+                    ],
+                    [
+                        "fontFamily",
+                        "CSS font stack applied at render time."
+                    ],
+                    [
+                        "sizePt",
+                        "Body size in points (Studio clamps 6–36)."
+                    ],
+                    [
+                        "lineHeight",
+                        "Unitless line height (1–3)."
+                    ],
+                    [
+                        "paragraphAlign",
+                        "left, center, right, or justify."
+                    ],
+                    [
+                        "paragraphIndentIn",
+                        "First-line indent in inches."
+                    ],
+                    [
+                        "paragraphSpacingPt",
+                        "Space between paragraphs in points."
+                    ],
+                    [
+                        "hyphenation",
+                        "Boolean; enables hyphenation when supported."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec40",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "4.3 header.numbering, metadata, readMode"
+            },
+            {
+                "id": "spec41",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Field",
+                        "Description"
+                    ],
+                    [
+                        "numbering.startPage",
+                        "First printed page number after front matter."
+                    ],
+                    [
+                        "numbering.pageOffsetStart",
+                        "Physical pages before numbering begins."
+                    ],
+                    [
+                        "numbering.firstPhysicalPageSide",
+                        "Always left (page 1 is a left page)."
+                    ],
+                    [
+                        "theme",
+                        "default, serif, dark, or compact — CSS theme on the root element."
+                    ],
+                    [
+                        "metadata.fields",
+                        "Array of { name, value } custom fields (editor round-trip)."
+                    ],
+                    [
+                        "metadata.title",
+                        "Document title when published."
+                    ],
+                    [
+                        "readMode",
+                        "When true, players substitute [FieldName] tokens in strings (section 7). When false, tokens stay literal."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec42",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "4.4 header.mergeFields"
+            },
+            {
+                "id": "spec43",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Object shape (always use all three keys when present): version (integer, 1), fields (array), values (object). Each fields entry is { name, value, used } where name is the display field name, value is the publish-time string, and used marks whether the token appeared in block text. values maps lower-case lookup keys to strings (for example title, author, publisheddate). Keys in values use only letters, digits, spaces, dots, and hyphens—normalized to lower case for lookup. Studio fills values on publish from custom fields and document title; it does not store computed layout tokens such as [PageNo] in values. Readers merge values first when resolving tokens (section 7.3)."
+            },
+            {
+                "id": "spec44",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "4.5 resolveHeader() — normative algorithm"
+            },
+            {
+                "id": "spec45",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "When format and header are missing, players build an effective header from legacy editor JSON. The reference algorithm matches Studio block-editor.js buildTslHeader() / getPageFormatSpec()."
+            },
+            {
+                "id": "spec46",
+                "type": "h3",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "4.5.1 Input"
+            },
+            {
+                "id": "spec47",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Input object C: must contain blocks (array). Optional keys: pageFormat (string, default web), typography (object), customFormat (object, inches), theme (string, default default), startPage (integer, default 1), pageOffsetStart (integer, default 0), usePrintGutters (boolean, default true), hyphenation (boolean, default true), customFields (array). Unknown keys are ignored for header resolution but should be preserved on the document object for round-trip."
+            },
+            {
+                "id": "spec48",
+                "type": "h3",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "4.5.2 Resolution steps"
+            },
+            {
+                "id": "spec49",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Start from editor defaults: pageFormat web, typography sizePt 11 lineHeight 1.45 fontId book-serif paragraphAlign left, startPage 1, pageOffsetStart 0, usePrintGutters true, hyphenation true, theme default.",
+                "bulletStyle": "number"
+            },
+            {
+                "id": "spec50",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Resolve pageFormat id: if unknown, treat as web. Expand preset trim and margins from the preset table (section 8.1) or, when id is custom, from customFormat.trimIn and customFormat.marginsIn converted to mm for header.page.trimMM and marginsMM.",
+                "bulletStyle": "number"
+            },
+            {
+                "id": "spec51",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Apply usePrintGutters and compute page.sidesMM when kind is print with gutters enabled.",
+                "bulletStyle": "number"
+            },
+            {
+                "id": "spec52",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Merge typography: clamp sizePt 6–36, lineHeight 1–3, paragraphIndentIn 0–2 in, paragraphSpacingPt 0–36; set fontFamily from fontId table (section 8.2).",
+                "bulletStyle": "number"
+            },
+            {
+                "id": "spec53",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Copy customFields into metadata.fields; set metadata.title from publish context or first title block when available.",
+                "bulletStyle": "number"
+            },
+            {
+                "id": "spec54",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Emit numbering.startPage, numbering.pageOffsetStart, numbering.firstPhysicalPageSide left, header.page.rowGapMM 2, web headerRule true / print headerRule false (see defaults table section 10).",
+                "bulletStyle": "number"
+            },
+            {
+                "id": "spec55",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Set readMode from publish context (false for .tsl downloads, true for published reading copies). Build mergeFields via section 4.4.",
+                "bulletStyle": "number"
+            },
+            {
+                "id": "spec56",
+                "type": "h3",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "4.5.3 Worked example"
+            },
+            {
+                "id": "spec57",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Legacy input: blocks with one paragraph, pageFormat us-novel, startPage 1, pageOffsetStart 0. Output header.page.formatId us-novel, kind print, trimMM from 5.5×8.5 in preset, marginsMM from preset inches converted to mm, usePrintGutters true, rowGapMM 2. document.blocks is unchanged. Envelope format talesmith-lang version 1 is added only when serializing a full .tsl file, not when resolving in memory."
+            },
+            {
+                "id": "spec58",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "resolveHeader({\n  blocks: [{ id: \"b1\", type: \"paragraph\", cols: 2, text: \"Hello\" }],\n  pageFormat: \"us-novel\",\n  typography: { fontId: \"book-serif\", sizePt: 11 }\n})\n// → header.page.formatId \"us-novel\", header.typography.fontFamily expanded, document.blocks unchanged"
+            },
+            {
+                "id": "spec59",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "5. Properties common to all blocks"
+            },
+            {
+                "id": "spec60",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "The cols field controls page width in Studio and in readers (including this lab). cols: 2 (default) means full page width — one stream of text across the sheet. cols: 1 means half page width; consecutive cols: 1 blocks are placed side by side in pairs, matching the two-column grid in the block editor and print layout."
+            },
+            {
+                "id": "spec61",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Property",
+                        "Type",
+                        "Description"
+                    ],
+                    [
+                        "id",
+                        "string",
+                        "Stable identifier, e.g. b12."
+                    ],
+                    [
+                        "type",
+                        "string",
+                        "Block kind; see section 6. Unknown types load as paragraph in Studio."
+                    ],
+                    [
+                        "align",
+                        "string",
+                        "left, center, right, or justify."
+                    ],
+                    [
+                        "cols",
+                        "integer",
+                        "2 = full width (default). 1 = half width; pair for two columns on the page."
+                    ],
+                    [
+                        "theme",
+                        "string or null",
+                        "Optional per-block theme override."
+                    ],
+                    [
+                        "text",
+                        "string",
+                        "Primary content for text-like blocks; may include limited HTML (section 5.1)."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec62",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "5.1 Limited HTML inside text"
+            },
+            {
+                "id": "spec63",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Allowed inline tags: b, strong, i, em, u, a, br, span, sup, sub, code. Links must use http or https. For specifications and code listings, prefer a code block (type code) with plain text instead of inline markup."
+            },
+            {
+                "id": "spec64",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "5.2 cols — two-column grid span"
+            },
+            {
+                "id": "spec65",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "cols is not \"number of columns on the page\"; it is how many half-columns a block spans on the editor print grid (maximum 2). cols: 2 (default) = full width of the body area. cols: 1 = half width; consecutive eligible cols:1 blocks are paired left and right on the same row."
+            },
+            {
+                "id": "spec66",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Rule",
+                        "Behavior"
+                    ],
+                    [
+                        "Allowed values",
+                        "Only 1 or 2. Any other value is treated as 2 on load."
+                    ],
+                    [
+                        "Eligible for cols:1",
+                        "Types that allow single column in Studio (most text-like blocks). Document layout types (pageheader, newpage, toc, paywall, front-cover, full-page, manuscript-title, image-index, document) force cols:2."
+                    ],
+                    [
+                        "Pairing",
+                        "Scan blocks in order. A cols:1 block starts a run; extend the run while the next block is cols:1 and not a control type. Emit floor(n/2) rows; an odd final half-column occupies the left slot only."
+                    ],
+                    [
+                        "cols:2 breaks pairing",
+                        "A full-width block ends the current run and prints on its own row."
+                    ],
+                    [
+                        "Control types",
+                        "pageheader, pagefooter, newpage, divider, toc, image-index, document, front-cover, full-page, paywall, manuscript-title do not join cols:1 pairing; they flush layout (headers/footers update state, breaks start a new page)."
+                    ],
+                    [
+                        "Row height",
+                        "Paired halves share one row height (the taller half sets the row). Vertical alignment is top within the row."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec67",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "5.3 Block id"
+            },
+            {
+                "id": "spec68",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Requirement",
+                        "Norm"
+                    ],
+                    [
+                        "Required",
+                        "Every block should have id (string). Players generate b1, b2, … when missing."
+                    ],
+                    [
+                        "Unique",
+                        "ids must be unique within document.blocks. Duplicate ids on paste are reassigned in Studio."
+                    ],
+                    [
+                        "Format",
+                        "No enforced pattern; Studio uses b plus integer. Keep ids stable across edits when possible for TOC links and merge audit."
+                    ],
+                    [
+                        "Round-trip",
+                        "Parsers must preserve id on load and export even when normalising other fields."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec69",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "5.4 String fields — HTML, whitespace, and tokens"
+            },
+            {
+                "id": "spec70",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Field",
+                        "HTML allowed?",
+                        "Token substitution when readMode true?"
+                    ],
+                    [
+                        "text on textual blocks",
+                        "Yes (section 5.1)",
+                        "Yes"
+                    ],
+                    [
+                        "code.text",
+                        "No (plain text)",
+                        "No"
+                    ],
+                    [
+                        "table.cells[][]",
+                        "No (plain strings)",
+                        "No"
+                    ],
+                    [
+                        "image.caption",
+                        "Yes",
+                        "Yes"
+                    ],
+                    [
+                        "image.src",
+                        "No (URL/data URI only)",
+                        "No"
+                    ],
+                    [
+                        "pageheader/pagefooter textLeft/Center/Right",
+                        "No (plain text with tokens)",
+                        "Yes"
+                    ],
+                    [
+                        "manuscript-title title/byline/contact/authorInfo/wordCount/linesCount",
+                        "Plain text; authorInfo may contain newlines",
+                        "Yes in template strings"
+                    ],
+                    [
+                        "paywall.text",
+                        "Plain text",
+                        "Yes"
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec71",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Paragraph-like text preserves newline characters in JSON; players render them as line breaks where appropriate. code.text preserves all whitespace literally. There is no escape syntax for literal [Author] in prose; leave tokens out or split across elements if the editor allows."
+            },
+            {
+                "id": "spec72",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "5.5 Scalar and enum constraints"
+            },
+            {
+                "id": "spec73",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Property",
+                        "Type / default",
+                        "Constraints"
+                    ],
+                    [
+                        "align",
+                        "string, left",
+                        "left, center, right, justify; else left"
+                    ],
+                    [
+                        "theme (block)",
+                        "null",
+                        "null or one of default, serif, dark, compact"
+                    ],
+                    [
+                        "bulletStyle",
+                        "disc",
+                        "disc, circle, square, dash, number, lower-alpha, upper-alpha"
+                    ],
+                    [
+                        "todo.checked",
+                        "boolean, false",
+                        "JSON boolean"
+                    ],
+                    [
+                        "table.header",
+                        "boolean, true",
+                        "First row styled as header when true"
+                    ],
+                    [
+                        "pageheader.side / pagefooter.side",
+                        "any",
+                        "any, left, right"
+                    ],
+                    [
+                        "image.width",
+                        "number, 100",
+                        "Integer percent 10–100"
+                    ],
+                    [
+                        "toc.maxLevel",
+                        "number, 3",
+                        "Integer 1–3 inclusive"
+                    ],
+                    [
+                        "toc.leader",
+                        "string, \".\"",
+                        "Up to 4 characters repeated in leader fill (often \".\" or \"·\")"
+                    ],
+                    [
+                        "image-index.leader",
+                        "string, \".\"",
+                        "Same as toc.leader"
+                    ],
+                    [
+                        "full-page hAlign / vAlign",
+                        "center / center",
+                        "hAlign left|center|right; vAlign top|center|bottom"
+                    ],
+                    [
+                        "manuscript-title.kind",
+                        "novel",
+                        "novel, short-story, or poem"
+                    ],
+                    [
+                        "front-cover.expanded / toc.expanded / …",
+                        "true on many control blocks",
+                        "UI collapse in Studio; expanded true means print layout uses the block body"
+                    ],
+                    [
+                        "document.documentId",
+                        "null",
+                        "16-character hex string when set; null when unset"
+                    ],
+                    [
+                        "paywall.roles",
+                        "[]",
+                        "Array of audience role id strings; empty means all roles gated at publish"
+                    ],
+                    [
+                        "aside.icon",
+                        "string, default light-bulb emoji in Studio",
+                        "Single emoji or short text prefix; not a URL"
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec74",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "5.6 URLs and image.src"
+            },
+            {
+                "id": "spec75",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "src must be an absolute http or https URL, a data:image/… URI, or (in Studio only) a blob URL until saved. Relative paths such as cover.jpg are not portable in .tsl; resolve them to absolute URLs or data URIs before exchange. Players reject or omit images with javascript:, file:, or unknown schemes. Published Lean HTML may embed images as data URIs when Studio inline embed is enabled."
+            },
+            {
+                "id": "spec76",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6. Block types"
+            },
+            {
+                "id": "spec77",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "document.blocks is an ordered array. Process blocks from first to last. The subsections below describe each type, when to use it, and a minimal JSON example."
+            },
+            {
+                "id": "spec78",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.1 — Document title"
+            },
+            {
+                "id": "spec79",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: title. Use once at the start for the work’s main title. Distinct from chapter headings (h1)."
+            },
+            {
+                "id": "spec80",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec81",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b1\", \"type\": \"title\", \"align\": \"center\", \"cols\": 2, \"text\": \"My Novel\" }"
+            },
+            {
+                "id": "spec82",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.2 — Body text"
+            },
+            {
+                "id": "spec83",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: paragraph. Default prose block. Empty text suppresses paragraph indent in the player."
+            },
+            {
+                "id": "spec84",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec85",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b2\", \"type\": \"paragraph\", \"cols\": 1, \"text\": \"It was a bright cold day in April.\" }"
+            },
+            {
+                "id": "spec86",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.3 — Heading level 1"
+            },
+            {
+                "id": "spec87",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: h1. Major sections. Updates the running header used by [RunningHeader] tokens."
+            },
+            {
+                "id": "spec88",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec89",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b3\", \"type\": \"h1\", \"cols\": 1, \"text\": \"Chapter 1\" }"
+            },
+            {
+                "id": "spec90",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.4 — Heading level 2"
+            },
+            {
+                "id": "spec91",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: h2. Subsections."
+            },
+            {
+                "id": "spec92",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec93",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b4\", \"type\": \"h2\", \"cols\": 1, \"text\": \"Arrival\" }"
+            },
+            {
+                "id": "spec94",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.5 — Heading level 3"
+            },
+            {
+                "id": "spec95",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: h3. Minor subsections."
+            },
+            {
+                "id": "spec96",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec97",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b5\", \"type\": \"h3\", \"cols\": 1, \"text\": \"The platform\" }"
+            },
+            {
+                "id": "spec98",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.6 — Block quotation"
+            },
+            {
+                "id": "spec99",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: quote. Long citations or pull quotes."
+            },
+            {
+                "id": "spec100",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec101",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b6\", \"type\": \"quote\", \"cols\": 1, \"text\": \"To be or not to be.\" }"
+            },
+            {
+                "id": "spec102",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.7 — Preformatted text"
+            },
+            {
+                "id": "spec103",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: code. Plain text only; HTML is not interpreted. Use for JSON examples and source listings."
+            },
+            {
+                "id": "spec104",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec105",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b7\", \"type\": \"code\", \"cols\": 1, \"text\": \"{ \\\"key\\\": \\\"value\\\" }\" }"
+            },
+            {
+                "id": "spec106",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.8 — Callout"
+            },
+            {
+                "id": "spec107",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: aside. Highlighted note. Optional icon field (emoji); default is a light-bulb."
+            },
+            {
+                "id": "spec108",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec109",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b8\", \"type\": \"aside\", \"cols\": 1, \"icon\": \"💡\", \"text\": \"Remember to save.\" }"
+            },
+            {
+                "id": "spec110",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.9 — List item"
+            },
+            {
+                "id": "spec111",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: bullet. Consecutive bullet blocks form one list. bulletStyle: disc, circle, square, dash, number, lower-alpha, upper-alpha."
+            },
+            {
+                "id": "spec112",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec113",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b9\", \"type\": \"bullet\", \"bulletStyle\": \"disc\", \"cols\": 1, \"text\": \"First item\" }"
+            },
+            {
+                "id": "spec114",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.10 — Checkbox task"
+            },
+            {
+                "id": "spec115",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: todo. checked true shows struck-through text in the player."
+            },
+            {
+                "id": "spec116",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec117",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b10\", \"type\": \"todo\", \"cols\": 1, \"checked\": false, \"text\": \"Finish draft\" }"
+            },
+            {
+                "id": "spec118",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.11 — Horizontal rule"
+            },
+            {
+                "id": "spec119",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: divider. Visual separator; no extra fields."
+            },
+            {
+                "id": "spec120",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec121",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b11\", \"type\": \"divider\", \"cols\": 1 }"
+            },
+            {
+                "id": "spec122",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.12 — Page break"
+            },
+            {
+                "id": "spec123",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: newpage. Forces the next content onto a new physical page."
+            },
+            {
+                "id": "spec124",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec125",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b12\", \"type\": \"newpage\", \"cols\": 1 }"
+            },
+            {
+                "id": "spec126",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.13 — Figure"
+            },
+            {
+                "id": "spec127",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: image. src is a URL or data URI if embedded; caption optional; width is percent 10–100."
+            },
+            {
+                "id": "spec128",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec129",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b13\", \"type\": \"image\", \"cols\": 1, \"src\": \"https://example.com/photo.jpg\", \"caption\": \"Figure 1\", \"width\": 100 }"
+            },
+            {
+                "id": "spec130",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.14 — Table"
+            },
+            {
+                "id": "spec131",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: table. cells is an array of rows; each row an array of strings. header true marks the first row as column headings."
+            },
+            {
+                "id": "spec132",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec133",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b14\", \"type\": \"table\", \"header\": true, \"cols\": 1, \"cells\": [[\"Term\",\"Meaning\"],[\"TSL\",\"This format\"]] }"
+            },
+            {
+                "id": "spec134",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.15 — Running header"
+            },
+            {
+                "id": "spec135",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: pageheader. Configures header text on subsequent pages. textLeft, textCenter, textRight; side is any, left, or right."
+            },
+            {
+                "id": "spec136",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec137",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b15\", \"type\": \"pageheader\", \"side\": \"any\", \"textLeft\": \"[Title]\", \"textCenter\": \"\", \"textRight\": \"[PageNo]\" }"
+            },
+            {
+                "id": "spec138",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.16 — Running footer"
+            },
+            {
+                "id": "spec139",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: pagefooter. Same shape as pageheader; applies to footer band."
+            },
+            {
+                "id": "spec140",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec141",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b16\", \"type\": \"pagefooter\", \"side\": \"any\", \"textLeft\": \"\", \"textCenter\": \"[PageNo]\", \"textRight\": \"\" }"
+            },
+            {
+                "id": "spec142",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.17 — Cover image"
+            },
+            {
+                "id": "spec143",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: front-cover. Full-bleed page from src."
+            },
+            {
+                "id": "spec144",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec145",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b17\", \"type\": \"front-cover\", \"cols\": 1, \"src\": \"cover.jpg\", \"expanded\": true }"
+            },
+            {
+                "id": "spec146",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.18 — Centred page"
+            },
+            {
+                "id": "spec147",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: full-page. Single page with text aligned via hAlign and vAlign (left|center|right and top|center|bottom)."
+            },
+            {
+                "id": "spec148",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec149",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b18\", \"type\": \"full-page\", \"cols\": 1, \"text\": \"Dedication\", \"hAlign\": \"center\", \"vAlign\": \"center\" }"
+            },
+            {
+                "id": "spec150",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.19 — Submission title page"
+            },
+            {
+                "id": "spec151",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: manuscript-title. Formal title page for novel, short-story, or poem (kind field). Uses field tokens in templates."
+            },
+            {
+                "id": "spec152",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec153",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b19\", \"type\": \"manuscript-title\", \"kind\": \"novel\", \"title\": \"[Title]\", \"byline\": \"By [Author]\" }"
+            },
+            {
+                "id": "spec154",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.20 — Table of contents"
+            },
+            {
+                "id": "spec155",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: toc. Auto-generated outline in Studio. maxLevel (default 3), leader (default dot)."
+            },
+            {
+                "id": "spec156",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec157",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b20\", \"type\": \"toc\", \"maxLevel\": 3, \"leader\": \".\" }"
+            },
+            {
+                "id": "spec158",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.21 — Embed another document"
+            },
+            {
+                "id": "spec159",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: document. Reference by documentId; not flattened inside .tsl export."
+            },
+            {
+                "id": "spec160",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec161",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b21\", \"type\": \"document\", \"documentId\": \"abc\", \"title\": \"Appendix\" }"
+            },
+            {
+                "id": "spec162",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.22 — Paywall marker"
+            },
+            {
+                "id": "spec163",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "type: paywall. Publishing only; players skip. Content after this may require subscriber roles."
+            },
+            {
+                "id": "spec164",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example:"
+            },
+            {
+                "id": "spec165",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "{ \"id\": \"b22\", \"type\": \"paywall\", \"text\": \"Subscribers only beyond this point.\" }"
+            },
+            {
+                "id": "spec166",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "6.23 — Screenplay, stage, and Math (Studio extensions)"
+            },
+            {
+                "id": "spec167",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "These types are registered in Studio plugins (block-editor-script.js, block-editor-stage.js, block-editor-math.js). They are valid in .tsl and Studio export but omitted from the numbered examples above. v1 readers may render them as plain paragraphs if unsupported; preserve type and all properties for round-trip."
+            },
+            {
+                "id": "spec168",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "type",
+                        "Role"
+                    ],
+                    [
+                        "script-scene",
+                        "Scene heading (slugline)"
+                    ],
+                    [
+                        "script-action",
+                        "Action lines"
+                    ],
+                    [
+                        "script-character",
+                        "Character name"
+                    ],
+                    [
+                        "script-dialogue",
+                        "Dialogue"
+                    ],
+                    [
+                        "script-parenthetical",
+                        "Parenthetical"
+                    ],
+                    [
+                        "script-transition",
+                        "Transition"
+                    ],
+                    [
+                        "script-shot",
+                        "Shot line"
+                    ],
+                    [
+                        "stage-scene",
+                        "Act/scene heading"
+                    ],
+                    [
+                        "stage-action",
+                        "Stage action"
+                    ],
+                    [
+                        "stage-direction",
+                        "Direction"
+                    ],
+                    [
+                        "stage-speech",
+                        "Character plus speech (character and text fields)"
+                    ],
+                    [
+                        "mathml",
+                        "MathML source string; display boolean for block layout"
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec169",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "7. Field tokens"
+            },
+            {
+                "id": "spec170",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "When readMode is true, strings may include tokens like [Author] or [PageNo]. Pattern: open bracket, name starting with a letter, then letters digits spaces dots or hyphens, close bracket. This specification sets readMode false so examples below stay literal."
+            },
+            {
+                "id": "spec171",
+                "type": "h3",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "7.1 Custom fields and mergeFields.values"
+            },
+            {
+                "id": "spec172",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Declare metadata.fields (canonical) or editor customFields (legacy). Reference them in text with [FieldName] matching the field name. On publish, Studio writes header.mergeFields with version 1, a fields audit list, and values: an object whose keys are lower-case names and whose values are strings frozen at publish time (title, custom fields, publisheddate when set). At render time with readMode true, lookup uses the lower-case form of the token name against mergeFields.values before other sources (section 7.3)."
+            },
+            {
+                "id": "spec173",
+                "type": "h3",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "7.2 Built-in computed tokens"
+            },
+            {
+                "id": "spec174",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Token",
+                        "Meaning"
+                    ],
+                    [
+                        "[PageNo], [Page]",
+                        "Current page number after pageOffsetStart."
+                    ],
+                    [
+                        "[PageCount], [Pages]",
+                        "Total page count."
+                    ],
+                    [
+                        "[RunningHeader]",
+                        "Plain text of the latest title or heading."
+                    ],
+                    [
+                        "[PageSide], [Side]",
+                        "Left or Right on gutter pages."
+                    ],
+                    [
+                        "[Title]",
+                        "Document title when not overridden in mergeFields.values."
+                    ],
+                    [
+                        "[Date], [Time], [DateTime]",
+                        "Client locale date or time at render (not stored in mergeFields.values)."
+                    ],
+                    [
+                        "[WordCount], [Lines], [AuthorLastName], …",
+                        "Other computed tokens the Studio editor resolves when readMode is true."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec175",
+                "type": "h3",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "7.3 Resolution order when readMode is true"
+            },
+            {
+                "id": "spec176",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Players walk each [Token] in a string in this order: (1) header.mergeFields.values using a lower-case key—publish-time strings win, including over computed names such as Title when both apply; (2) metadata.fields and legacy custom field definitions on the document; (3) built-in computed tokens evaluated at render time (page numbers, running header, client [Date]/[Time]/[DateTime], word counts, and similar); (4) if still unmatched, leave the original [Token] text in place. When readMode is false, no substitution runs (this specification file keeps readMode false so examples stay literal). Publish freezes custom and title strings in mergeFields.values; layout tokens remain computed on each read."
+            },
+            {
+                "id": "spec177",
+                "type": "h3",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "7.4 Token grammar edge cases"
+            },
+            {
+                "id": "spec178",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Topic",
+                        "Rule"
+                    ],
+                    [
+                        "Pattern",
+                        "[Name] where Name starts with A–Z or a–z then letters, digits, spaces, dots, hyphens."
+                    ],
+                    [
+                        "Case",
+                        "Lookup normalises to lower case with spaces and underscores removed (Author and author share one key in mergeFields.values)."
+                    ],
+                    [
+                        "Unknown token",
+                        "When readMode true and no value resolves, leave the original [Token] characters in the output string."
+                    ],
+                    [
+                        "Literal brackets",
+                        "No escape sequence. To show literal square brackets, avoid valid token names or use HTML/CSS workarounds outside token substitution."
+                    ],
+                    [
+                        "Scope",
+                        "Substitution runs on string fields marked in section 5.4, not on src, type, id, or numeric fields. Not inside HTML attribute values unless the player explicitly resolves that field as a whole string first."
+                    ],
+                    [
+                        "HTML interaction",
+                        "For text fields, resolve tokens on the string, then parse allowed inline HTML. Do not re-parse tokens inside generated markup."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec179",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "8. Page formats and fonts"
+            },
+            {
+                "id": "spec180",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "8.1 Page format presets (pageFormat / header.page.formatId)"
+            },
+            {
+                "id": "spec181",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Legacy editor JSON uses pageFormat (string id) and, when pageFormat is custom, customFormat with trimIn and marginsIn in inches: trimIn.width, trimIn.height, marginsIn.top, bottom, outside, gutter. Export expands these into header.page: formatId custom, trimIn and marginsIn plus trimMM and marginsMM (millimetres are what players use for layout). When a preset other than custom is active, header.page may still carry unusedCustomFormat with the saved inch values for round-trip. Do not mix ad hoc mm fields on the legacy root object—only customFormat inches and header.page mm/in pairs are defined."
+            },
+            {
+                "id": "spec182",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Id",
+                        "Typical use"
+                    ],
+                    [
+                        "web",
+                        "Articles and on-screen reading (210×297 mm logical box)."
+                    ],
+                    [
+                        "us-novel",
+                        "US trade paperback 5.5×8.5 in."
+                    ],
+                    [
+                        "us-mass-market",
+                        "US mass-market paperback."
+                    ],
+                    [
+                        "us-business",
+                        "US 6×9 in non-fiction."
+                    ],
+                    [
+                        "us-reference",
+                        "US letter 8.5×11 in."
+                    ],
+                    [
+                        "uk-novel",
+                        "UK A5 fiction."
+                    ],
+                    [
+                        "uk-business",
+                        "UK royal format."
+                    ],
+                    [
+                        "uk-reference",
+                        "UK A4 reference."
+                    ],
+                    [
+                        "custom",
+                        "Uses customFormat (legacy) or header.page trimIn/marginsIn and trimMM/marginsMM (canonical)."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec183",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "8.2 Typography fontId values"
+            },
+            {
+                "id": "spec184",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "fontId",
+                        "Role"
+                    ],
+                    [
+                        "book-serif",
+                        "Default book serif stack."
+                    ],
+                    [
+                        "georgia",
+                        "Georgia-based stack."
+                    ],
+                    [
+                        "times",
+                        "Times New Roman stack."
+                    ],
+                    [
+                        "palatino",
+                        "Palatino stack."
+                    ],
+                    [
+                        "garamond",
+                        "Garamond stack."
+                    ],
+                    [
+                        "baskerville",
+                        "Baskerville stack."
+                    ],
+                    [
+                        "sans",
+                        "System sans-serif stack."
+                    ],
+                    [
+                        "courier",
+                        "Monospace stack."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec185",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "8.3 Physical page numbering"
+            },
+            {
+                "id": "spec186",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Physical pages are counted from 1 for layout. Displayed [PageNo] uses startPage and pageOffsetStart from header.numbering:"
+            },
+            {
+                "id": "spec187",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "if physicalIndex <= pageOffsetStart:\n  displayedPageNumber = null   // no number printed\nelse:\n  displayedPageNumber = startPage + (physicalIndex - pageOffsetStart - 1)"
+            },
+            {
+                "id": "spec188",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Worked example: startPage 1, pageOffsetStart 2 → physical pages 1–2 are unnumbered; physical page 3 shows [PageNo] 1; physical page 4 shows 2. firstPhysicalPageSide is always left in v1 files: physical page 1 is a left (verso) sheet, which matches Studio print imposition for books that begin on a left page before chapter one. The field is stored for interchange consistency even though players currently derive side from physicalIndex alone (odd = Left, even = Right for [PageSide])."
+            },
+            {
+                "id": "spec189",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "8.4 Running headers and footers"
+            },
+            {
+                "id": "spec190",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "pageheader and pagefooter blocks set running text for following pages until replaced. side any applies to both recto and verso; left/right variants override for that side only. When several pageheader blocks appear, the most recent applicable block wins per side. [RunningHeader] on a page is the plain text of the latest title or h1–h3 heading on that page (title counts; empty headings are skipped). Headings on the page update lastHeading before the footer runs. h2 and h3 update [RunningHeader] the same as h1. On web format, pagination is still simulated for preview; [PageSide] follows the same odd-left/even-right rule."
+            },
+            {
+                "id": "spec191",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "8.5 Table of contents block"
+            },
+            {
+                "id": "spec192",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "toc is generated at render time from the current block tree (not baked into .tsl as static rows). Included entries: h1, h2, h3 with non-empty plain text; maxLevel 1–3 filters by heading level. Nested document blocks: headings inside embedded documents up to depth 5 are included when the embed resolves in Studio. Page numbers in the TOC come from the same pagination pass as print preview; on continuous scroll layouts page numbers may be blank or omitted. leader repeats up to four characters to fill the line between title and page number."
+            },
+            {
+                "id": "spec193",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "9. Document settings moved into header on export"
+            },
+            {
+                "id": "spec194",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Document key (legacy root)",
+                        "Becomes"
+                    ],
+                    [
+                        "theme",
+                        "header.theme"
+                    ],
+                    [
+                        "startPage, pageOffsetStart",
+                        "header.numbering.*"
+                    ],
+                    [
+                        "pageFormat, customFormat, usePrintGutters",
+                        "header.page (expanded; see section 8.1)"
+                    ],
+                    [
+                        "typography, hyphenation",
+                        "header.typography"
+                    ],
+                    [
+                        "customFields",
+                        "header.metadata.fields"
+                    ],
+                    [
+                        "blocks",
+                        "document.blocks (unchanged); not duplicated under header"
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec195",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "10. Normative defaults"
+            },
+            {
+                "id": "spec196",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "When a setting or block property is omitted, independent readers must use these defaults so layout matches Studio. Values already expanded in header.page and header.typography override this table for canonical .tsl files."
+            },
+            {
+                "id": "spec197",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Setting / property",
+                        "Default"
+                    ],
+                    [
+                        "pageFormat / header.page.formatId",
+                        "web"
+                    ],
+                    [
+                        "usePrintGutters / header.page.usePrintGutters",
+                        "true"
+                    ],
+                    [
+                        "hyphenation / header.typography.hyphenation",
+                        "true"
+                    ],
+                    [
+                        "startPage / numbering.startPage",
+                        "1"
+                    ],
+                    [
+                        "pageOffsetStart / numbering.pageOffsetStart",
+                        "0"
+                    ],
+                    [
+                        "numbering.firstPhysicalPageSide",
+                        "left"
+                    ],
+                    [
+                        "theme / header.theme",
+                        "default"
+                    ],
+                    [
+                        "header.page.rowGapMM",
+                        "2"
+                    ],
+                    [
+                        "header.page.headerTopMM / footerBottomMM (web)",
+                        "3 / 3 with headerRule and footerRule true"
+                    ],
+                    [
+                        "header.page.headerTopMM / footerBottomMM (print presets)",
+                        "8 / 8 with headerRule and footerRule false"
+                    ],
+                    [
+                        "typography.fontId",
+                        "book-serif"
+                    ],
+                    [
+                        "typography.sizePt",
+                        "11"
+                    ],
+                    [
+                        "typography.lineHeight",
+                        "1.45"
+                    ],
+                    [
+                        "typography.paragraphAlign",
+                        "left"
+                    ],
+                    [
+                        "typography.paragraphIndentIn",
+                        "0"
+                    ],
+                    [
+                        "typography.paragraphSpacingPt",
+                        "0"
+                    ],
+                    [
+                        "block.align",
+                        "left"
+                    ],
+                    [
+                        "block.cols",
+                        "2"
+                    ],
+                    [
+                        "block.theme",
+                        "null"
+                    ],
+                    [
+                        "readMode (downloaded .tsl)",
+                        "false"
+                    ],
+                    [
+                        "readMode (published reading copy)",
+                        "true"
+                    ],
+                    [
+                        "header.page.headerRule / footerRule (web)",
+                        "true / true"
+                    ],
+                    [
+                        "header.page.headerRule / footerRule (print presets)",
+                        "false / false"
+                    ],
+                    [
+                        "table.header",
+                        "true"
+                    ],
+                    [
+                        "pageheader.side / pagefooter.side",
+                        "any"
+                    ],
+                    [
+                        "bulletStyle",
+                        "disc"
+                    ],
+                    [
+                        "todo.checked",
+                        "false"
+                    ],
+                    [
+                        "image.width",
+                        "100 (percent)"
+                    ],
+                    [
+                        "toc.maxLevel",
+                        "3"
+                    ],
+                    [
+                        "toc.leader",
+                        "\".\" (up to 4 chars)"
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec198",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "11. Parser and reader conformance"
+            },
+            {
+                "id": "spec199",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "11.1 Malformed or invalid files"
+            },
+            {
+                "id": "spec200",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "cells": [
+                    [
+                        "Condition",
+                        "Required behavior"
+                    ],
+                    [
+                        "Invalid JSON",
+                        "Reject with error; do not partial render."
+                    ],
+                    [
+                        "format not talesmith-lang (and not legacy blocks-only object)",
+                        "Reject; Studio parseTsl throws Not a Talesmith Lang file."
+                    ],
+                    [
+                        "Missing blocks array",
+                        "Treat as empty blocks []."
+                    ],
+                    [
+                        "version missing on legacy JSON",
+                        "Assume version 1 when wrapping to envelope."
+                    ],
+                    [
+                        "version > 1",
+                        "Best-effort: parse known fields, preserve unknown top-level keys and block properties, surface a warning. Do not silently discard content."
+                    ],
+                    [
+                        "version < 1 or non-integer",
+                        "Reject canonical files."
+                    ],
+                    [
+                        "Out-of-range typography or margins",
+                        "Clamp to the same ranges Studio uses (section 5.5 and 8.1)."
+                    ]
+                ],
+                "header": true
+            },
+            {
+                "id": "spec201",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "11.2 Unknown block types"
+            },
+            {
+                "id": "spec202",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Studio load: if type is not registered and not in DEFAULTS, coerce type to paragraph while merging all other properties onto the block. Reference player: render a generic text block when a text field exists; otherwise render an empty placeholder; never drop the block from the in-memory model. Export and round-trip must preserve the original type string and unknown properties even if the reader cannot lay them out natively."
+            },
+            {
+                "id": "spec203",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "11.3 Unknown keys"
+            },
+            {
+                "id": "spec204",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Preserve unknown properties on each block object. Preserve unknown top-level envelope keys and unknown document keys that are not setting keys (section 9). Setting keys found on document when header is present are ignored for layout but may be kept for round-trip."
+            },
+            {
+                "id": "spec205",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "12. Publish semantics (Lean HTML and nodes)"
+            },
+            {
+                "id": "spec206",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "12.1 document embed blocks"
+            },
+            {
+                "id": "spec207",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "In .tsl source, document blocks remain references (not flattened). On publish to Lean HTML or node reading copies, Studio flattens linked documents into one block stream (studio_api flattenDocumentBlocksForPublish) unless exporting .tsl. Missing or cyclic embeds: skip or omit unresolved content; Studio caps embed depth at 5. Permissions are enforced by the node (who may open the published format), not by the embed block itself."
+            },
+            {
+                "id": "spec208",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "12.2 paywall blocks"
+            },
+            {
+                "id": "spec209",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "paywall is a publish-time gate marker, not DRM. The full source and Lean HTML still contain all blocks; the node filters what it sends to a viewer without the required audience role. When access is denied, publishing stops after the paywall block: the paywall message is included and subsequent blocks are omitted from that viewer payload. Owners and permitted roles receive content after the gate. The .tsl lab player does not enforce paywall roles unless wired to node APIs."
+            },
+            {
+                "id": "spec210",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "12.3 full-page, front-cover, manuscript-title"
+            },
+            {
+                "id": "spec211",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "full-page and front-cover start a new physical page when the current page already has content; they consume a full page body. front-cover.expanded true selects the full-bleed cover layout in Studio; false collapses the editor chrome only. manuscript-title templates are plain strings with field tokens; kind selects layout preset novel (full page), short-story, or poem (half page height in print preview)."
+            },
+            {
+                "id": "spec212",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "13. Lean HTML and processing pipeline"
+            },
+            {
+                "id": "spec213",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Parse JSON → resolve header if needed → walk blocks in order → render DOM or HTML → apply CSS → optional reader prefs in the browser."
+            },
+            {
+                "id": "spec214",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Lean HTML embeds the header as a base64 comment and data-tsl-header-b64 on the article element. Use Lean HTML for published reading copies; use .tsl for editable sources."
+            },
+            {
+                "id": "spec215",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "14. Versioning"
+            },
+            {
+                "id": "spec216",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "version 1 is the current interchange version describing Studio and tsl-reader. Parsers must preserve unknown block properties and unknown top-level envelope keys (section 11.3). When version is greater than 1, use best-effort parsing (section 11.1) rather than hard rejection unless security requires it. Reference player: player/tsl.js in the tsl-reader repo. Publish and Lean HTML: src/plugins/studio/node/studio_publisher.php in Talesmith Studio."
+            }
+        ]
+    }
+}
