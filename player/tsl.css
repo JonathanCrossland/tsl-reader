@@ -577,18 +577,47 @@
 }
 
 @media print {
+    @page {
+        margin: 0;
+    }
+
     .tsl-root {
         padding: 0;
         background: #fff;
     }
 
     .tsl-pages {
+        display: block;
         gap: 0;
+    }
+
+    /* Screen spreads (two-up) must not stay side-by-side when printing */
+    .tsl-root[data-tsl-layout="pages"] .tsl-spread {
+        display: block;
+    }
+
+    .tsl-root[data-tsl-layout="pages"] .tsl-spread .tsl-page {
+        flex: none;
+        width: var(--tsl-page-w);
+        max-width: none;
+        margin: 0 auto;
+    }
+
+    .tsl-page[aria-hidden="true"] {
+        display: none !important;
     }
 
     .tsl-page {
         box-shadow: none;
+        border: 0;
         page-break-after: always;
         break-after: page;
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+    .tsl-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
     }
 }
