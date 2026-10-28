@@ -28,7 +28,7 @@
     "theme": "default",
     "readMode": true,
     "metadata": { "title": "Rich content blocks", "fields": [] },
-    "mergeFields": { "version": 1, "fields": [], "values": { "title": "Rich content blocks" } }
+    "mergeFields": { "version": 0.1, "fields": [], "values": { "title": "Rich content blocks" } }
   },
   "document": {
     "blocks": [
@@ -125,7 +125,7 @@
       {
         "id": "img1",
         "type": "image",
-        "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20480%20320%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%234a6278%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%232f4759%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22320%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Ctext%20x%3D%22240%22%20y%3D%22168%22%20font-family%3D%22Georgia%2Cserif%22%20font-size%3D%2224%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EFigure%3C%2Ftext%3E%3C%2Fsvg%3E",
+        "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20480%20320%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%234a6278%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%232f4759%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22320%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Ctext%20x%3D%22240%22%20y%3D%22168%22%20font-family%3D%22Georgia%2Cserif%22%20font-size%3D%2224%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EFigure%3C%2Ftext%3E%3C%2Fsvg%3E",
         "caption": "Embedded SVG figure with width percent",
         "width": 72
       }

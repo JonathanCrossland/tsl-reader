@@ -239,7 +239,7 @@
                 }
             });
         }
-        return { version: 1, fields: fields, values: values };
+        return { version: 0.1, fields: fields, values: values };
     }
 
     function mergeFieldValues(header) {
@@ -1339,7 +1339,7 @@
             theme: 'default',
             metadata: { fields: [] },
             readMode: true,
-            mergeFields: { version: 1, fields: [], values: {} }
+            mergeFields: { version: 0.1, fields: [], values: {} }
         };
     }
 
@@ -1460,7 +1460,7 @@
         }
         return {
             format: 'talesmith-lang',
-            version: 1,
+            version: 0.1,
             header: header,
             document: { blocks: blocks }
         };

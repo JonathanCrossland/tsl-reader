@@ -1,6 +1,6 @@
 {
   "format": "talesmith-lang",
-  "version": 1,
+  "version": 0.1,
   "header": {
     "page": {
       "formatId": "us-novel",
@@ -32,7 +32,7 @@
       "fields": [{ "name": "Author", "value": "TSL Reader" }]
     },
     "mergeFields": {
-      "version": 1,
+      "version": 0.1,
       "fields": [],
       "values": { "title": "Print layout sample", "author": "TSL Reader" }
     }

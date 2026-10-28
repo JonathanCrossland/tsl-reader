@@ -1,6 +1,6 @@
 {
     "format": "talesmith-lang",
-    "version": 1,
+    "version": 0.1,
     "header": {
         "page": {
             "formatId": "web",
@@ -49,7 +49,7 @@
             ]
         },
         "mergeFields": {
-            "version": 1,
+            "version": 0.1,
             "fields": [],
             "values": {
                 "title": "Talesmith Language"
@@ -94,7 +94,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Specification for the .tsl file format (version 1, draft)"
+                "text": "Specification for the .tsl file format (version 0.1, draft)"
             },
             {
                 "id": "spec5",
@@ -317,7 +317,7 @@
                         "version",
                         "integer",
                         "yes",
-                        "Format version. Only 1 is defined today (draft)."
+                        "Format version. Only 0.1 is defined today (draft)."
                     ],
                     [
                         "header",
@@ -701,7 +701,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Legacy input: blocks with one paragraph, pageFormat us-novel, startPage 1, pageOffsetStart 0. Output header.page.formatId us-novel, kind print, trimMM from 5.5×8.5 in preset, marginsMM from preset inches converted to mm, usePrintGutters true, rowGapMM 2. document.blocks is unchanged. Envelope format talesmith-lang version 1 is added only when serializing a full .tsl file, not when resolving in memory."
+                "text": "Legacy input: blocks with one paragraph, pageFormat us-novel, startPage 1, pageOffsetStart 0. Output header.page.formatId us-novel, kind print, trimMM from 5.5×8.5 in preset, marginsMM from preset inches converted to mm, usePrintGutters true, rowGapMM 2. document.blocks is unchanged. Envelope format talesmith-lang version 0.1 is added only when serializing a full .tsl file, not when resolving in memory."
             },
             {
                 "id": "spec58",
@@ -1898,7 +1898,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Declare metadata.fields (canonical) or editor customFields (legacy). Reference them in text with [FieldName] matching the field name. On publish, Studio writes header.mergeFields with version 1, a fields audit list, and values: an object whose keys are lower-case names and whose values are strings frozen at publish time (title, custom fields, publisheddate when set). At render time with readMode true, lookup uses the lower-case form of the token name against mergeFields.values before other sources (section 7.3)."
+                "text": "Declare metadata.fields (canonical) or editor customFields (legacy). Reference them in text with [FieldName] matching the field name. On publish, Studio writes header.mergeFields with version 0.1, a fields audit list, and values: an object whose keys are lower-case names and whose values are strings frozen at publish time (title, custom fields, publisheddate when set). At render time with readMode true, lookup uses the lower-case form of the token name against mergeFields.values before other sources (section 7.3)."
             },
             {
                 "id": "spec173",
@@ -2441,7 +2441,7 @@
                     ],
                     [
                         "version missing on legacy JSON",
-                        "Assume version 1 when wrapping to envelope."
+                        "Assume version 0.1 when wrapping to envelope."
                     ],
                     [
                         "version > 1",
@@ -2584,7 +2584,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "version 1 is the current interchange version describing Studio and tsl-reader. Parsers must preserve unknown block properties and unknown top-level envelope keys (section 11.3). When version is greater than 1, use best-effort parsing (section 11.1) rather than hard rejection unless security requires it. Reference player: player/tsl.js in the tsl-reader repo. Publish and Lean HTML: src/plugins/studio/node/studio_publisher.php in Talesmith Studio."
+                "text": "version 0.1 is the current interchange version describing Studio and tsl-reader. Parsers must preserve unknown block properties and unknown top-level envelope keys (section 11.3). When version is greater than 1, use best-effort parsing (section 11.1) rather than hard rejection unless security requires it. Reference player: player/tsl.js in the tsl-reader repo. Publish and Lean HTML: src/plugins/studio/node/studio_publisher.php in Talesmith Studio."
             }
         ]
     }
