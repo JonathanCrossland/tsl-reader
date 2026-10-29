@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Talesmith Lang (.tsl) player</title>
     <link rel="stylesheet" href="../player/tsl.css">
     <link rel="stylesheet" href="../player/lab.css">
@@ -28,7 +28,8 @@
                 <span class="tsl-lab-select-wrap">
                     <select data-tsl-sample-select>
                         <option value="">Choose…</option>
-                        <option value="../spec/tsl-spec.tsl" selected>Format specification</option>
+                        <option value="../spec/specification-0.1.tsl" selected>0.1 Specification</option>
+                        <option value="../spec/tsl-spec.tsl">Format specification</option>
                         <option value="../examples/rich-content.tsl">Rich content blocks</option>
                         <option value="../examples/print-layout.tsl">Print layout &amp; pages</option>
                     </select>
@@ -104,6 +105,18 @@
         </div>
     </header>
     <div class="tsl-lab-mount" data-tsl-mount></div>
+    <script>
+    (function (g) {
+        g.__TalesmithTslStorage = {
+            getItem: function (key) {
+                try { return g.localStorage.getItem(key); } catch (e) { return null; }
+            },
+            setItem: function (key, value) {
+                try { g.localStorage.setItem(key, value); } catch (e) { /* private mode */ }
+            }
+        };
+    })(window);
+    </script>
     <script src="../player/tsl.js"></script>
     <script src="lab.js"></script>
     <div class="tsl-lab-float">

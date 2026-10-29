@@ -94,6 +94,31 @@
         });
     }
 
+    function syncReadMenuPosition() {
+        if (!readToggle || !readMenu || readMenu.hidden) {
+            return;
+        }
+        readMenu.style.marginLeft = '';
+        readMenu.style.removeProperty('--tsl-lab-read-menu-top');
+
+        if (window.matchMedia('(max-width: 720px)').matches) {
+            var toggleRect = readToggle.getBoundingClientRect();
+            readMenu.style.setProperty('--tsl-lab-read-menu-top', Math.round(toggleRect.bottom + 8) + 'px');
+        }
+
+        var margin = 16;
+        var menuRect = readMenu.getBoundingClientRect();
+        var shift = 0;
+        if (menuRect.left < margin) {
+            shift = margin - menuRect.left;
+        } else if (menuRect.right > window.innerWidth - margin) {
+            shift = window.innerWidth - margin - menuRect.right;
+        }
+        if (shift !== 0) {
+            readMenu.style.marginLeft = shift + 'px';
+        }
+    }
+
     function setReadMenuOpen(open) {
         if (!readToggle || !readMenu) {
             return;
@@ -101,6 +126,12 @@
         readToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         readMenu.hidden = !open;
         readToggle.classList.toggle('is-open', open);
+        if (open) {
+            requestAnimationFrame(syncReadMenuPosition);
+        } else {
+            readMenu.style.marginLeft = '';
+            readMenu.style.removeProperty('--tsl-lab-read-menu-top');
+        }
     }
 
     if (sampleSelect) {
@@ -168,6 +199,10 @@
                 setReadMenuOpen(false);
                 readToggle.focus();
             }
+        });
+
+        window.addEventListener('resize', function () {
+            syncReadMenuPosition();
         });
     }
 

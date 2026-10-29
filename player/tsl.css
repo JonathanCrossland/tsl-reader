@@ -134,22 +134,173 @@
 }
 
 
-.tsl-root[data-tsl-layout="pages"] .tsl-pages {
-    gap: 2rem;
+.tsl-root[data-tsl-layout="pages"] {
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
+    padding-bottom: 1.5rem;
+    --tsl-pager-gutter: 0.65rem;
+    --tsl-page-fit-w: min(var(--tsl-page-w), 100%);
 }
 
-.tsl-root[data-tsl-layout="pages"] .tsl-spread {
+.tsl-root[data-tsl-layout="pages"][data-tsl-page-view="spread"] {
+    --tsl-page-fit-w: min(var(--tsl-page-w), calc((100% - var(--tsl-pager-gutter)) / 2));
+}
+
+@media (max-width: 1199px) {
+    .tsl-root[data-tsl-layout="pages"] {
+        --tsl-page-fit-w: min(var(--tsl-page-w), 100%);
+    }
+}
+
+.tsl-pager-wrap {
+    width: 100%;
+    max-width: 100%;
+}
+
+.tsl-pager {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+}
+
+.tsl-pager-viewport {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    overflow: auto;
+    max-height: calc(100dvh - 8rem);
+    -webkit-overflow-scrolling: touch;
+    padding: 0 0.15rem;
+}
+
+.tsl-pager-arrow {
+    position: absolute;
+    top: 50%;
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-top: -1.25rem;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--tsl-rule) 70%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--tsl-paper) 90%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    color: var(--tsl-ink);
+    font: inherit;
+    cursor: pointer;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+    transition: border-color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+}
+
+.tsl-pager-arrow--prev {
+    left: 0.25rem;
+}
+
+.tsl-pager-arrow--next {
+    right: 0.25rem;
+}
+
+.tsl-pager-arrow:hover:not(:disabled) {
+    border-color: var(--tsl-muted);
+    background: color-mix(in srgb, var(--tsl-paper) 96%, var(--tsl-ink));
+}
+
+.tsl-pager-arrow:focus-visible {
+    outline: 2px solid var(--tsl-muted);
+    outline-offset: 2px;
+}
+
+.tsl-pager-arrow:disabled {
+    opacity: 0.25;
+    cursor: default;
+    box-shadow: none;
+    pointer-events: none;
+}
+
+.tsl-pager-glyph {
+    font-size: 1.65rem;
+    line-height: 1;
+    font-weight: 600;
+}
+
+.tsl-pager-status {
+    margin: 0.55rem 0 0;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--tsl-muted);
+    font-family: var(--tsl-font-ui, ui-sans-serif, system-ui, sans-serif);
+}
+
+.tsl-root[data-tsl-layout="pages"] .tsl-pages {
+    display: block;
+    width: 100%;
+    gap: 0;
+}
+
+.tsl-root[data-tsl-layout="pages"] .tsl-page:not([aria-hidden="true"]) {
+    width: var(--tsl-page-fit-w);
+}
+
+.tsl-root[data-tsl-layout="pages"] .tsl-spread,
+.tsl-root[data-tsl-layout="pages"] .tsl-pages > .tsl-page:not([aria-hidden="true"]) {
+    display: none;
+}
+
+.tsl-root[data-tsl-layout="pages"][data-tsl-page-view="spread"] .tsl-spread.is-active {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
     justify-content: center;
     align-items: stretch;
-    gap: 0.65rem;
+    gap: var(--tsl-pager-gutter);
+    width: 100%;
     max-width: 100%;
+    margin: 0 auto;
 }
 
-.tsl-root[data-tsl-layout="pages"] .tsl-spread .tsl-page {
-    flex: 0 0 auto;
+.tsl-root[data-tsl-layout="pages"][data-tsl-page-view="spread"] .tsl-spread.is-active .tsl-page {
+    flex: 1 1 0;
+    min-width: 0;
+    width: var(--tsl-page-fit-w);
+    max-width: calc((100% - var(--tsl-pager-gutter)) / 2);
+}
+
+.tsl-root[data-tsl-layout="pages"][data-tsl-page-view="spread"] .tsl-pages > .tsl-page.is-active {
+    display: flex;
+    width: var(--tsl-page-fit-w);
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.tsl-root[data-tsl-layout="pages"][data-tsl-page-view="single"] .tsl-spread {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.tsl-root[data-tsl-layout="pages"][data-tsl-page-view="single"] .tsl-spread .tsl-page {
+    display: none;
+    width: var(--tsl-page-fit-w);
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.tsl-root[data-tsl-layout="pages"][data-tsl-page-view="single"] .tsl-spread .tsl-page.is-active {
+    display: flex;
+}
+
+.tsl-root[data-tsl-layout="pages"][data-tsl-page-view="single"] .tsl-pages > .tsl-page.is-active {
+    display: flex;
+    width: var(--tsl-page-fit-w);
+    max-width: 100%;
+    margin: 0 auto;
 }
 
 .tsl-pages {
@@ -576,9 +727,60 @@
     display: none;
 }
 
+/* Drop caps (lean HTML + paginated .tsl-root) */
+.studio-lean-tsl p.studio-has-dropcap,
+.tsl-root p.studio-has-dropcap,
+.tsl-root .tsl-block--paragraph.studio-has-dropcap {
+    overflow: visible;
+    text-indent: 0;
+}
+
+.dropcap,
+.studio-dropcap {
+    float: left;
+    line-height: 1;
+    margin-top: var(--ts-dc-margin-top, 0);
+    margin-right: var(--ts-dc-margin-right, 0.08em);
+    margin-left: var(--ts-dc-margin-left, 0);
+}
+
+.dropcap:not(.be-dc-glyph-cap),
+.studio-dropcap:not(.be-dc-glyph-cap) {
+    font-size: var(--ts-dc-cap-size, 2.5em);
+}
+
+.dropcap.be-dc-glyph-cap,
+.studio-dropcap.be-dc-glyph-cap {
+    width: var(--ts-dc-cap-size, 2.5em);
+    color: inherit;
+}
+
+.dropcap.be-dc-glyph-cap .be-dc-glyph-svg,
+.studio-dropcap.be-dc-glyph-cap .be-dc-glyph-svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    fill: currentColor;
+}
+
+.rd-article--tsl[data-tsl-layout="pages"] .tsl-reader-player-mount,
+.rd-article--tsl[data-tsl-layout="pages"] .tsl-root {
+    width: 100%;
+    max-width: none;
+}
+
+.rd-article--tsl[data-tsl-layout="pages"] .tsl-pager-wrap {
+    margin: 0 auto;
+}
+
 @media print {
     @page {
         margin: 0;
+    }
+
+    .tsl-pager-arrow,
+    .tsl-pager-status {
+        display: none !important;
     }
 
     .tsl-root {
@@ -589,6 +791,15 @@
     .tsl-pages {
         display: block;
         gap: 0;
+    }
+
+    .tsl-root[data-tsl-layout="pages"] .tsl-spread,
+    .tsl-root[data-tsl-layout="pages"] .tsl-pages > .tsl-page:not([aria-hidden="true"]) {
+        display: block !important;
+    }
+
+    .tsl-root[data-tsl-layout="pages"] .tsl-spread .tsl-page {
+        display: flex !important;
     }
 
     /* Screen spreads (two-up) must not stay side-by-side when printing */

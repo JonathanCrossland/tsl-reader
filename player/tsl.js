@@ -373,6 +373,53 @@
         });
     }
 
+    function isDropCapSpan(el) {
+        if (!el || !el.classList) {
+            return false;
+        }
+        return el.classList.contains('dropcap') || el.classList.contains('studio-dropcap');
+    }
+
+    function cleanDropCapSpan(span) {
+        var style = span.getAttribute('style') || '';
+        span.removeAttribute('style');
+        if (/^[\s;]*(--ts-dc-[\w-]+|float|line-height|color|width|font-size)/i.test(style)) {
+            span.setAttribute('style', style);
+        }
+        Array.prototype.slice.call(span.childNodes).forEach(function (child) {
+            if (child.nodeType !== 1) {
+                return;
+            }
+            var tag = child.tagName.toLowerCase();
+            if (tag === 'svg') {
+                cleanSvgGlyph(child);
+            } else if (tag !== 'span') {
+                while (child.firstChild) {
+                    span.insertBefore(child.firstChild, child);
+                }
+                span.removeChild(child);
+            } else {
+                cleanInline(child);
+            }
+        });
+    }
+
+    function cleanSvgGlyph(svg) {
+        Array.prototype.slice.call(svg.childNodes).forEach(function (child) {
+            if (child.nodeType !== 1) {
+                svg.removeChild(child);
+                return;
+            }
+            var tag = child.tagName.toLowerCase();
+            if (tag !== 'path') {
+                while (child.firstChild) {
+                    svg.insertBefore(child.firstChild, child);
+                }
+                svg.removeChild(child);
+            }
+        });
+    }
+
     function inlineHtml(text) {
         var s = String(text || '');
         if (!s) {
@@ -380,11 +427,19 @@
         }
         var doc = new DOMParser().parseFromString('<div>' + s + '</div>', 'text/html');
         var allowed = { b: 1, strong: 1, i: 1, em: 1, u: 1, a: 1, br: 1, span: 1, sup: 1, sub: 1, code: 1 };
-        function clean(node) {
+        function cleanInline(node) {
             var kids = Array.prototype.slice.call(node.childNodes);
             kids.forEach(function (child) {
                 if (child.nodeType === 1) {
                     var tag = child.tagName.toLowerCase();
+                    if (tag === 'span' && isDropCapSpan(child)) {
+                        cleanDropCapSpan(child);
+                        return;
+                    }
+                    if (tag === 'span' && child.classList.contains('studio-dropcap-rest')) {
+                        cleanInline(child);
+                        return;
+                    }
                     if (!allowed[tag]) {
                         while (child.firstChild) {
                             node.insertBefore(child.firstChild, child);
@@ -400,12 +455,12 @@
                                 child.setAttribute('target', '_blank');
                             }
                         }
-                        clean(child);
+                        cleanInline(child);
                     }
                 }
             });
         }
-        clean(doc.body);
+        cleanInline(doc.body);
         return doc.body.innerHTML;
     }
 
@@ -448,9 +503,238 @@
         return 'any';
     }
 
+    var TSL_SPREAD_GAP_PX = 12;
+    /* Two-up only on desktop-like widths; phones and tablet portrait stay 1-up */
+    var TSL_SPREAD_MIN_VIEWPORT_PX = 1200;
+    var TSL_SPREAD_MIN_HALF_PX = 300;
+
+    function parseCssLengthToPx(root, value) {
+        if (!value) {
+            return 0;
+        }
+        value = String(value).trim();
+        var m = value.match(/^([\d.]+)(mm|pt|px|rem|em)$/);
+        if (!m) {
+            return 0;
+        }
+        var n = parseFloat(m[1]);
+        var unit = m[2];
+        var rootFont = parseFloat(getComputedStyle(root).fontSize) || 16;
+        if (unit === 'mm') {
+            return n * (96 / 25.4);
+        }
+        if (unit === 'pt') {
+            return n * (96 / 72);
+        }
+        if (unit === 'rem' || unit === 'em') {
+            return n * rootFont;
+        }
+        return n;
+    }
+
+    function nominalPageWidthPx(root) {
+        var pagePx = parseCssLengthToPx(root, getComputedStyle(root).getPropertyValue('--tsl-page-w'));
+        var scale = parseFloat(getComputedStyle(root).getPropertyValue('--tsl-reader-scale')) || 1;
+        return pagePx * scale;
+    }
+
+    function attachPagePager(root, pagesEl) {
+        var state = { index: 0, activePage: null, lastView: '' };
+
+        var wrap = document.createElement('div');
+        wrap.className = 'tsl-pager-wrap';
+
+        var pager = document.createElement('div');
+        pager.className = 'tsl-pager';
+        pager.setAttribute('data-tsl-pager', '');
+
+        var prevBtn = document.createElement('button');
+        prevBtn.type = 'button';
+        prevBtn.className = 'tsl-pager-arrow tsl-pager-arrow--prev';
+        prevBtn.setAttribute('aria-label', 'Previous page');
+        prevBtn.innerHTML = '<span class="tsl-pager-glyph" aria-hidden="true">&#8249;</span>';
+
+        var viewport = document.createElement('div');
+        viewport.className = 'tsl-pager-viewport';
+
+        var nextBtn = document.createElement('button');
+        nextBtn.type = 'button';
+        nextBtn.className = 'tsl-pager-arrow tsl-pager-arrow--next';
+        nextBtn.setAttribute('aria-label', 'Next page');
+        nextBtn.innerHTML = '<span class="tsl-pager-glyph" aria-hidden="true">&#8250;</span>';
+
+        var status = document.createElement('p');
+        status.className = 'tsl-pager-status';
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+
+        pager.appendChild(viewport);
+        wrap.appendChild(pager);
+        wrap.appendChild(status);
+
+        root.insertBefore(wrap, pagesEl);
+        viewport.appendChild(pagesEl);
+        viewport.appendChild(prevBtn);
+        viewport.appendChild(nextBtn);
+
+        function visiblePages() {
+            return Array.prototype.filter.call(
+                pagesEl.querySelectorAll('.tsl-page'),
+                function (p) { return !p.hasAttribute('aria-hidden'); }
+            );
+        }
+
+        function spreadSteps() {
+            return Array.prototype.filter.call(pagesEl.children, function (el) {
+                return el.classList.contains('tsl-spread')
+                    || (el.classList.contains('tsl-page') && !el.hasAttribute('aria-hidden'));
+            });
+        }
+
+        function clearActive() {
+            Array.prototype.forEach.call(pagesEl.querySelectorAll('.is-active'), function (el) {
+                el.classList.remove('is-active');
+            });
+        }
+
+        function pageViewMode() {
+            var avail = viewport.clientWidth;
+            if (avail < 1) {
+                avail = root.clientWidth;
+            }
+            if (avail < 1) {
+                avail = window.innerWidth || 0;
+            }
+            if (avail < TSL_SPREAD_MIN_VIEWPORT_PX) {
+                return 'single';
+            }
+            if (!window.matchMedia('(min-width: ' + TSL_SPREAD_MIN_VIEWPORT_PX + 'px)').matches) {
+                return 'single';
+            }
+            var half = (avail - TSL_SPREAD_GAP_PX) / 2;
+            var nominal = nominalPageWidthPx(root);
+            var minHalf = Math.max(TSL_SPREAD_MIN_HALF_PX, Math.min(nominal, nominal * 0.85));
+            if (half < minHalf) {
+                return 'single';
+            }
+            return 'spread';
+        }
+
+        function stepsForView(view) {
+            return view === 'spread' ? spreadSteps() : visiblePages();
+        }
+
+        function remapIndex(steps, view) {
+            if (!state.activePage || !steps.length) {
+                return;
+            }
+            var i;
+            for (i = 0; i < steps.length; i += 1) {
+                if (view === 'spread') {
+                    if (steps[i] === state.activePage || steps[i].contains(state.activePage)) {
+                        state.index = i;
+                        return;
+                    }
+                } else if (steps[i] === state.activePage) {
+                    state.index = i;
+                    return;
+                }
+            }
+        }
+
+        function rememberActiveFromStep(step) {
+            if (step.classList.contains('tsl-spread')) {
+                state.activePage = step.querySelector('.tsl-page');
+            } else {
+                state.activePage = step;
+            }
+        }
+
+        function refresh() {
+            var view = pageViewMode();
+            var viewChanged = view !== state.lastView;
+            state.lastView = view;
+            root.setAttribute('data-tsl-page-view', view);
+
+            var steps = stepsForView(view);
+            if (!steps.length) {
+                clearActive();
+                status.textContent = '';
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                return;
+            }
+
+            if (viewChanged) {
+                remapIndex(steps, view);
+            }
+            if (state.index >= steps.length) {
+                state.index = steps.length - 1;
+            }
+            if (state.index < 0) {
+                state.index = 0;
+            }
+
+            clearActive();
+            var current = steps[state.index];
+            current.classList.add('is-active');
+            rememberActiveFromStep(current);
+
+            prevBtn.disabled = state.index <= 0;
+            nextBtn.disabled = state.index >= steps.length - 1;
+            status.textContent = (view === 'spread' ? 'Spread ' : 'Page ')
+                + (state.index + 1) + ' of ' + steps.length;
+        }
+
+        function go(delta) {
+            var view = root.getAttribute('data-tsl-page-view') || 'single';
+            var steps = stepsForView(view);
+            var next = state.index + delta;
+            if (next < 0 || next >= steps.length) {
+                return;
+            }
+            state.index = next;
+            rememberActiveFromStep(steps[state.index]);
+            refresh();
+        }
+
+        prevBtn.addEventListener('click', function () { go(-1); });
+        nextBtn.addEventListener('click', function () { go(1); });
+
+        var resizeTimer;
+        function schedulePagerRefresh() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(refresh, 120);
+        }
+        window.addEventListener('resize', schedulePagerRefresh);
+        window.addEventListener('orientationchange', schedulePagerRefresh);
+
+        document.addEventListener('keydown', function onPagerKey(e) {
+            if (!root.isConnected || getTslLayout() !== 'pages') {
+                return;
+            }
+            var t = e.target;
+            if (t && t.closest && t.closest('input, textarea, select, [contenteditable="true"]')) {
+                return;
+            }
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                go(-1);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                go(1);
+            }
+        });
+
+        root._tslPagerRefresh = refresh;
+        root._tslPagerStep = go;
+        refresh();
+    }
+
     function render(mount, parsed) {
         var header = parsed.header;
         var blocks = parsed.blocks;
+        ensureHeadingNumbers(blocks, header);
         var page = header.page;
         var ty = header.typography;
         var layoutMode = getTslLayout();
@@ -707,6 +991,9 @@
 
         root.appendChild(pagesEl);
         applyReadingPrefs(root);
+        if (layoutMode === 'pages') {
+            attachPagePager(root, pagesEl);
+        }
         return root;
     }
 
@@ -715,10 +1002,22 @@
     var READER_SIZES = [14, 16, 18, 20, 24];
     var READER_DEFAULT_PREFS = { font: 'serif', size: 18, theme: 'light', width: 'medium' };
 
+    function tslPrefsStorage() {
+        var api = global.__TalesmithTslStorage;
+        if (api && typeof api.getItem === 'function' && typeof api.setItem === 'function') {
+            return api;
+        }
+        return null;
+    }
+
     function loadStored(key, fallback) {
+        var store = tslPrefsStorage();
+        if (!store) {
+            return fallback;
+        }
         try {
-            var raw = localStorage.getItem(key);
-            if (raw === null) {
+            var raw = store.getItem(key);
+            if (raw === null || raw === undefined) {
                 return fallback;
             }
             var v = JSON.parse(raw);
@@ -729,8 +1028,12 @@
     }
 
     function saveStored(key, value) {
+        var store = tslPrefsStorage();
+        if (!store) {
+            return;
+        }
         try {
-            localStorage.setItem(key, JSON.stringify(value));
+            store.setItem(key, JSON.stringify(value));
         } catch (e) { /* private mode */ }
     }
 
@@ -743,6 +1046,15 @@
     }
 
     function getTslLayout() {
+        if (typeof document !== 'undefined' && document.querySelector) {
+            var readerArticle = document.querySelector('[data-reader-article][data-tsl-layout]');
+            if (readerArticle) {
+                var owned = readerArticle.getAttribute('data-tsl-layout');
+                if (owned === 'scroll' || owned === 'pages') {
+                    return owned;
+                }
+            }
+        }
         return loadStored(TSL_LAYOUT_KEY, 'pages') === 'scroll' ? 'scroll' : 'pages';
     }
 
@@ -766,6 +1078,9 @@
         root.setAttribute('data-tsl-reader-width', p.width || 'medium');
         root.setAttribute('data-tsl-layout', layout);
         root.style.setProperty('--tsl-reader-scale', String(readerSizeScale(p.size)));
+        if (layout === 'pages' && typeof root._tslPagerRefresh === 'function') {
+            root._tslPagerRefresh();
+        }
     }
 
     function refreshAllReadingPrefs(relayout) {
@@ -970,7 +1285,15 @@
         if (type === 'paragraph' && !plainText(b.text)) {
             el.classList.add('tsl-block--no-indent');
         }
-        el.innerHTML = inlineHtml(b.text);
+        var inner = inlineHtml(b.text);
+        if (/^h[1-3]$/.test(type)) {
+            var hp = headingDisplayPrefix(b);
+            if (hp) {
+                el.setAttribute('data-heading-number', headingNumberLabel(b.number));
+                inner = escapeHtml(hp) + inner;
+            }
+        }
+        el.innerHTML = inner;
         return el;
     }
 
@@ -980,6 +1303,268 @@
 
     function round2(n) {
         return Math.round(n * 100) / 100;
+    }
+
+    var DC_CAP_HEIGHT = 0.703;
+
+    var NUMHEAD_MODES = { numerals: 'numerals', roman: 'roman' };
+
+    function normalizeNumheadingsMode(mode) {
+        var m = String(mode || '').toLowerCase().trim();
+        return m === NUMHEAD_MODES.numerals || m === NUMHEAD_MODES.roman ? m : null;
+    }
+
+    function headingNumberLabel(raw) {
+        var n = String(raw == null ? '' : raw).trim();
+        if (!n) {
+            return '';
+        }
+        return n.charAt(n.length - 1) === '.' ? n : n + '.';
+    }
+
+    function headingDisplayPrefix(block) {
+        if (!block || block.number == null || String(block.number).trim() === '') {
+            return '';
+        }
+        return headingNumberLabel(block.number) + ' ';
+    }
+
+    function headingNumberAttr(block) {
+        if (!block || block.number == null || String(block.number).trim() === '') {
+            return '';
+        }
+        return ' data-heading-number="' + escapeHtml(headingNumberLabel(block.number)) + '"';
+    }
+
+    function toRoman(n) {
+        n = Math.floor(Number(n) || 0);
+        if (n < 1) {
+            return '0';
+        }
+        if (n > 3999) {
+            return String(n);
+        }
+        var map = [
+            ['M', 1000], ['CM', 900], ['D', 500], ['CD', 400], ['C', 100], ['XC', 90],
+            ['L', 50], ['XL', 40], ['X', 10], ['IX', 9], ['V', 5], ['IV', 4], ['I', 1]
+        ];
+        var out = '';
+        var i;
+        for (i = 0; i < map.length; i += 1) {
+            while (n >= map[i][1]) {
+                out += map[i][0];
+                n -= map[i][1];
+            }
+        }
+        return out;
+    }
+
+    function formatOutlineNumber(counters, level, mode) {
+        var parts = [];
+        var L;
+        for (L = 1; L <= level; L += 1) {
+            var v = counters[L - 1];
+            if (L === 1 && v === 0 && level > 1) {
+                v = 1;
+            }
+            if (mode === NUMHEAD_MODES.roman && L === 1) {
+                parts.push(toRoman(v));
+            } else {
+                parts.push(String(v));
+            }
+        }
+        return parts.join('.');
+    }
+
+    function ensureHeadingNumbers(blocks, header) {
+        if (!Array.isArray(blocks)) {
+            return;
+        }
+        var mode = normalizeNumheadingsMode(header && header.numheadings);
+        if (!mode) {
+            return;
+        }
+        var counters = [0, 0, 0];
+        blocks.forEach(function (b) {
+            if (!b) {
+                return;
+            }
+            var m = /^h([1-3])$/.exec(b.type || '');
+            if (!m) {
+                return;
+            }
+            if (!plainText(b.text)) {
+                if (b.number != null) {
+                    delete b.number;
+                }
+                return;
+            }
+            if (b.number != null && String(b.number).trim() !== '') {
+                return;
+            }
+            var level = parseInt(m[1], 10);
+            counters[level - 1] += 1;
+            for (var j = level; j < 3; j += 1) {
+                counters[j] = 0;
+            }
+            b.number = formatOutlineNumber(counters, level, mode);
+        });
+    }
+
+    var DC_TEXT_INSET = 0.04;
+    var DC_OPTICAL_HANG = 0.065;
+    var DROP_CAP_GLYPHS = {
+        horticulture: {
+            W: '<svg class="be-dc-glyph-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 88" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 82V14c0-2 1-3 3-3h4l18 42 18-42h4c2 0 3 1 3 3v68h-8V38L32 82h-8L16 38v44H8zm28-58c-6 0-10 4-10 10v4c0 6 4 10 10 10s10-4 10-10v-4c0-6-4-10-10-10zm0 6c2 0 4 2 4 4v4c0 2-2 4-4 4s-4-2-4-4v-4c0-2 2-4 4-4z"/><path fill="currentColor" opacity="0.85" d="M2 76c4-8 10-12 18-12 6 0 11 3 14 8l-3 4c-2-3-5-5-9-5-5 0-9 3-12 9l-8-4z"/></svg>'
+        },
+        gothic: {
+            W: '<svg class="be-dc-glyph-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 96" aria-hidden="true" focusable="false"><path fill="currentColor" d="M4 92V4h10l14 52V4h8v88h-10L12 36v56H4zm22 0V28l-8-24h9l7 22 7-22h9l-8 24v64h-8zm18 0V4h10l8 34 8-34h10v88h-8V32l-10 38h-6l-10-38v60h-8z"/></svg>'
+        }
+    };
+
+    function parseDropCapComment(raw) {
+        if (raw == null || raw === '') {
+            return null;
+        }
+        if (typeof raw === 'object') {
+            return normalizeDropCap(raw);
+        }
+        try {
+            return normalizeDropCap(JSON.parse(String(raw)));
+        } catch (e1) {
+            var n = parseInt(raw, 10);
+            if (n >= 1 && n <= 3) {
+                return normalizeDropCap(n);
+            }
+        }
+        return null;
+    }
+
+    function normalizeDropCap(raw) {
+        if (raw == null || raw === false || raw === 0 || raw === '0') {
+            return null;
+        }
+        if (typeof raw === 'number') {
+            return { lines: Math.max(1, Math.min(3, raw | 0)), style: 'normal', characters: 1,
+                includeLeadingPunctuation: true, spacingEm: 0.08, opticalMargin: true,
+                alignBaseline: true, uppercase: false, variant: 'default' };
+        }
+        var o = raw && typeof raw === 'object' ? raw : {};
+        var capStyle = o.capStyle == null || o.capStyle === '' || o.capStyle === 'letter' || o.capStyle === 'none'
+            ? null : String(o.capStyle).toLowerCase();
+        if (capStyle && capStyle !== 'horticulture' && capStyle !== 'gothic') {
+            capStyle = null;
+        }
+        return {
+            lines: Math.max(1, Math.min(3, parseInt(o.lines, 10) || 2)),
+            style: o.style === 'small-caps' ? 'small-caps' : 'normal',
+            characters: Math.max(1, Math.min(8, parseInt(o.characters, 10) || 1)),
+            includeLeadingPunctuation: o.includeLeadingPunctuation !== false,
+            spacingEm: Math.max(0, Math.min(0.5, Number(o.spacingEm) || 0.08)),
+            opticalMargin: o.opticalMargin !== false,
+            alignBaseline: o.alignBaseline !== false,
+            uppercase: !!o.uppercase,
+            variant: o.variant === 'chapter' || o.variant === 'emphasis' ? o.variant : 'default',
+            capStyle: capStyle
+        };
+    }
+
+    function dcFloatMetrics(spec, lineHeight) {
+        var lh = Math.max(1, Math.min(3, Number(lineHeight) || 1.55));
+        var lines = spec.lines;
+        var capFontSizeEm = (lines * lh) / DC_CAP_HEIGHT;
+        var marginRightEm = spec.spacingEm;
+        var marginLeftEm = (spec.opticalMargin ? -(DC_OPTICAL_HANG * capFontSizeEm) : 0) + DC_TEXT_INSET;
+        return {
+            capFontSizeEm: capFontSizeEm,
+            marginRightEm: marginRightEm,
+            marginLeftEm: Math.max(0, marginLeftEm),
+            marginTopEm: 0,
+            lines: lines
+        };
+    }
+
+    function dcInlineStyle(metrics) {
+        return '--ts-dc-cap-size:' + metrics.capFontSizeEm.toFixed(5) + 'em;'
+            + '--ts-dc-margin-right:' + metrics.marginRightEm.toFixed(5) + 'em;'
+            + '--ts-dc-margin-left:' + metrics.marginLeftEm.toFixed(5) + 'em;'
+            + '--ts-dc-margin-top:' + metrics.marginTopEm.toFixed(5) + 'em;'
+            + '--ts-dc-lines:' + metrics.lines + ';'
+            + '--ts-dc-cap-height-ratio:' + DC_CAP_HEIGHT + ';';
+    }
+
+    function lookupDropCapGlyph(capStyle, letter) {
+        if (!capStyle || !letter) {
+            return null;
+        }
+        var style = DROP_CAP_GLYPHS[capStyle];
+        if (!style) {
+            return null;
+        }
+        var key = String(letter).charAt(0).toUpperCase();
+        return style[key] || null;
+    }
+
+    function splitDropCapPlain(plain, spec) {
+        var text = String(plain || '');
+        if (!text.trim()) {
+            return { cap: '', rest: text };
+        }
+        var work = text;
+        var prefix = '';
+        if (spec.includeLeadingPunctuation) {
+            var m = work.match(/^[\s"'“‘«(\[{]+/);
+            if (m) {
+                prefix = m[0];
+                work = work.slice(prefix.length);
+            }
+        }
+        var graphemes = Array.from(work);
+        var n = Math.max(1, Math.min(8, spec.characters | 0));
+        var cap = prefix + graphemes.slice(0, n).join('');
+        var rest = graphemes.slice(n).join('');
+        if (spec.uppercase) {
+            cap = cap.toLocaleUpperCase();
+        }
+        return { cap: cap, rest: rest };
+    }
+
+    function buildDropCapLeanInner(restInlineHtml, plain, block, header) {
+        var spec = normalizeDropCap(block.dropCap);
+        if (spec === null || !plainText(plain)) {
+            return null;
+        }
+        if (/class="[^"]*(?:dropcap|studio-dropcap)/i.test(String(block.text || ''))) {
+            return null;
+        }
+        var parts = splitDropCapPlain(plain, spec);
+        if (!parts.cap) {
+            return null;
+        }
+        var lh = (header && header.typography && header.typography.lineHeight) || 1.55;
+        var metrics = dcFloatMetrics(spec, lh);
+        var style = dcInlineStyle(metrics);
+        var capClass = 'dropcap studio-dropcap studio-dc-variant-' + spec.variant;
+        if (spec.style === 'small-caps') {
+            capClass += ' be-dc-small-caps';
+        }
+        var glyph = lookupDropCapGlyph(spec.capStyle, parts.cap);
+        var capHtml;
+        if (glyph) {
+            capClass += ' be-dc-glyph-cap be-dc-cap-style-' + spec.capStyle;
+            capHtml = '<span class="' + capClass + '" style="' + style
+                + 'float:left;line-height:1;color:inherit;width:var(--ts-dc-cap-size);" aria-hidden="true">'
+                + glyph + '</span>';
+        } else {
+            capHtml = '<span class="' + capClass + '" style="' + style
+                + 'float:left;line-height:1;color:inherit;font-size:var(--ts-dc-cap-size);" aria-hidden="true">'
+                + escapeHtml(parts.cap) + '</span>';
+        }
+        var restHtml = restInlineHtml;
+        if (!/<[a-z][\s\S]*>/i.test(String(block.text || ''))) {
+            restHtml = leanInlineHtml(parts.rest, header, header.readMode !== false);
+        }
+        return capHtml + '<span class="studio-dropcap-rest">' + restHtml + '</span>';
     }
 
     function leanAlignStyle(block) {
@@ -1023,14 +1608,28 @@
             if (!plainText(h)) {
                 return '';
             }
-            return '<' + type + ' style="' + style + '">' + h + '</' + type + '>';
+            return '<' + type + headingNumberAttr(block) + ' style="' + style + '">'
+                + escapeHtml(headingDisplayPrefix(block)) + h + '</' + type + '>';
         }
         if (type === 'paragraph') {
-            var p = leanInlineHtml(block.text, header, readMode);
-            if (!plainText(p)) {
+            var plain = plainText(block.text);
+            var pBody = buildDropCapLeanInner(
+                leanInlineHtml(block.text, header, readMode),
+                plain,
+                block,
+                header
+            );
+            if (!pBody) {
+                pBody = leanInlineHtml(block.text, header, readMode);
+            }
+            if (!plainText(pBody)) {
                 return '<p class="studio-lean-empty" style="' + style + '">&nbsp;</p>';
             }
-            return '<p style="' + style + '">' + p + '</p>';
+            var pClass = block.dropCap ? ' class="studio-has-dropcap"' : '';
+            if (/class="[^"]*(?:dropcap|studio-dropcap)/i.test(String(block.text || ''))) {
+                pClass = ' class="studio-has-dropcap"';
+            }
+            return '<p' + pClass + ' style="' + style + '">' + pBody + '</p>';
         }
         if (type === 'quote') {
             return '<blockquote style="' + style + '">' + leanInlineHtml(block.text, header, readMode) + '</blockquote>';
@@ -1284,6 +1883,7 @@
     function toLeanHtml(parsed) {
         var header = parsed.header;
         var blocks = parsed.blocks;
+        ensureHeadingNumbers(blocks, header);
         var readMode = header.readMode !== false;
         var attrs = articleAttrsFromHeader(header);
         Object.assign(attrs, headerB64Attr(header));
@@ -1355,6 +1955,10 @@
                 meta.cols = parseInt(val, 10) || 2;
             } else if (key === 'align') {
                 meta.align = val;
+            } else if (key === 'dropCap') {
+                meta.dropCap = val;
+            } else if (key === 'number') {
+                meta.number = val;
             }
             return '';
         });
@@ -1383,6 +1987,12 @@
         }
         if (type === 'todo') {
             block.checked = /checked/i.test(innerHtml);
+        }
+        if (meta.dropCap) {
+            block.dropCap = parseDropCapComment(meta.dropCap);
+        }
+        if (meta.number) {
+            block.number = String(meta.number).replace(/\.$/, '');
         }
         return block;
     }
@@ -1454,6 +2064,10 @@
                 var piece = type === 'code' ? plainText(el.textContent) : el.innerHTML;
                 var blk = leanRegionToBlock(meta, piece);
                 if (blk) {
+                    var hn = el.getAttribute('data-heading-number');
+                    if (hn) {
+                        blk.number = String(hn).replace(/\.$/, '');
+                    }
                     blocks.push(blk);
                 }
             }
@@ -1525,6 +2139,89 @@
         return render(mount, parsed);
     }
 
+    function findTslLeanArticle(root) {
+        if (!root || !root.querySelector) {
+            return null;
+        }
+        return root.querySelector('.studio-lean-tsl')
+            || root.querySelector('article.studio-lean-article[data-tsl-w-mm]')
+            || root.querySelector('[data-tsl-w-mm]');
+    }
+
+    function enhancePublishedLean(host) {
+        if (!host) {
+            return null;
+        }
+        var readerArticle = host.matches && host.matches('[data-reader-article]')
+            ? host : host.querySelector('[data-reader-article]');
+        if (!readerArticle) {
+            readerArticle = host;
+        }
+        var shell = readerArticle.querySelector('.document-tsl');
+        if (!shell) {
+            var leanOnly = findTslLeanArticle(readerArticle);
+            if (!leanOnly) {
+                return null;
+            }
+            applyTslLayoutVarsToArticle(leanOnly);
+            applyLeanReadingPrefs(leanOnly);
+            return { mode: 'scroll' };
+        }
+        var wrap = shell.querySelector('.post-lean-html-article-wrap') || shell;
+        var leanArticle = findTslLeanArticle(wrap);
+        if (leanArticle && !readerArticle._tslLeanBackup) {
+            readerArticle._tslLeanBackup = wrap.innerHTML;
+        }
+        var layout = readerArticle.getAttribute('data-tsl-layout');
+        if (layout !== 'scroll' && layout !== 'pages') {
+            layout = getTslLayout();
+        }
+        if (layout === 'scroll') {
+            if (readerArticle._tslLeanBackup && !findTslLeanArticle(wrap)) {
+                wrap.innerHTML = readerArticle._tslLeanBackup;
+                leanArticle = findTslLeanArticle(wrap);
+            }
+            applyTslLayoutVarsToArticle(leanArticle);
+            applyLeanReadingPrefs(leanArticle);
+            readerArticle._tslPlayer = null;
+            return { mode: 'scroll' };
+        }
+        if (readerArticle._tslLeanBackup && !findTslLeanArticle(wrap)) {
+            wrap.innerHTML = readerArticle._tslLeanBackup;
+            leanArticle = findTslLeanArticle(wrap);
+        }
+        if (!leanArticle || !leanArticle.getAttribute('data-tsl-header-b64')) {
+            applyTslLayoutVarsToArticle(leanArticle);
+            applyLeanReadingPrefs(leanArticle);
+            return { mode: 'scroll' };
+        }
+        var envelope = leanHtmlToEnvelope('<div class="document-tsl post-lean-html">' + wrap.innerHTML + '</div>');
+        var parsed = { header: envelope.header, blocks: envelope.document.blocks };
+        var mount = document.createElement('div');
+        mount.className = 'tsl-reader-player-mount';
+        mount.setAttribute('data-tsl-mount', 'reader');
+        mount._tslParsed = parsed;
+        wrap.innerHTML = '';
+        wrap.appendChild(mount);
+        var root = render(mount, parsed);
+        var player = {
+            mode: 'pages',
+            root: root,
+            step: function (delta) {
+                if (root && typeof root._tslPagerStep === 'function') {
+                    root._tslPagerStep(delta);
+                }
+            },
+            refresh: function () {
+                if (root && typeof root._tslPagerRefresh === 'function') {
+                    root._tslPagerRefresh();
+                }
+            }
+        };
+        readerArticle._tslPlayer = player;
+        return player;
+    }
+
     global.TalesmithTsl = {
         parse: parse,
         resolveHeader: resolveHeader,
@@ -1543,6 +2240,9 @@
         getTslLayout: getTslLayout,
         setReadingPref: setReadingPref,
         applyReadingPrefs: applyReadingPrefs,
+        applyTslLayoutVarsToArticle: applyTslLayoutVarsToArticle,
+        applyLeanReadingPrefs: applyLeanReadingPrefs,
+        enhancePublishedLean: enhancePublishedLean,
         bindReadingPrefsUI: bindReadingPrefsUI,
         resetReadingPrefs: resetReadingPrefs
     };

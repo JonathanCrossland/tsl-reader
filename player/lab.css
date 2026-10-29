@@ -23,6 +23,8 @@
     --lab-font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
     --lab-font-display: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
     --lab-header-max: 56rem;
+    /* 16px avoids iOS Safari focus-zoom on selects and inputs */
+    --lab-control-font-size: 1rem;
 }
 
 *,
@@ -40,6 +42,8 @@ body {
     color: var(--lab-ink);
     background: var(--lab-bg-subtle);
     -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
 }
 
 /* —— Header —— */
@@ -251,14 +255,15 @@ body {
 
 .tsl-lab-sample-label select {
     appearance: none;
-    font: inherit;
-    font-size: 0.8125rem;
+    font-family: var(--lab-font-ui);
+    font-size: var(--lab-control-font-size);
     font-weight: 500;
+    line-height: 1.25;
     color: var(--lab-ink);
     width: 100%;
     min-width: 8rem;
     max-width: 100%;
-    padding: 0.35rem 1.75rem 0.35rem 0.6rem;
+    padding: 0.3rem 1.75rem 0.3rem 0.55rem;
     border: 1px solid var(--lab-border-strong);
     border-radius: var(--lab-radius-sm);
     background: var(--lab-surface-elevated);
@@ -373,8 +378,12 @@ body {
     right: 0;
     top: calc(100% + 0.5rem);
     z-index: 200;
-    width: min(21rem, calc(100vw - 2.5rem));
+    width: min(21rem, calc(100vw - 2rem));
+    max-height: calc(100dvh - 5rem);
     padding: 0.85rem 1rem 1rem;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
     background: var(--lab-surface-elevated);
     border: 1px solid var(--lab-border);
     border-radius: var(--lab-radius-md);
@@ -415,7 +424,7 @@ body {
 
 .tsl-lab-read-row {
     display: grid;
-    grid-template-columns: 5.25rem 1fr;
+    grid-template-columns: 5.25rem minmax(0, 1fr);
     align-items: center;
     gap: 0.5rem 0.75rem;
     margin-bottom: 0.65rem;
@@ -433,6 +442,8 @@ body {
 
 .tsl-lab-read .tsl-lab-seg {
     width: fit-content;
+    max-width: 100%;
+    flex-wrap: wrap;
 }
 
 .tsl-lab-read .tsl-lab-seg button {
@@ -548,6 +559,36 @@ body {
         flex: 1 1 100%;
         text-align: left;
         padding-top: 0.15rem;
+    }
+
+    .tsl-lab-read-menu {
+        position: fixed;
+        left: 1rem;
+        right: 1rem;
+        width: auto;
+        max-width: none;
+        top: var(--tsl-lab-read-menu-top, 4.5rem);
+        max-height: min(70dvh, calc(100dvh - var(--tsl-lab-read-menu-top, 4.5rem) - 1rem));
+    }
+
+    .tsl-lab-read-row {
+        grid-template-columns: 1fr;
+        gap: 0.35rem;
+        align-items: stretch;
+    }
+
+    .tsl-lab-read .tsl-lab-seg {
+        width: 100%;
+    }
+
+    .tsl-lab-read .tsl-lab-seg button {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .tsl-lab-sizes {
+        flex-wrap: wrap;
+        width: 100%;
     }
 }
 
