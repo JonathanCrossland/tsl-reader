@@ -6,13 +6,15 @@
 
 Serve this folder statically (e.g. XAMPP) and open **`lab/index.html`**. The lab loads **`spec/tsl-spec.tsl`** by default and includes sample documents.
 
+**Talesmith Reader:** after lab looks correct, sync `player/` into the ientra repo with `php tooling/sync_tsl_reader_player.php` (from ientra root; requires this repo as `../tsl-reader`), rebuild the node, and test a published TSL reading copy in the Reader plugin.
+
 ## Layout
 
 | Path | Purpose |
 |------|---------|
 | `spec/` | Format specification (`tsl-spec.tsl`) |
-| `player/` | Reference renderer (`talesmith.js`, `talesmith.css`) |
-| `lab/` | Interactive player and reading-settings demo |
+| `player/` | Reference renderer (`tsl.js`, `tsl.css`, `dropcap-glyphs.json`) |
+| `lab/` | Interactive player and reading-settings demo — **prove player changes here first** |
 | `examples/` | Focused block demos (`rich-content.tsl`, `print-layout.tsl`) |
 
 ## License

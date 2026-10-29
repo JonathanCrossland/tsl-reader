@@ -504,9 +504,9 @@
     }
 
     var TSL_SPREAD_GAP_PX = 12;
-    /* Two-up only on desktop-like widths; phones and tablet portrait stay 1-up */
-    var TSL_SPREAD_MIN_VIEWPORT_PX = 1200;
-    var TSL_SPREAD_MIN_HALF_PX = 300;
+    /* Two-up from ~960px content width (same threshold as Talesmith EPUB Reader) */
+    var TSL_SPREAD_MIN_VIEWPORT_PX = 960;
+    var TSL_SPREAD_MIN_HALF_PX = 240;
 
     function parseCssLengthToPx(root, value) {
         if (!value) {
@@ -612,9 +612,7 @@
                 return 'single';
             }
             var half = (avail - TSL_SPREAD_GAP_PX) / 2;
-            var nominal = nominalPageWidthPx(root);
-            var minHalf = Math.max(TSL_SPREAD_MIN_HALF_PX, Math.min(nominal, nominal * 0.85));
-            if (half < minHalf) {
+            if (half < TSL_SPREAD_MIN_HALF_PX) {
                 return 'single';
             }
             return 'spread';
@@ -740,6 +738,7 @@
         var layoutMode = getTslLayout();
         var root = document.createElement('div');
         root.className = 'tsl-root';
+        root.setAttribute('data-tsl-layout', layoutMode);
         root.setAttribute('data-tsl-theme', header.theme || 'default');
         if (ty.hyphenation) {
             root.setAttribute('data-tsl-hyphenate', '1');
@@ -2168,6 +2167,19 @@
             || root.querySelector('[data-tsl-w-mm]');
     }
 
+    function leanSupportsPagination(article, wrapHtml) {
+        if (!article) {
+            return false;
+        }
+        if (article.getAttribute('data-tsl-header-b64')) {
+            return true;
+        }
+        if (article.getAttribute('data-tsl-w-mm') && article.getAttribute('data-tsl-h-mm')) {
+            return true;
+        }
+        return !!(wrapHtml && /studio:tsl-settings\s+encoding="b64"/.test(wrapHtml));
+    }
+
     function enhancePublishedLean(host) {
         if (!host) {
             return null;
@@ -2210,7 +2222,7 @@
             wrap.innerHTML = readerArticle._tslLeanBackup;
             leanArticle = findTslLeanArticle(wrap);
         }
-        if (!leanArticle || !leanArticle.getAttribute('data-tsl-header-b64')) {
+        if (!leanArticle || !leanSupportsPagination(leanArticle, wrap.innerHTML)) {
             applyTslLayoutVarsToArticle(leanArticle);
             applyLeanReadingPrefs(leanArticle);
             return { mode: 'scroll' };
