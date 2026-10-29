@@ -1290,7 +1290,11 @@
             var hp = headingDisplayPrefix(b);
             if (hp) {
                 el.setAttribute('data-heading-number', headingNumberLabel(b.number));
-                inner = escapeHtml(hp) + inner;
+                var plain = plainText(b.text);
+                var prefPlain = hp.trim();
+                if (plain.indexOf(prefPlain) !== 0 && plain.indexOf(prefPlain.replace(/\.$/, '')) !== 0) {
+                    inner = escapeHtml(hp) + inner;
+                }
             }
         }
         el.innerHTML = inner;
@@ -1327,6 +1331,23 @@
             return '';
         }
         return headingNumberLabel(block.number) + ' ';
+    }
+
+    function headingBodyHtml(block, header, readMode) {
+        var body = leanInlineHtml(block.text, header, readMode);
+        var pref = headingDisplayPrefix(block);
+        if (!pref) {
+            return body;
+        }
+        var plain = plainText(block.text);
+        var prefPlain = pref.trim();
+        if (plain.indexOf(prefPlain) === 0) {
+            return body;
+        }
+        if (plain.indexOf(prefPlain.replace(/\.$/, '')) === 0) {
+            return body;
+        }
+        return escapeHtml(pref) + body;
     }
 
     function headingNumberAttr(block) {
@@ -1604,12 +1625,11 @@
             return '<h1 class="studio-lean-title" style="' + style + '">' + t + '</h1>';
         }
         if (type === 'h1' || type === 'h2' || type === 'h3') {
-            var h = leanInlineHtml(block.text, header, readMode);
-            if (!plainText(h)) {
+            if (!plainText(block.text)) {
                 return '';
             }
             return '<' + type + headingNumberAttr(block) + ' style="' + style + '">'
-                + escapeHtml(headingDisplayPrefix(block)) + h + '</' + type + '>';
+                + headingBodyHtml(block, header, readMode) + '</' + type + '>';
         }
         if (type === 'paragraph') {
             var plain = plainText(block.text);
