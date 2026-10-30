@@ -17,6 +17,28 @@
         TalesmithTsl.bindReadingPrefsUI(settings);
     }
 
+    var printBtn = document.querySelector('[data-tsl-print]');
+    if (printBtn) {
+        printBtn.addEventListener('click', function () {
+            window.print();
+        });
+    }
+
+    function syncPageFitRowVisibility() {
+        var row = document.querySelector('[data-tsl-pagefit-row]');
+        if (!row || !TalesmithTsl.getTslLayout) {
+            return;
+        }
+        row.hidden = TalesmithTsl.getTslLayout() === 'scroll';
+    }
+
+    if (settings) {
+        settings.addEventListener('click', function () {
+            window.setTimeout(syncPageFitRowVisibility, 0);
+        });
+    }
+    syncPageFitRowVisibility();
+
     function setStatus(msg, isError) {
         if (!status) {
             return;

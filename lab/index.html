@@ -41,6 +41,7 @@
             </label>
             <button type="button" class="tsl-lab-btn tsl-lab-btn-ghost" data-tsl-download hidden>Download</button>
             <button type="button" class="tsl-lab-btn tsl-lab-btn-ghost" data-tsl-reload hidden>Reload</button>
+            <button type="button" class="tsl-lab-btn tsl-lab-btn-secondary" data-tsl-print title="Print or save as PDF">Print</button>
             <span class="tsl-lab-status" data-tsl-status role="status" aria-live="polite"></span>
             <div class="tsl-lab-typo-wrap">
                 <button type="button" class="tsl-lab-typo-btn" data-tsl-read-toggle aria-expanded="false" aria-haspopup="dialog" aria-controls="tsl-read-menu" title="Reading settings">
@@ -93,6 +94,14 @@
                             <div class="tsl-lab-seg" role="radiogroup" aria-label="Layout">
                                 <button type="button" role="radio" data-tsl-pref="layout" data-value="pages">Pages</button>
                                 <button type="button" role="radio" data-tsl-pref="layout" data-value="scroll">Scroll</button>
+                            </div>
+                        </div>
+                        <div class="tsl-lab-read-row" data-tsl-pagefit-row>
+                            <span class="tsl-lab-read-label">Page size</span>
+                            <div class="tsl-lab-seg" role="radiogroup" aria-label="Page size on screen">
+                                <button type="button" role="radio" data-tsl-pref="pageFit" data-value="fit">Fit width</button>
+                                <button type="button" role="radio" data-tsl-pref="pageFit" data-value="scale">Fit screen</button>
+                                <button type="button" role="radio" data-tsl-pref="pageFit" data-value="native">Actual</button>
                             </div>
                         </div>
                         <div class="tsl-lab-read-foot">
