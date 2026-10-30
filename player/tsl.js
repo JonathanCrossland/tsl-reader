@@ -67,6 +67,9 @@
             if (header.readMode === undefined) {
                 header.readMode = true;
             }
+            if (header.allowScrollMode === undefined) {
+                header.allowScrollMode = true;
+            }
             return { header: header, blocks: blocks };
         }
         return {
@@ -157,6 +160,7 @@
             theme: c.theme || 'default',
             metadata: metadata,
             readMode: true,
+            allowScrollMode: c.allowScrollMode !== false,
             mergeFields: synthesizeMergeFields(c, blocksFromContent(c))
         };
         return header;
@@ -1753,6 +1757,7 @@
             return null;
         }
         mount._tslParsed = parsed;
+        stampTslReadingCapabilities(parsed.header, mount);
         var layout = getTslLayout();
         if (layout === 'scroll') {
             return mountLeanHtml(mount, parsed);
@@ -1760,7 +1765,74 @@
         return render(mount, parsed);
     }
 
+    function tslHeaderAllowsScroll(header) {
+        if (!header || header.allowScrollMode === undefined) {
+            return true;
+        }
+        return header.allowScrollMode !== false;
+    }
+
+    function getActiveTslHeader() {
+        if (typeof document === 'undefined' || !document.querySelector) {
+            return null;
+        }
+        var mount = document.querySelector('[data-tsl-mount]');
+        if (mount && mount._tslParsed && mount._tslParsed.header) {
+            return mount._tslParsed.header;
+        }
+        var art = document.querySelector('[data-reader-article]');
+        if (art && art._tslParsedEnvelope && art._tslParsedEnvelope.header) {
+            return art._tslParsedEnvelope.header;
+        }
+        if (art && art.getAttribute('data-tsl-allow-scroll') === '0') {
+            return { allowScrollMode: false };
+        }
+        var lean = document.querySelector('[data-tsl-header-b64]');
+        if (lean && typeof leanHtmlToEnvelope === 'function') {
+            try {
+                return leanHtmlToEnvelope(lean.outerHTML).header;
+            } catch (e) { /* ignore */ }
+        }
+        return null;
+    }
+
+    function getTslReadingCapabilities(header) {
+        return { allowScrollMode: tslHeaderAllowsScroll(header || getActiveTslHeader()) };
+    }
+
+    function stampTslReadingCapabilities(header, root) {
+        var allow = tslHeaderAllowsScroll(header);
+        var flag = allow ? '1' : '0';
+        var art = null;
+        if (root) {
+            if (root.matches && root.matches('[data-reader-article]')) {
+                art = root;
+            } else if (root.closest) {
+                art = root.closest('[data-reader-article]');
+            }
+            if (root.setAttribute) {
+                root.setAttribute('data-tsl-allow-scroll', flag);
+            }
+        }
+        if (art) {
+            art.setAttribute('data-tsl-allow-scroll', flag);
+            if (!allow && art.getAttribute('data-tsl-layout') === 'scroll') {
+                art.setAttribute('data-tsl-layout', 'pages');
+            }
+            var shell = art.querySelector('.document-tsl');
+            if (shell) {
+                shell.setAttribute('data-tsl-allow-scroll', flag);
+            }
+        }
+        if (!allow && loadStored(TSL_LAYOUT_KEY, 'pages') === 'scroll') {
+            saveStored(TSL_LAYOUT_KEY, 'pages');
+        }
+    }
+
     function getTslLayout() {
+        if (!getTslReadingCapabilities().allowScrollMode) {
+            return 'pages';
+        }
         var stored = loadStored(TSL_LAYOUT_KEY, 'pages') === 'scroll' ? 'scroll' : 'pages';
         if (typeof document !== 'undefined' && document.querySelector) {
             var readerArticle = document.querySelector('[data-reader-article][data-tsl-layout]');
@@ -1839,6 +1911,9 @@
 
     function setReadingPref(key, value) {
         if (key === 'layout') {
+            if (value === 'scroll' && !getTslReadingCapabilities().allowScrollMode) {
+                return;
+            }
             saveStored(TSL_LAYOUT_KEY, value === 'scroll' ? 'scroll' : 'pages');
             refreshAllReadingPrefs(true);
             return;
@@ -1877,6 +1952,10 @@
         }
         var p = getReadingPrefs();
         var layout = getTslLayout();
+        var caps = getTslReadingCapabilities();
+        container.querySelectorAll('[data-tsl-layout-row]').forEach(function (row) {
+            row.hidden = !caps.allowScrollMode;
+        });
         container.querySelectorAll('[data-tsl-pref]').forEach(function (b) {
             var key = b.getAttribute('data-tsl-pref');
             var cur = key === 'layout' ? layout : (key === 'size' ? String(p.size)
@@ -3430,6 +3509,7 @@
     function display(mount, parsed, mode) {
         if (mount) {
             mount._tslParsed = parsed;
+            stampTslReadingCapabilities(parsed && parsed.header, mount);
         }
         if (mode === 'lean') {
             return mountLeanHtml(mount, parsed);
@@ -3484,6 +3564,7 @@
         } catch (e) {
             return null;
         }
+        stampTslReadingCapabilities(parsed.header, readerArticle);
         var layout = readerArticle.getAttribute('data-tsl-layout');
         if (layout !== 'scroll' && layout !== 'pages') {
             layout = getTslLayout();
@@ -3689,6 +3770,7 @@
         loadText: loadText,
         getReadingPrefs: getReadingPrefs,
         getTslLayout: getTslLayout,
+        getTslReadingCapabilities: getTslReadingCapabilities,
         getPageFit: getPageFit,
         setReadingPref: setReadingPref,
         applyReadingPrefs: applyReadingPrefs,
@@ -3697,6 +3779,7 @@
         enhancePublishedLean: enhancePublishedLean,
         repaginateReaderArticle: repaginateReaderArticle,
         mountReaderEnvelope: mountReaderEnvelope,
+        syncReadingPrefsUI: syncReadingPrefsUI,
         bindReadingPrefsUI: bindReadingPrefsUI,
         resetReadingPrefs: resetReadingPrefs,
         collectDocumentOutline: collectDocumentOutline,

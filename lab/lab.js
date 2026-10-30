@@ -178,6 +178,10 @@
         }
         lastParsed = parsed;
         TalesmithTsl.display(mount, parsed);
+        if (settings && TalesmithTsl.syncReadingPrefsUI) {
+            TalesmithTsl.syncReadingPrefsUI(settings);
+        }
+        syncPageFitRowVisibility();
         rebuildLabContents(parsed);
         setStatus('');
     }
