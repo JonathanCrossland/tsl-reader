@@ -597,17 +597,111 @@
             });
         }
 
+        function fitContainerEl() {
+            return root.closest('[data-tsl-fit-container]')
+                || root.closest('[data-tsl-mount]')
+                || wrap.parentElement
+                || root;
+        }
+
         function containerWidthPx() {
-            var mount = root.closest('[data-tsl-mount]');
-            var w = 0;
-            if (mount && mount.clientWidth > 0) {
-                w = mount.clientWidth;
-            } else if (viewport.clientWidth > 0) {
-                w = viewport.clientWidth;
-            } else if (root.clientWidth > 0) {
+            var w = viewport.clientWidth;
+            var box = fitContainerEl();
+            if (box && box.clientWidth > w) {
+                w = box.clientWidth;
+            }
+            if (root.clientWidth > w) {
                 w = root.clientWidth;
             }
             return w;
+        }
+
+        function nominalTrimPageSizePx() {
+            var cs = getComputedStyle(root);
+            return {
+                w: parseCssLengthToPx(root, cs.getPropertyValue('--tsl-page-w')),
+                h: parseCssLengthToPx(root, cs.getPropertyValue('--tsl-page-h'))
+            };
+        }
+
+        function stepLayoutSizeMeasured(step) {
+            var gap = 0;
+            var w = 0;
+            var h = 0;
+            if (step.classList.contains('tsl-spread')) {
+                var pages = step.querySelectorAll('.tsl-page');
+                Array.prototype.forEach.call(pages, function (p) {
+                    var sz = pageElementSize(p);
+                    w += sz.w;
+                    h = Math.max(h, sz.h);
+                });
+                if (pages.length > 1) {
+                    gap = TSL_SPREAD_GAP_PX;
+                }
+            } else {
+                var szOne = pageElementSize(step);
+                w = szOne.w;
+                h = szOne.h;
+            }
+            return { w: w + gap, h: h };
+        }
+
+        function stepLayoutSize(step) {
+            var nom = nominalTrimPageSizePx();
+            if (nom.w < 1 || nom.h < 1) {
+                return stepLayoutSizeMeasured(step);
+            }
+            if (step.classList.contains('tsl-spread')) {
+                var n = step.querySelectorAll('.tsl-page').length;
+                if (n < 1) {
+                    n = 1;
+                }
+                return {
+                    w: nom.w * Math.min(n, 2) + (n > 1 ? TSL_SPREAD_GAP_PX : 0),
+                    h: nom.h
+                };
+            }
+            return { w: nom.w, h: nom.h };
+        }
+
+        /** Host-defined stage (data-tsl-fit-container): geometry only, no chrome constants. */
+        function pagerStageSize() {
+            var inset = 8;
+            var box = fitContainerEl();
+            var vpRect = viewport.getBoundingClientRect();
+            var w = viewport.clientWidth;
+            if (w < 1) {
+                w = vpRect.width;
+            }
+            if (box) {
+                var boxRect = box.getBoundingClientRect();
+                if (boxRect.width > 0) {
+                    w = Math.min(w > 0 ? w : boxRect.width, boxRect.width);
+                }
+            }
+            var h = viewport.clientHeight;
+            if (h < 1) {
+                h = vpRect.height;
+            }
+            if (box) {
+                var boxRect2 = box.getBoundingClientRect();
+                var top = Math.max(vpRect.top, boxRect2.top);
+                var bottom = Math.min(vpRect.bottom, boxRect2.bottom);
+                if (status.offsetParent) {
+                    var st = status.getBoundingClientRect();
+                    if (st.top > vpRect.top + 2 && st.top < bottom) {
+                        bottom = Math.min(bottom, st.top);
+                    }
+                }
+                var clipH = bottom - top;
+                if (clipH > h) {
+                    h = clipH;
+                }
+            }
+            return {
+                w: Math.max(0, Math.floor(w - inset)),
+                h: Math.max(0, Math.floor(h - inset))
+            };
         }
 
         function pageViewMode() {
@@ -728,51 +822,6 @@
             root.style.removeProperty('--tsl-viewport-scale');
         }
 
-        function readingContainerEl() {
-            return root.closest('[data-tsl-fit-container]')
-                || root.closest('[data-tsl-mount]')
-                || wrap.parentElement
-                || root;
-        }
-
-        function pagerStageSize() {
-            var mount = readingContainerEl();
-            var inset = 8;
-            var w = 0;
-            var h = 0;
-            var vpRect = viewport.getBoundingClientRect();
-
-            if (mount) {
-                var mountRect = mount.getBoundingClientRect();
-                var statusRect = status.getBoundingClientRect();
-
-                w = vpRect.width > 0 ? vpRect.width : mount.clientWidth;
-
-                if (status.offsetHeight > 0 && statusRect.top > vpRect.top + 8) {
-                    h = statusRect.top - vpRect.top;
-                }
-                if (h < 32) {
-                    h = mountRect.bottom - vpRect.top;
-                }
-                if (h < 32 && mount.clientHeight > 0) {
-                    h = mount.clientHeight - status.offsetHeight;
-                }
-
-                w = Math.min(w, mountRect.width);
-                if (mountRect.bottom > vpRect.top) {
-                    h = Math.min(h, mountRect.bottom - vpRect.top);
-                }
-            } else {
-                w = vpRect.width || viewport.clientWidth;
-                h = vpRect.height || viewport.clientHeight;
-            }
-
-            return {
-                w: Math.max(0, Math.floor(w - inset)),
-                h: Math.max(0, Math.floor(h - inset))
-            };
-        }
-
         function pageElementSize(pageEl) {
             if (!pageEl) {
                 return { w: 0, h: 0 };
@@ -796,28 +845,6 @@
                 h = Math.max(h, stack);
             }
             return { w: w, h: h };
-        }
-
-        function stepLayoutSize(step) {
-            var gap = 0;
-            var w = 0;
-            var h = 0;
-            if (step.classList.contains('tsl-spread')) {
-                var pages = step.querySelectorAll('.tsl-page');
-                Array.prototype.forEach.call(pages, function (p) {
-                    var sz = pageElementSize(p);
-                    w += sz.w;
-                    h = Math.max(h, sz.h);
-                });
-                if (pages.length > 1) {
-                    gap = TSL_SPREAD_GAP_PX;
-                }
-            } else {
-                var szOne = pageElementSize(step);
-                w = szOne.w;
-                h = szOne.h;
-            }
-            return { w: w + gap, h: h };
         }
 
         function applyStepTransform(step, layout, scale, opts) {
@@ -870,19 +897,13 @@
             viewport.style.overflowX = 'auto';
             viewport.style.overflowY = 'auto';
 
-            if (fit === 'native') {
+            if (fit === 'native' || fit === 'fit') {
                 return;
             }
 
             var layout = stepLayoutSize(current);
             var avail = pagerStageSize();
             if (layout.w < 1 || layout.h < 1 || avail.w < 1 || avail.h < 1) {
-                return;
-            }
-
-            if (fit === 'fit') {
-                var wOnly = Math.min(1, avail.w / layout.w);
-                applyStepTransform(current, layout, wOnly, { lockHeight: false, stageHeight: 0 });
                 return;
             }
 
@@ -964,9 +985,9 @@
         if (typeof ResizeObserver !== 'undefined') {
             var pagerResizeObs = new ResizeObserver(schedulePagerRefresh);
             pagerResizeObs.observe(viewport);
-            var mountObsEl = root.closest('[data-tsl-mount]');
-            if (mountObsEl) {
-                pagerResizeObs.observe(mountObsEl);
+            var fitObsEl = fitContainerEl();
+            if (fitObsEl && fitObsEl !== viewport) {
+                pagerResizeObs.observe(fitObsEl);
             }
             root._tslPagerResizeObs = pagerResizeObs;
         }
@@ -2649,19 +2670,18 @@
             layout = getTslLayout();
         }
         if (layout === 'scroll') {
+            wrap.classList.remove('tsl-reader-player-mount');
+            wrap.removeAttribute('data-tsl-mount');
             mountLeanHtml(wrap, parsed);
             applyTslLayoutVarsToArticle(findTslLeanArticle(wrap));
             applyLeanReadingPrefs(findTslLeanArticle(wrap));
             readerArticle._tslPlayer = { mode: 'scroll' };
             return readerArticle._tslPlayer;
         }
-        var mount = document.createElement('div');
-        mount.className = 'tsl-reader-player-mount';
-        mount.setAttribute('data-tsl-mount', 'reader');
-        mount._tslParsed = parsed;
         wrap.innerHTML = '';
-        wrap.appendChild(mount);
-        var root = render(mount, parsed);
+        wrap.classList.add('tsl-reader-player-mount');
+        wrap.setAttribute('data-tsl-mount', 'reader');
+        var root = render(wrap, parsed);
         var player = {
             mode: 'pages',
             root: root,
@@ -2669,6 +2689,17 @@
                 if (typeof root._tslPagerStep === 'function') {
                     root._tslPagerStep(delta);
                 }
+            },
+            refresh: function () {
+                if (typeof root._tslPagerRefresh === 'function') {
+                    root._tslPagerRefresh();
+                }
+            },
+            goToIndex: function (idx) {
+                if (typeof root._tslPagerGoToIndex === 'function') {
+                    return root._tslPagerGoToIndex(idx);
+                }
+                return false;
             },
             progress: function () {
                 if (typeof root._tslPagerInfo !== 'function') {
@@ -2741,13 +2772,10 @@
         }
         var envelope = leanHtmlToEnvelope('<div class="document-tsl post-lean-html">' + wrap.innerHTML + '</div>');
         var parsed = { header: envelope.header, blocks: envelope.document.blocks };
-        var mount = document.createElement('div');
-        mount.className = 'tsl-reader-player-mount';
-        mount.setAttribute('data-tsl-mount', 'reader');
-        mount._tslParsed = parsed;
         wrap.innerHTML = '';
-        wrap.appendChild(mount);
-        var root = render(mount, parsed);
+        wrap.classList.add('tsl-reader-player-mount');
+        wrap.setAttribute('data-tsl-mount', 'reader');
+        var root = render(wrap, parsed);
         var player = {
             mode: 'pages',
             root: root,
