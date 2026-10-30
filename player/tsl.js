@@ -1043,7 +1043,17 @@
         }
 
         function goToElement(el) {
+            if (!el) {
+                return false;
+            }
             var i = stepForElement(el);
+            if (i < 0 && el.id) {
+                var byId = findInDocumentAnchorTarget('#' + el.id, root);
+                if (byId && byId !== el) {
+                    i = stepForElement(byId);
+                    el = byId;
+                }
+            }
             if (i < 0) {
                 return false;
             }
@@ -1411,6 +1421,7 @@
         if (layoutMode === 'pages') {
             attachPagePager(root, pagesEl);
         }
+        bindInDocumentAnchorClicks(root);
         updateTslPrintPageRule(root);
         bindTslPrintLifecycle();
         return root;
@@ -1635,6 +1646,94 @@
             b.setAttribute('aria-checked', on ? 'true' : 'false');
             b.classList.toggle('is-on', on);
         });
+    }
+
+    function findInDocumentAnchorTarget(hash, root) {
+        var id = String(hash || '').replace(/^#/, '').trim();
+        if (!id || !root) {
+            return null;
+        }
+        var el = document.getElementById(id);
+        if (el && root.contains(el)) {
+            return el;
+        }
+        if (id.indexOf('tsl-h-') !== 0 && id.indexOf('h-') === 0) {
+            el = document.getElementById('tsl-' + id);
+            if (el && root.contains(el)) {
+                return el;
+            }
+        }
+        var m = id.match(/^tsl-h-(.+)$/);
+        if (m) {
+            el = root.querySelector('[data-tsl-block-id="' + m[1] + '"]');
+            if (el) {
+                return el;
+            }
+        }
+        m = id.match(/^h-(.+)$/);
+        if (m) {
+            el = root.querySelector('[data-tsl-block-id="' + m[1] + '"]');
+            if (el) {
+                return el;
+            }
+            el = document.getElementById('h-' + m[1]);
+            if (el && root.contains(el)) {
+                return el;
+            }
+        }
+        return null;
+    }
+
+    function navigateToInDocumentAnchor(target, root) {
+        if (!target || !root) {
+            return false;
+        }
+        var layout = root.getAttribute('data-tsl-layout');
+        if (!layout || layout === 'pages') {
+            layout = getTslLayout();
+        }
+        if (layout === 'pages' && typeof root._tslPagerGoToElement === 'function') {
+            var ok = root._tslPagerGoToElement(target);
+            if (ok && target.id && history.replaceState) {
+                history.replaceState(null, '', '#' + target.id);
+            }
+            return ok;
+        }
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        if (target.id && history.replaceState) {
+            history.replaceState(null, '', '#' + target.id);
+        }
+        return true;
+    }
+
+    function bindInDocumentAnchorClicks(root) {
+        if (!root || root._tslAnchorClickBound) {
+            return;
+        }
+        root._tslAnchorClickBound = true;
+        root.addEventListener('click', function (e) {
+            var a = e.target.closest('a.studio-lean-toc-link[href^="#"]');
+            if (!a || !root.contains(a)) {
+                return;
+            }
+            var hash = a.getAttribute('href');
+            if (!hash || hash === '#') {
+                return;
+            }
+            var target = findInDocumentAnchorTarget(hash, root);
+            if (!target) {
+                return;
+            }
+            e.preventDefault();
+            navigateToInDocumentAnchor(target, root);
+        });
+        root._tslGoToDocumentHash = function (hash) {
+            var target = findInDocumentAnchorTarget(hash, root);
+            if (!target) {
+                return false;
+            }
+            return navigateToInDocumentAnchor(target, root);
+        };
     }
 
     function bindReadingPrefsUI(container) {
@@ -3045,6 +3144,7 @@
         wrap.appendChild(article);
         shell.appendChild(wrap);
         mount.appendChild(shell);
+        bindInDocumentAnchorClicks(article);
         return article;
     }
 
@@ -3203,6 +3303,7 @@
             }
             applyTslLayoutVarsToArticle(leanOnly);
             applyLeanReadingPrefs(leanOnly);
+            bindInDocumentAnchorClicks(leanOnly);
             return { mode: 'scroll' };
         }
         var wrap = shell.querySelector('.post-lean-html-article-wrap') || shell;
@@ -3221,6 +3322,7 @@
             }
             applyTslLayoutVarsToArticle(leanArticle);
             applyLeanReadingPrefs(leanArticle);
+            bindInDocumentAnchorClicks(leanArticle);
             readerArticle._tslPlayer = null;
             return { mode: 'scroll' };
         }
@@ -3303,6 +3405,9 @@
         resetReadingPrefs: resetReadingPrefs,
         collectDocumentOutline: collectDocumentOutline,
         collectTocEntries: collectTocEntries,
-        headingAnchorId: headingAnchorId
+        headingAnchorId: headingAnchorId,
+        findInDocumentAnchorTarget: findInDocumentAnchorTarget,
+        navigateToInDocumentAnchor: navigateToInDocumentAnchor,
+        bindInDocumentAnchorClicks: bindInDocumentAnchorClicks
     };
 })(typeof window !== 'undefined' ? window : globalThis);

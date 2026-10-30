@@ -54,7 +54,15 @@
             a.textContent = e.text;
             a.addEventListener('click', function (ev) {
                 ev.preventDefault();
+                var hash = a.getAttribute('href');
                 var root = mount && mount.querySelector('.tsl-root');
+                if (root && TalesmithTsl.navigateToInDocumentAnchor && TalesmithTsl.findInDocumentAnchorTarget) {
+                    var target = TalesmithTsl.findInDocumentAnchorTarget(hash, root)
+                        || TalesmithTsl.findInDocumentAnchorTarget(hash, mount.querySelector('.studio-lean-tsl') || mount);
+                    if (target && TalesmithTsl.navigateToInDocumentAnchor(target, root || mount)) {
+                        return;
+                    }
+                }
                 var target = document.getElementById(TalesmithTsl.headingAnchorId({ id: e.id }));
                 if (root && target && typeof root._tslPagerGoToElement === 'function') {
                     root._tslPagerGoToElement(target);
