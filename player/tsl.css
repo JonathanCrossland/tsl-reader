@@ -522,6 +522,21 @@
     text-align: var(--tsl-text-align);
 }
 
+.tsl-root[data-tsl-layout="pages"] .tsl-page:not([data-tsl-full-bleed="1"]) {
+    height: var(--tsl-page-h);
+    min-height: var(--tsl-page-h);
+    max-height: var(--tsl-page-h);
+}
+
+.tsl-root[data-tsl-layout="pages"] .tsl-page:not([data-tsl-full-bleed="1"]) .tsl-body {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+.tsl-measure-chrome {
+    flex: 0 0 auto;
+}
+
 .tsl-measure {
     position: absolute;
     left: -10000px;

@@ -1261,10 +1261,24 @@
 
         var pagesEl = document.createElement('div');
         pagesEl.className = 'tsl-pages';
-        var measureStrip = document.createElement('div');
-        measureStrip.className = 'tsl-measure';
-        measureStrip.setAttribute('aria-hidden', 'true');
-        root.appendChild(measureStrip);
+        var measurePage = document.createElement('section');
+        measurePage.className = 'tsl-page';
+        measurePage.setAttribute('data-tsl-side', 'any');
+        measurePage.setAttribute('aria-hidden', 'true');
+        measurePage.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;';
+        var measureHeaderSlot = document.createElement('div');
+        measureHeaderSlot.className = 'tsl-measure-chrome';
+        var measureBody = document.createElement('div');
+        measureBody.className = 'tsl-body';
+        measureBody.style.flex = '1 1 auto';
+        measureBody.style.minHeight = '0';
+        measureBody.style.overflow = 'visible';
+        var measureFooterSlot = document.createElement('div');
+        measureFooterSlot.className = 'tsl-measure-chrome';
+        measurePage.appendChild(measureHeaderSlot);
+        measurePage.appendChild(measureBody);
+        measurePage.appendChild(measureFooterSlot);
+        root.appendChild(measurePage);
         mount.innerHTML = '';
         mount.appendChild(root);
         applyReadingPrefs(root);
@@ -1292,8 +1306,6 @@
                 physical: physical,
                 pageNo: displayPageNo(header, physical),
                 fullBleed: !!(opts && opts.fullBleed),
-                runningHeader: '',
-                usedH: 0,
                 body: document.createElement('div'),
                 header: pickSide(headerState, side),
                 footer: pickSide(footerState, side)
@@ -1303,32 +1315,114 @@
             return pg;
         }
 
+        function collectPageHeadingTexts(body) {
+            var texts = [];
+            body.querySelectorAll('.tsl-block--title, .tsl-block--h1, .tsl-block--h2, .tsl-block--h3').forEach(function (el) {
+                var t = (el.textContent || '').trim();
+                if (t) {
+                    texts.push(t);
+                }
+            });
+            return texts;
+        }
+
+        /** Verso: first heading on page; recto: last; otherwise carry from prior pages. */
+        function resolveRunningHeadersOnPages(pageList) {
+            var carry = '';
+            pageList.forEach(function (pg) {
+                var headings = collectPageHeadingTexts(pg.body);
+                if (headings.length) {
+                    if (pg.side === 'left') {
+                        pg.resolvedRunningHeader = headings[0];
+                    } else if (pg.side === 'right') {
+                        pg.resolvedRunningHeader = headings[headings.length - 1];
+                    } else {
+                        pg.resolvedRunningHeader = headings[headings.length - 1];
+                    }
+                    carry = headings[headings.length - 1];
+                } else {
+                    pg.resolvedRunningHeader = carry;
+                }
+            });
+        }
+
+        function pageFieldRunningHeader(pg) {
+            if (pg && pg.resolvedRunningHeader) {
+                return pg.resolvedRunningHeader;
+            }
+            return runningHeader;
+        }
+
         var current = null;
         var mmPx = 96 / 25.4;
-        var rowGapPx = (page.rowGapMM != null ? page.rowGapMM : 2) * mmPx;
 
-        function bodyWidthMm(side) {
-            if (page.usePrintGutters !== false && page.kind === 'print') {
-                return page.trimMM.width - page.marginsMM.gutter - page.marginsMM.outside;
+        /** Body budget: trim page minus header/footer chrome (footer is the floor for flow). */
+        function syncMeasurePageForSide(side, pg) {
+            var s = side || (pg && pg.side) || (current && current.side) || 'any';
+            measurePage.setAttribute('data-tsl-side', s);
+            measurePage.style.width = pageTrimWidthPx() + 'px';
+            measurePage.style.height = page.trimMM.height + 'mm';
+            measurePage.style.minHeight = page.trimMM.height + 'mm';
+            measurePage.style.maxHeight = page.trimMM.height + 'mm';
+            measureHeaderSlot.innerHTML = '';
+            measureFooterSlot.innerHTML = '';
+            var draftCtx = {
+                values: values,
+                runningHeader: runningHeader,
+                pageNo: pg && pg.pageNo != null ? pg.pageNo : 1,
+                side: s,
+                pageCount: 1
+            };
+            var hdr = (pg && pg.header) || pickSide(headerState, s);
+            var ftr = (pg && pg.footer) || pickSide(footerState, s);
+            if (hdr) {
+                measureHeaderSlot.appendChild(renderRegion(hdr, 'header', page.headerRule, draftCtx, readMode));
             }
-            return page.trimMM.width - 2 * page.marginsMM.outside;
+            if (ftr) {
+                measureFooterSlot.appendChild(renderRegion(ftr, 'footer', page.footerRule, draftCtx, readMode));
+            }
+            var innerW = pageBodyInnerWidthPx(s);
+            measureBody.style.width = innerW + 'px';
+            measureBody.style.maxWidth = innerW + 'px';
         }
 
-        /** Same vertical budget as block-editor measureBody() (margin box only). */
-        function bodyHeightBudgetPx() {
-            var bodyHmm = page.trimMM.height - page.marginsMM.top - page.marginsMM.bottom;
-            return Math.max(80, bodyHmm * mmPx);
+        function measureBodyBudgetPx(side, pg) {
+            syncMeasurePageForSide(side, pg);
+            measureBody.innerHTML = '';
+            return Math.max(80, measureBody.clientHeight);
         }
 
-        function syncMeasureStrip(side) {
-            measureStrip.style.width = bodyWidthMm(side || (current && current.side) || 'any') + 'mm';
+        function prepareMeasureBodyStack(side, pg) {
+            syncMeasurePageForSide(side, pg);
+            measureBody.innerHTML = '';
+            var budget = Math.max(80, measureBody.clientHeight);
+            var stack = document.createElement('div');
+            stack.className = 'tsl-measure-stack';
+            stack.style.width = '100%';
+            stack.style.height = 'auto';
+            measureBody.appendChild(stack);
+            return { budget: budget, stack: stack };
         }
 
-        function measureRowHeight(row, side) {
-            syncMeasureStrip(side);
-            measureStrip.innerHTML = '';
-            measureStrip.appendChild(row);
-            return row.getBoundingClientRect().height || 0;
+        /** True when existing page body plus optional row fits above the page footer. */
+        function fitsOnPage(pg, extraRow) {
+            if (!pg) {
+                return true;
+            }
+            var shell = prepareMeasureBodyStack(pg.side, pg);
+            Array.prototype.forEach.call(pg.body.childNodes, function (node) {
+                shell.stack.appendChild(node.cloneNode(true));
+            });
+            if (extraRow) {
+                shell.stack.appendChild(extraRow.cloneNode(true));
+            }
+            return shell.stack.scrollHeight <= shell.budget + 1;
+        }
+
+        function measureRowHeight(row, side, pg) {
+            var shell = prepareMeasureBodyStack(side, pg);
+            shell.stack.appendChild(row.cloneNode(true));
+            return shell.stack.scrollHeight;
         }
 
         function pageTrimWidthPx() {
@@ -1385,8 +1479,85 @@
             col.appendChild(renderBlock(b, blockRenderCtx));
         }
 
-        function appendFlowRow(blocksInRow, rowClass) {
-            ensurePage();
+        function cloneBlockShallow(b) {
+            var c = {};
+            Object.keys(b).forEach(function (k) {
+                c[k] = b[k];
+            });
+            return c;
+        }
+
+        function blockTypeIsSplittable(b) {
+            if (!b || !b.type) {
+                return false;
+            }
+            if (b.type === 'code') {
+                return true;
+            }
+            return b.type === 'paragraph' || b.type === 'quote' || b.type === 'aside'
+                || b.type === 'title' || b.type === 'h1' || b.type === 'h2' || b.type === 'h3';
+        }
+
+        function appendSplittableSegments(b, rowClass, segments, joinFn) {
+            if (!segments.length) {
+                ensurePage();
+                current.body.appendChild(buildFlowRow([b], rowClass));
+                return;
+            }
+            var si = 0;
+            while (si < segments.length) {
+                ensurePage();
+                while (current.body.childNodes.length && !fitsOnPage(current, null)) {
+                    current = startPage();
+                }
+                var remain = segments.length - si;
+                var lo = 1;
+                var hi = remain;
+                var best = 0;
+                while (lo <= hi) {
+                    var mid = Math.floor((lo + hi) / 2);
+                    var trial = cloneBlockShallow(b);
+                    trial.text = joinFn(segments.slice(si, si + mid));
+                    var trialRow = buildFlowRow([trial], rowClass);
+                    if (fitsOnPage(current, trialRow)) {
+                        best = mid;
+                        lo = mid + 1;
+                    } else {
+                        hi = mid - 1;
+                    }
+                }
+                if (best < 1) {
+                    if (current.body.childNodes.length) {
+                        current = startPage();
+                    }
+                    best = 1;
+                }
+                var chunkBlock = cloneBlockShallow(b);
+                chunkBlock.text = joinFn(segments.slice(si, si + best));
+                current.body.appendChild(buildFlowRow([chunkBlock], rowClass));
+                si += best;
+            }
+        }
+
+        function appendSplittableTextBlock(b, rowClass) {
+            if (b.type === 'code') {
+                appendSplittableSegments(b, rowClass, String(b.text || '').split('\n'), function (lines) {
+                    return lines.join('\n');
+                });
+                return;
+            }
+            var plain = plainText(b.text);
+            if (!plain) {
+                ensurePage();
+                current.body.appendChild(buildFlowRow([b], rowClass));
+                return;
+            }
+            appendSplittableSegments(b, rowClass, plain.split(/\s+/).filter(Boolean), function (words) {
+                return words.join(' ');
+            });
+        }
+
+        function buildFlowRow(blocksInRow, rowClass) {
             var row = document.createElement('div');
             row.className = 'tsl-row tsl-row--' + rowClass;
             blocksInRow.forEach(function (pb) {
@@ -1395,17 +1566,20 @@
                 appendBlockToColumn(col, pb);
                 row.appendChild(col);
             });
-            syncMeasureStrip(current.side);
-            var maxH = bodyHeightBudgetPx();
-            var rowH = measureRowHeight(row, current.side);
-            var used = current.usedH || 0;
-            if (used > 0 && used + rowH > maxH) {
+            return row;
+        }
+
+        function appendFlowRow(blocksInRow, rowClass) {
+            if (blocksInRow.length === 1 && blockTypeIsSplittable(blocksInRow[0])) {
+                appendSplittableTextBlock(blocksInRow[0], rowClass);
+                return;
+            }
+            ensurePage();
+            var row = buildFlowRow(blocksInRow, rowClass);
+            while (current.body.childNodes.length && !fitsOnPage(current, row)) {
                 current = startPage();
-                used = 0;
-                maxH = bodyHeightBudgetPx();
             }
             current.body.appendChild(row);
-            current.usedH = used + rowH + rowGapPx;
         }
 
         function measureTocNavRowHeight(block, entries, pageByBlockId, side) {
@@ -1416,7 +1590,7 @@
             col.className = 'tsl-col';
             col.appendChild(nav);
             row.appendChild(col);
-            return measureRowHeight(row, side || (current && current.side) || 'any');
+            return measureRowHeight(row, side || (current && current.side) || 'any', current);
         }
 
         function appendTocNavRowToPage(block, entries, pageByBlockId) {
@@ -1427,9 +1601,7 @@
             col.className = 'tsl-col';
             col.appendChild(nav);
             row.appendChild(col);
-            var rowH = measureTocNavRowHeight(block, entries, pageByBlockId, current.side);
             current.body.appendChild(row);
-            current.usedH = (current.usedH || 0) + rowH + rowGapPx;
         }
 
         /** Split long TOC lists across pages (matches Studio print pagination). */
@@ -1448,10 +1620,10 @@
             var entryIdx = 0;
             while (entryIdx < allEntries.length) {
                 ensurePage();
-                if ((current.usedH || 0) > 0) {
+                if (current.body.childNodes.length > 0) {
                     current = startPage();
                 }
-                var maxH = bodyHeightBudgetPx();
+                var maxH = measureBodyBudgetPx(current.side, current);
                 var remain = allEntries.length - entryIdx;
                 var best = entryIdx + 1;
                 for (var n = 1; n <= remain; n += 1) {
@@ -1551,9 +1723,8 @@
             }
             if (/^h[1-3]$/.test(type) || type === 'title') {
                 var ht = plainText(b.text);
-                runningHeader = ht;
-                if (current) {
-                    current.runningHeader = ht;
+                if (ht) {
+                    runningHeader = ht;
                 }
             }
 
@@ -1577,6 +1748,7 @@
             bi += 1;
         }
         pages = pages.filter(function (p) { return p.body.childNodes.length > 0; });
+        resolveRunningHeadersOnPages(pages);
         refreshIndexBlocksInPages(pages, blocks);
         var pageCount = pages.length;
         var spreadEl = null;
@@ -1595,7 +1767,7 @@
                 pageCount: pageCount,
                 side: pg.side,
                 values: values,
-                runningHeader: pg.runningHeader || runningHeader
+                runningHeader: pageFieldRunningHeader(pg)
             };
             if (pg.header && !pg.fullBleed) {
                 section.appendChild(renderRegion(pg.header, 'header', page.headerRule, ctx, readMode));
