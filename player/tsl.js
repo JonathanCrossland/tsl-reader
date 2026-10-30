@@ -420,8 +420,59 @@
         });
     }
 
-    function inlineHtml(text) {
-        var s = String(text || '');
+    function looksLikeLegacyInlineHtml(value) {
+        var s = value == null ? '' : String(value);
+        if (!s || s.indexOf('<') === -1) {
+            return false;
+        }
+        return /<(strong|b|em|i|u|code|br)\b/i.test(s);
+    }
+
+    function markdownInlineHasMarkup(value) {
+        var s = value == null ? '' : String(value);
+        if (!s) {
+            return false;
+        }
+        if (looksLikeLegacyInlineHtml(s)) {
+            return true;
+        }
+        return /(\*\*|__|\*(?!\*)|_(?!_)|~~[^~\n]+~~|\+\+[^+\n]+\+\+|`[^`\n]+`|\[[^\]]+\]\([^)]+\)|\\[\[(]|\\\(|\n)/.test(s);
+    }
+
+    /** Studio inline markdown → HTML (small subset); then sanitized like authored HTML. */
+    function markdownInlineToHtml(raw) {
+        var s = String(raw || '');
+        if (!s) {
+            return '';
+        }
+        if (looksLikeLegacyInlineHtml(s)) {
+            return sanitizeInlineHtmlFragment(s);
+        }
+        var codeSlots = [];
+        s = s.replace(/`([^`\n]+)`/g, function (_, inner) {
+            var key = '\x01TSL_CODE' + codeSlots.length + '\x01';
+            codeSlots.push('<code>' + escapeHtml(inner) + '</code>');
+            return key;
+        });
+        var out = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_, label, href) {
+            return '<a href="' + escapeHtml(href) + '">' + label + '</a>';
+        });
+        out = out.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        out = out.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        out = out.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        out = out.replace(/~~(.+?)~~/g, '<span class="tsl-md-strike">$1</span>');
+        out = out.replace(/\+\+(.+?)\+\+/g, '<u>$1</u>');
+        out = out.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        out = out.replace(/(?<![A-Za-z0-9])_([^_\n]+)_(?![A-Za-z0-9])/g, '<em>$1</em>');
+        codeSlots.forEach(function (html, i) {
+            out = out.replace('\x01TSL_CODE' + i + '\x01', html);
+        });
+        out = out.replace(/\n/g, '<br>');
+        return sanitizeInlineHtmlFragment(out);
+    }
+
+    function sanitizeInlineHtmlFragment(s) {
         if (!s) {
             return '';
         }
@@ -462,6 +513,17 @@
         }
         cleanInline(doc.body);
         return doc.body.innerHTML;
+    }
+
+    function inlineHtml(text) {
+        var s = String(text || '');
+        if (!s) {
+            return '';
+        }
+        if (markdownInlineHasMarkup(s)) {
+            return markdownInlineToHtml(s);
+        }
+        return sanitizeInlineHtmlFragment(s);
     }
 
     var TSL_LAYOUT_BREAK_TYPES = {
@@ -561,7 +623,7 @@
     }
 
     function attachPagePager(root, pagesEl) {
-        var state = { index: 0, activePage: null, lastView: '' };
+        var state = { index: 0, activePage: null, lastView: '', scaleRaf: 0, stageW: -1, stageH: -1, scaling: false };
 
         var wrap = document.createElement('div');
         wrap.className = 'tsl-pager-wrap';
@@ -626,16 +688,24 @@
                 || root;
         }
 
-        function containerWidthPx() {
-            var w = viewport.clientWidth;
+        function fitStageWidthPx() {
             var box = fitContainerEl();
-            if (box && box.clientWidth > w) {
-                w = box.clientWidth;
+            var vpRect = viewport.getBoundingClientRect();
+            var w = viewport.clientWidth;
+            if (w < 1) {
+                w = vpRect.width;
             }
-            if (root.clientWidth > w) {
-                w = root.clientWidth;
+            if (box) {
+                var boxRect = box.getBoundingClientRect();
+                if (boxRect.width > 0) {
+                    w = Math.min(w > 0 ? w : boxRect.width, boxRect.width);
+                }
             }
-            return w;
+            return Math.max(0, w);
+        }
+
+        function containerWidthPx() {
+            return fitStageWidthPx();
         }
 
         function nominalTrimPageSizePx() {
@@ -686,40 +756,52 @@
             return { w: nom.w, h: nom.h };
         }
 
-        /** Host-defined stage (data-tsl-fit-container): geometry only, no chrome constants. */
+        /** Hard ceiling: stage height never exceeds visible browser viewport (reader, not document scroll). */
+        function readerBrowserViewportHeightPx() {
+            if (typeof window === 'undefined') {
+                return 0;
+            }
+            var pagerTop = viewport.getBoundingClientRect().top;
+            var viewBottom = window.innerHeight;
+            if (window.visualViewport) {
+                viewBottom = window.visualViewport.offsetTop + window.visualViewport.height;
+            }
+            var budget = viewBottom - pagerTop;
+            if (status.offsetHeight > 0) {
+                budget -= status.offsetHeight;
+            }
+            return Math.max(0, Math.floor(budget));
+        }
+
+        /** Vertical budget for fit/scale: stable flex column size (not the viewport element we resize). */
+        function pagerStageHeightPx() {
+            var h = 0;
+            var mount = root.closest('[data-tsl-mount]');
+            var box = fitContainerEl();
+            if (mount && mount.clientHeight > 0) {
+                h = mount.clientHeight;
+            } else if (box && box.clientHeight > 0) {
+                h = box.clientHeight;
+            }
+            if (status.offsetHeight > 0) {
+                h = Math.max(0, h - status.offsetHeight);
+            }
+            if (h < 32 && wrap && wrap.clientHeight > 0) {
+                h = wrap.clientHeight - (status.offsetHeight || 0);
+            }
+            var viewCap = readerBrowserViewportHeightPx();
+            if (viewCap > 0) {
+                h = h > 0 ? Math.min(h, viewCap) : viewCap;
+            }
+            return Math.max(0, h);
+        }
+
+        /** Host-defined stage (data-tsl-fit-container): width from container; height from pager wrap. */
         function pagerStageSize() {
             var inset = 8;
-            var box = fitContainerEl();
-            var vpRect = viewport.getBoundingClientRect();
-            var w = viewport.clientWidth;
-            if (w < 1) {
-                w = vpRect.width;
-            }
-            if (box) {
-                var boxRect = box.getBoundingClientRect();
-                if (boxRect.width > 0) {
-                    w = Math.min(w > 0 ? w : boxRect.width, boxRect.width);
-                }
-            }
-            var h = viewport.clientHeight;
-            if (h < 1) {
-                h = vpRect.height;
-            }
-            if (box) {
-                var boxRect2 = box.getBoundingClientRect();
-                var top = Math.max(vpRect.top, boxRect2.top);
-                var bottom = Math.min(vpRect.bottom, boxRect2.bottom);
-                if (status.offsetParent) {
-                    var st = status.getBoundingClientRect();
-                    if (st.top > vpRect.top + 2 && st.top < bottom) {
-                        bottom = Math.min(bottom, st.top);
-                    }
-                }
-                var clipH = bottom - top;
-                if (clipH > h) {
-                    h = clipH;
-                }
-            }
+            var w = fitStageWidthPx();
+            var h = pagerStageHeightPx();
+
             return {
                 w: Math.max(0, Math.floor(w - inset)),
                 h: Math.max(0, Math.floor(h - inset))
@@ -843,9 +925,12 @@
             nextBtn.disabled = state.index >= steps.length - 1;
             status.textContent = (view === 'spread' ? 'Spread ' : 'Page ')
                 + (state.index + 1) + ' of ' + steps.length;
-            requestAnimationFrame(function () {
-                requestAnimationFrame(applyViewportScale);
-            });
+            if (!state.scaleRaf) {
+                state.scaleRaf = requestAnimationFrame(function () {
+                    state.scaleRaf = 0;
+                    applyViewportScale();
+                });
+            }
             if (typeof root._tslPagerChangeFn === 'function') {
                 root._tslPagerChangeFn();
             }
@@ -923,14 +1008,13 @@
             step.style.marginBottom = (scaledH - pageH) + 'px';
             root.style.setProperty('--tsl-viewport-scale', String(scale));
             if (opts.lockHeight) {
-                var boxH = opts.stageHeight > 0 ? opts.stageHeight : Math.ceil(scaledH);
                 viewport.style.overflow = 'hidden';
                 viewport.style.alignItems = 'flex-start';
                 viewport.style.justifyContent = 'center';
                 viewport.style.flex = '1 1 0';
-                viewport.style.height = boxH + 'px';
-                viewport.style.maxHeight = boxH + 'px';
                 viewport.style.minHeight = '0';
+                viewport.style.maxHeight = '100%';
+                viewport.style.height = '';
             } else {
                 var avail = pagerStageSize();
                 viewport.style.overflowX = 'auto';
@@ -946,39 +1030,41 @@
         function applyViewportScale() {
             var fit = getPageFit();
             root.setAttribute('data-tsl-page-fit', fit);
-            clearPagerStageStyles();
+            state.scaling = true;
+            try {
+                clearPagerStageStyles();
 
-            var view = root.getAttribute('data-tsl-page-view') || 'single';
-            var steps = stepsForView(view);
-            var current = steps[state.index];
-            if (!current) {
-                return;
-            }
+                var view = root.getAttribute('data-tsl-page-view') || 'single';
+                var steps = stepsForView(view);
+                var current = steps[state.index];
+                if (!current) {
+                    return;
+                }
 
-            viewport.style.alignItems = 'flex-start';
-            viewport.style.justifyContent = 'center';
-            viewport.style.overflowX = 'auto';
-            viewport.style.overflowY = 'auto';
+                viewport.style.alignItems = 'flex-start';
+                viewport.style.justifyContent = 'center';
+                viewport.style.overflowX = 'auto';
+                viewport.style.overflowY = 'auto';
 
-            if (fit === 'native') {
-                applyNativePrintSizePolicy();
-                return;
-            }
-            if (fit === 'fit') {
-                applyFitWidthPolicy();
-                return;
-            }
+                if (fit === 'native') {
+                    applyNativePrintSizePolicy();
+                    return;
+                }
+                if (fit === 'fit') {
+                    applyFitWidthPolicy();
+                    return;
+                }
 
-            var layout = stepLayoutSize(current);
-            var avail = pagerStageSize();
-            if (layout.w < 1 || layout.h < 1) {
-                bailFitScreenToScroll(layout, avail);
-                return;
-            }
-            if (hostStageCramped(avail, layout)) {
-                bailFitScreenToScroll(layout, avail);
-                return;
-            }
+                var layout = stepLayoutSize(current);
+                var avail = pagerStageSize();
+                if (layout.w < 1 || layout.h < 1) {
+                    bailFitScreenToScroll(layout, avail);
+                    return;
+                }
+                if (hostStageCramped(avail, layout)) {
+                    bailFitScreenToScroll(layout, avail);
+                    return;
+                }
 
             var s = Math.min(avail.w / layout.w, avail.h / layout.h) * 0.985;
             if (s < TSL_MIN_FIT_SCREEN_SCALE) {
@@ -986,9 +1072,20 @@
                 return;
             }
             s = Math.min(s, 1);
+            var scaledH = layout.h * s;
+            var viewCap = readerBrowserViewportHeightPx();
+            if (viewCap > 0 && scaledH > viewCap + 1) {
+                s = Math.min(s, viewCap / layout.h);
+            }
             root.removeAttribute('data-tsl-scale-unreasonable');
-            root.removeAttribute('data-tsl-stage-cramped');
-            applyStepTransform(current, layout, s, { lockHeight: true, stageHeight: avail.h });
+                root.removeAttribute('data-tsl-stage-cramped');
+                applyStepTransform(current, layout, s, { lockHeight: true, stageHeight: avail.h });
+            } finally {
+                state.scaling = false;
+                var sz = pagerStageSize();
+                state.stageW = sz.w;
+                state.stageH = sz.h;
+            }
         }
 
         function goToIndex(idx) {
@@ -1065,17 +1162,30 @@
 
         var resizeTimer;
         function schedulePagerRefresh() {
+            if (state.scaling) {
+                return;
+            }
             clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(refresh, 120);
+            resizeTimer = setTimeout(function () {
+                if (state.scaling) {
+                    return;
+                }
+                var sz = pagerStageSize();
+                if (state.stageW >= 0
+                    && Math.abs(sz.w - state.stageW) < 3
+                    && Math.abs(sz.h - state.stageH) < 3) {
+                    return;
+                }
+                refresh();
+            }, 160);
         }
         window.addEventListener('resize', schedulePagerRefresh);
         window.addEventListener('orientationchange', schedulePagerRefresh);
 
         if (typeof ResizeObserver !== 'undefined') {
             var pagerResizeObs = new ResizeObserver(schedulePagerRefresh);
-            pagerResizeObs.observe(viewport);
             var fitObsEl = fitContainerEl();
-            if (fitObsEl && fitObsEl !== viewport) {
+            if (fitObsEl) {
                 pagerResizeObs.observe(fitObsEl);
             }
             root._tslPagerResizeObs = pagerResizeObs;
@@ -1147,24 +1257,10 @@
 
         var pagesEl = document.createElement('div');
         pagesEl.className = 'tsl-pages';
-        var measurePage = document.createElement('section');
-        measurePage.className = 'tsl-page';
-        measurePage.setAttribute('data-tsl-side', 'any');
-        measurePage.setAttribute('aria-hidden', 'true');
-        measurePage.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;';
-        var measureHeaderSlot = document.createElement('div');
-        measureHeaderSlot.className = 'tsl-measure-chrome';
-        var measureBody = document.createElement('div');
-        measureBody.className = 'tsl-body';
-        measureBody.style.flex = '1 1 auto';
-        measureBody.style.minHeight = '0';
-        measureBody.style.overflow = 'hidden';
-        var measureFooterSlot = document.createElement('div');
-        measureFooterSlot.className = 'tsl-measure-chrome';
-        measurePage.appendChild(measureHeaderSlot);
-        measurePage.appendChild(measureBody);
-        measurePage.appendChild(measureFooterSlot);
-        root.appendChild(measurePage);
+        var measureStrip = document.createElement('div');
+        measureStrip.className = 'tsl-measure';
+        measureStrip.setAttribute('aria-hidden', 'true');
+        root.appendChild(measureStrip);
         mount.innerHTML = '';
         mount.appendChild(root);
         applyReadingPrefs(root);
@@ -1207,6 +1303,30 @@
         var mmPx = 96 / 25.4;
         var rowGapPx = (page.rowGapMM != null ? page.rowGapMM : 2) * mmPx;
 
+        function bodyWidthMm(side) {
+            if (page.usePrintGutters !== false && page.kind === 'print') {
+                return page.trimMM.width - page.marginsMM.gutter - page.marginsMM.outside;
+            }
+            return page.trimMM.width - 2 * page.marginsMM.outside;
+        }
+
+        /** Same vertical budget as block-editor measureBody() (margin box only). */
+        function bodyHeightBudgetPx() {
+            var bodyHmm = page.trimMM.height - page.marginsMM.top - page.marginsMM.bottom;
+            return Math.max(80, bodyHmm * mmPx);
+        }
+
+        function syncMeasureStrip(side) {
+            measureStrip.style.width = bodyWidthMm(side || (current && current.side) || 'any') + 'mm';
+        }
+
+        function measureRowHeight(row, side) {
+            syncMeasureStrip(side);
+            measureStrip.innerHTML = '';
+            measureStrip.appendChild(row);
+            return row.getBoundingClientRect().height || 0;
+        }
+
         function pageTrimWidthPx() {
             return Math.max(120, parseCssLengthToPx(root, page.trimMM.width + 'mm'));
         }
@@ -1222,51 +1342,6 @@
                 return Math.max(120, trim - gut - out);
             }
             return Math.max(120, trim - out - out);
-        }
-
-        function syncMeasurePageBox(side) {
-            var s = side || (current && current.side) || 'any';
-            measurePage.setAttribute('data-tsl-side', s);
-            measurePage.style.width = pageTrimWidthPx() + 'px';
-            measurePage.style.height = page.trimMM.height + 'mm';
-            measurePage.style.minHeight = page.trimMM.height + 'mm';
-            measurePage.style.maxHeight = page.trimMM.height + 'mm';
-            var innerW = pageBodyInnerWidthPx(s);
-            measureBody.style.width = innerW + 'px';
-            measureBody.style.maxWidth = innerW + 'px';
-        }
-
-        function syncMeasurePageRegions(side) {
-            var s = side || (current && current.side) || 'any';
-            syncMeasurePageBox(s);
-            measureHeaderSlot.innerHTML = '';
-            measureFooterSlot.innerHTML = '';
-            var hdr = pickSide(headerState, s);
-            var ftr = pickSide(footerState, s);
-            var draftCtx = {
-                values: values,
-                runningHeader: runningHeader,
-                pageNo: 1,
-                side: s
-            };
-            if (hdr) {
-                measureHeaderSlot.appendChild(renderRegion(hdr, 'header', page.headerRule, draftCtx, readMode));
-            }
-            if (ftr) {
-                measureFooterSlot.appendChild(renderRegion(ftr, 'footer', page.footerRule, draftCtx, readMode));
-            }
-        }
-
-        function measureBodyBudgetPx(side) {
-            syncMeasurePageRegions(side);
-            return Math.max(120, measureBody.clientHeight);
-        }
-
-        function measureRowHeight(row, side) {
-            syncMeasurePageRegions(side);
-            measureBody.innerHTML = '';
-            measureBody.appendChild(row);
-            return row.getBoundingClientRect().height || 0;
         }
 
         function measurePageContentWidthPx(side) {
@@ -1316,15 +1391,14 @@
                 appendBlockToColumn(col, pb);
                 row.appendChild(col);
             });
-            syncMeasurePageRegions(current.side);
-            var maxH = measureBody.clientHeight;
+            syncMeasureStrip(current.side);
+            var maxH = bodyHeightBudgetPx();
             var rowH = measureRowHeight(row, current.side);
             var used = current.usedH || 0;
             if (used > 0 && used + rowH > maxH) {
                 current = startPage();
                 used = 0;
-                syncMeasurePageRegions(current.side);
-                maxH = measureBody.clientHeight;
+                maxH = bodyHeightBudgetPx();
             }
             current.body.appendChild(row);
             current.usedH = used + rowH + rowGapPx;
@@ -1373,7 +1447,7 @@
                 if ((current.usedH || 0) > 0) {
                     current = startPage();
                 }
-                var maxH = measureBodyBudgetPx(current.side);
+                var maxH = bodyHeightBudgetPx();
                 var remain = allEntries.length - entryIdx;
                 var best = entryIdx + 1;
                 for (var n = 1; n <= remain; n += 1) {

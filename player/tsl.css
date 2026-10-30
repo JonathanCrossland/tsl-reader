@@ -208,6 +208,13 @@
     padding: 0 0.15rem;
 }
 
+.tsl-root[data-tsl-page-fit="scale"] .tsl-pager-wrap {
+    flex: 1 1 0;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+}
+
 .tsl-root[data-tsl-page-fit="scale"] .tsl-pager-viewport {
     overflow: hidden;
     flex: 1 1 0;
@@ -476,6 +483,7 @@
 .tsl-region--header {
     margin-bottom: var(--tsl-row-gap);
     border-bottom: 1px solid transparent;
+    flex-shrink: 0;
 }
 
 .tsl-region--header[data-tsl-rule="1"] {
@@ -487,6 +495,7 @@
     margin-top: auto;
     padding-top: 0.5em;
     border-top: 1px solid transparent;
+    flex-shrink: 0;
 }
 
 .tsl-region--footer[data-tsl-rule="1"] {
@@ -509,11 +518,17 @@
 
 .tsl-body {
     flex: 1 1 auto;
+    min-height: 0;
     text-align: var(--tsl-text-align);
 }
 
-.tsl-measure-chrome {
-    flex: 0 0 auto;
+.tsl-measure {
+    position: absolute;
+    left: -10000px;
+    top: 0;
+    visibility: hidden;
+    pointer-events: none;
+    box-sizing: border-box;
 }
 
 /* Block width: cols=2 (default) = full row; cols=1 = half row, paired like Studio print layout */
@@ -685,6 +700,10 @@
 .tsl-list--todo .tsl-done {
     text-decoration: line-through;
     color: var(--tsl-muted);
+}
+
+.tsl-md-strike {
+    text-decoration: line-through;
 }
 
 .tsl-figure {
