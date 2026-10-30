@@ -3,10 +3,10 @@
   "version": 0.1,
   "header": {
     "page": {
-      "formatId": "us-novel",
+      "formatId": "uk-reference",
       "kind": "print",
-      "trimMM": { "width": 139.7, "height": 215.9 },
-      "marginsMM": { "top": 19.05, "bottom": 19.05, "outside": 12.7, "gutter": 22.225 },
+      "trimMM": { "width": 210, "height": 297 },
+      "marginsMM": { "top": 12, "bottom": 12, "outside": 15, "gutter": 15 },
       "headerTopMM": 8,
       "footerBottomMM": 8,
       "headerRule": false,

@@ -736,9 +736,34 @@ body {
         display: none !important;
     }
 
+    html,
     body {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
         background: #fff;
+    }
+
+    body {
         min-height: auto;
+        display: block !important;
+    }
+
+    .tsl-lab-body,
+    .tsl-lab-stage,
+    .tsl-lab-mount {
+        flex: none !important;
+        height: auto !important;
+        max-height: none !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+    }
+
+    .tsl-lab-mount .tsl-root[data-tsl-layout="pages"],
+    .tsl-lab-mount .tsl-pager-wrap {
+        flex: none !important;
+        max-height: none !important;
+        overflow: visible !important;
     }
 
     .tsl-lab-mount {

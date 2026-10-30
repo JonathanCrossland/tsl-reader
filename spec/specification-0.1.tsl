@@ -150,6 +150,7 @@
       "title": "Talesmith Language"
     },
     "readMode": false,
+    "allowScrollMode": true,
     "mergeFields": {
       "version": 1,
       "fields": [
@@ -334,6 +335,19 @@
         "text": "[Title]-[RunningHeader]"
       },
       {
+        "id": "b354",
+        "type": "pagefooter",
+        "align": "center",
+        "theme": null,
+        "textLeft": "tls 0.1",
+        "textCenter": "",
+        "textRight": "[PageNo]/[PageCount]",
+        "side": "any",
+        "expanded": false,
+        "cols": 2,
+        "text": "[PageNo]/[PageCount]"
+      },
+      {
         "id": "b179",
         "type": "newpage",
         "align": "left",
@@ -428,7 +442,7 @@
         "type": "paragraph",
         "align": "left",
         "theme": null,
-        "text": "If the editor is the problem, another editor in the same lineage is not the answer. Talesmith's answer is to separate what the writer means from how it looks — the writer says \"this paragraph opens with a three-line drop cap, this page runs a header on the left,\" and the page, or the screen, works out the rest. That separation is Talesmith Language, and the rest of this document specifies it.",
+        "text": "If the editor is the problem, another editor in the same lineage is not the answer. Talesmith's answer is to separate what the writer means from how it looks \u2014 the writer says \"this paragraph opens with a three-line drop cap, this page runs a header on the left,\" and the page, or the screen, works out the rest. That separation is Talesmith Language, and the rest of this document specifies it.",
         "dropCap": null,
         "cols": 2
       },
@@ -447,18 +461,7 @@
         "align": "left",
         "theme": null,
         "text": "We have many formats to contend with and their design decisions and capabilities have allowed for the usual pros and cons. For example, Word has had many formats over the decades, RTF is basic, PDF is complex, HTML and markdown are simpler but cannot do what PDF can. However, PDF requires a binary viewer and complex embedded HTML containers. A Google Doc does not reveal its format. All of these are targeted towards specific devices or media. HTML is universal in many senses, and epub chose it for that reason. However, as we have discussed HTML is not capable of storing the requirements for an editor and a document reader. The industry has split these two things and this may be part of the issue. Although it is great being able to import and export, it is only due to limitations that we move from one to another. The hope is that if we dont have complex typography here, we export and get it in the other editor. But this comes at a price. The formats are rarely interchangeble with loss. And to an author, a published file, a reader, even the slightest loss can mean the difference in reader experience, author's wishes, capabilities and so on.",
-        "dropCap": {
-          "lines": 1,
-          "style": "normal",
-          "characters": 1,
-          "includeLeadingPunctuation": true,
-          "spacingEm": 0.08,
-          "opticalMargin": true,
-          "alignBaseline": true,
-          "uppercase": false,
-          "variant": "default",
-          "capStyle": "horticulture"
-        },
+        "dropCap": null,
         "cols": 2
       },
       {

@@ -980,21 +980,23 @@
             }
             var w = Math.max(pageEl.offsetWidth, pageEl.getBoundingClientRect().width);
             var h = Math.max(pageEl.offsetHeight, pageEl.getBoundingClientRect().height);
-            var body = pageEl.querySelector('.tsl-body');
-            if (body) {
-                var inner = body.scrollHeight;
-                var header = pageEl.querySelector('.tsl-region--header');
-                var footer = pageEl.querySelector('.tsl-region--footer');
-                var stack = inner;
-                if (header) {
-                    stack += header.offsetHeight;
+            if (pageEl.getAttribute('data-tsl-full-bleed') === '1') {
+                var body = pageEl.querySelector('.tsl-body');
+                if (body) {
+                    var inner = body.scrollHeight;
+                    var header = pageEl.querySelector('.tsl-region--header');
+                    var footer = pageEl.querySelector('.tsl-region--footer');
+                    var stack = inner;
+                    if (header) {
+                        stack += header.offsetHeight;
+                    }
+                    if (footer) {
+                        stack += footer.offsetHeight;
+                    }
+                    var cs = getComputedStyle(pageEl);
+                    stack += parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+                    h = Math.max(h, stack);
                 }
-                if (footer) {
-                    stack += footer.offsetHeight;
-                }
-                var cs = getComputedStyle(pageEl);
-                stack += parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
-                h = Math.max(h, stack);
             }
             return { w: w, h: h };
         }
@@ -1012,7 +1014,8 @@
             step.style.marginBottom = (scaledH - pageH) + 'px';
             root.style.setProperty('--tsl-viewport-scale', String(scale));
             if (opts.lockHeight) {
-                viewport.style.overflow = 'hidden';
+                viewport.style.overflowX = 'hidden';
+                viewport.style.overflowY = 'auto';
                 viewport.style.alignItems = 'flex-start';
                 viewport.style.justifyContent = 'center';
                 viewport.style.flex = '1 1 0';
@@ -1032,6 +1035,17 @@
         }
 
         function applyViewportScale() {
+            if (tslAuthorPrintLayout() || root.getAttribute('data-tsl-print-all') === '1') {
+                root.setAttribute('data-tsl-page-fit', 'native');
+                state.scaling = true;
+                try {
+                    clearPagerStageStyles();
+                    applyNativePrintSizePolicy();
+                } finally {
+                    state.scaling = false;
+                }
+                return;
+            }
             var fit = getPageFit();
             root.setAttribute('data-tsl-page-fit', fit);
             state.scaling = true;
@@ -1212,8 +1226,20 @@
             }
         });
 
+        function preparePagerForPrint() {
+            if (state.scaleRaf) {
+                cancelAnimationFrame(state.scaleRaf);
+                state.scaleRaf = 0;
+            }
+            root.setAttribute('data-tsl-page-fit', 'native');
+            root.setAttribute('data-tsl-print-all', '1');
+            clearPagerStageStyles();
+            applyNativePrintSizePolicy();
+        }
+
         root._tslPagerRefresh = refresh;
         root._tslPagerClearStage = clearPagerStageStyles;
+        root._tslPagerPreparePrint = preparePagerForPrint;
         root._tslPagerStep = go;
         root._tslPagerGoToIndex = goToIndex;
         root._tslPagerGoToElement = goToElement;
@@ -1237,7 +1263,7 @@
         ensureHeadingNumbers(blocks, header);
         var page = header.page;
         var ty = header.typography;
-        var layoutMode = getTslLayout();
+        var layoutMode = layoutModeForDocument(header, blocks);
         var root = document.createElement('div');
         root.className = 'tsl-root';
         root.setAttribute('data-tsl-layout', layoutMode);
@@ -1284,6 +1310,80 @@
         applyReadingPrefs(root);
         var headerState = { any: null, left: null, right: null };
         var footerState = { any: null, left: null, right: null };
+        blocks.forEach(function (b) {
+            if (!b || !b.type) {
+                return;
+            }
+            if (b.type === 'pageheader') {
+                headerState[b.side || 'any'] = b;
+            }
+            if (b.type === 'pagefooter') {
+                footerState[b.side || 'any'] = b;
+            }
+        });
+
+        function copySideChromeState(state) {
+            return { any: state.any, left: state.left, right: state.right };
+        }
+
+        /** Effective running chrome after each block index (seeded from whole document, then updated in order). */
+        function buildRunningChromeTimeline(blockList) {
+            var h = { any: null, left: null, right: null };
+            var f = { any: null, left: null, right: null };
+            blockList.forEach(function (b) {
+                if (!b || !b.type) {
+                    return;
+                }
+                if (b.type === 'pageheader') {
+                    h[b.side || 'any'] = b;
+                }
+                if (b.type === 'pagefooter') {
+                    f[b.side || 'any'] = b;
+                }
+            });
+            var timeline = [];
+            var i;
+            h = copySideChromeState(h);
+            f = copySideChromeState(f);
+            for (i = 0; i < blockList.length; i += 1) {
+                var blk = blockList[i];
+                if (blk && blk.type === 'pageheader') {
+                    h[blk.side || 'any'] = blk;
+                }
+                if (blk && blk.type === 'pagefooter') {
+                    f[blk.side || 'any'] = blk;
+                }
+                timeline[i] = { header: copySideChromeState(h), footer: copySideChromeState(f) };
+            }
+            return timeline;
+        }
+
+        var runningChromeTimeline = buildRunningChromeTimeline(blocks);
+        var bi = 0;
+
+        function refreshCurrentPageChrome() {
+            if (!current || current.fullBleed) {
+                return;
+            }
+            current.header = pickSide(headerState, current.side);
+            current.footer = pickSide(footerState, current.side);
+        }
+
+        function applyRunningChromeFromTimeline(pg) {
+            if (!pg || pg.fullBleed) {
+                return;
+            }
+            var idx = typeof pg.endBlockIndex === 'number' ? pg.endBlockIndex : (blocks.length - 1);
+            idx = Math.max(0, Math.min(blocks.length - 1, idx));
+            var snap = runningChromeTimeline[idx] || runningChromeTimeline[blocks.length - 1];
+            if (!snap) {
+                pg.header = pickSide(headerState, pg.side);
+                pg.footer = pickSide(footerState, pg.side);
+                return;
+            }
+            pg.header = pickSide(snap.header, pg.side);
+            pg.footer = pickSide(snap.footer, pg.side);
+        }
         var physical = 0;
         var pages = [];
         var values = mergeFieldValues(header);
@@ -1306,12 +1406,12 @@
                 physical: physical,
                 pageNo: displayPageNo(header, physical),
                 fullBleed: !!(opts && opts.fullBleed),
-                body: document.createElement('div'),
-                header: pickSide(headerState, side),
-                footer: pickSide(footerState, side)
+                endBlockIndex: typeof bi === 'number' ? Math.max(0, bi) : 0,
+                body: document.createElement('div')
             };
             pg.body.className = 'tsl-body';
             pages.push(pg);
+            applyRunningChromeFromTimeline(pg);
             return pg;
         }
 
@@ -1572,12 +1672,18 @@
         function appendFlowRow(blocksInRow, rowClass) {
             if (blocksInRow.length === 1 && blockTypeIsSplittable(blocksInRow[0])) {
                 appendSplittableTextBlock(blocksInRow[0], rowClass);
+                if (current) {
+                    current.endBlockIndex = bi;
+                }
                 return;
             }
             ensurePage();
             var row = buildFlowRow(blocksInRow, rowClass);
             while (current.body.childNodes.length && !fitsOnPage(current, row)) {
                 current = startPage();
+            }
+            if (current) {
+                current.endBlockIndex = bi;
             }
             current.body.appendChild(row);
         }
@@ -1645,18 +1751,6 @@
             }
         }
 
-        var bi = 0;
-        while (bi < blocks.length) {
-            var pre = blocks[bi];
-            if (!pre || !pre.type) { bi += 1; continue; }
-            if (pre.type === 'pageheader') {
-                headerState[pre.side || 'any'] = pre; bi += 1; continue;
-            }
-            if (pre.type === 'pagefooter') {
-                footerState[pre.side || 'any'] = pre; bi += 1; continue;
-            }
-            break;
-        }
         while (bi < blocks.length) {
             var b = blocks[bi];
             if (!b || !b.type) {
@@ -1666,17 +1760,19 @@
             var type = b.type;
             if (type === 'pageheader') {
                 headerState[b.side || 'any'] = b;
-                if (current && current.body.childNodes.length === 0) {
-                    current.header = pickSide(headerState, current.side);
-                }
+                ensurePage();
+                current.endBlockIndex = bi;
+                refreshCurrentPageChrome();
+                applyRunningChromeFromTimeline(current);
                 bi += 1;
                 continue;
             }
             if (type === 'pagefooter') {
                 footerState[b.side || 'any'] = b;
-                if (current && current.body.childNodes.length === 0) {
-                    current.footer = pickSide(footerState, current.side);
-                }
+                ensurePage();
+                current.endBlockIndex = bi;
+                refreshCurrentPageChrome();
+                applyRunningChromeFromTimeline(current);
                 bi += 1;
                 continue;
             }
@@ -1748,6 +1844,9 @@
             bi += 1;
         }
         pages = pages.filter(function (p) { return p.body.childNodes.length > 0; });
+        pages.forEach(function (pg) {
+            applyRunningChromeFromTimeline(pg);
+        });
         resolveRunningHeadersOnPages(pages);
         refreshIndexBlocksInPages(pages, blocks);
         var pageCount = pages.length;
@@ -1890,13 +1989,20 @@
             document.querySelectorAll('.tsl-root').forEach(function (root) {
                 root.setAttribute('data-tsl-print-all', '1');
                 updateTslPrintPageRule(root);
-                if (typeof root._tslPagerClearStage === 'function') {
+                if (typeof root._tslPagerPreparePrint === 'function') {
+                    root._tslPagerPreparePrint();
+                } else if (typeof root._tslPagerClearStage === 'function') {
                     root._tslPagerClearStage();
                 }
             });
         });
         window.addEventListener('afterprint', function () {
             document.documentElement.removeAttribute('data-tsl-printing');
+            if (document.querySelectorAll) {
+                document.querySelectorAll('.tsl-root[data-tsl-print-all]').forEach(function (root) {
+                    root.removeAttribute('data-tsl-print-all');
+                });
+            }
             rerenderAllTslMounts();
         });
     }
@@ -1924,6 +2030,24 @@
         return findTslLeanArticle(wrap);
     }
 
+    function blocksHaveRunningChrome(blocks) {
+        if (!blocks || !blocks.length) {
+            return false;
+        }
+        return blocks.some(function (b) {
+            return b && (b.type === 'pageheader' || b.type === 'pagefooter');
+        });
+    }
+
+    function layoutModeForDocument(header, blocks) {
+        var layout = getTslLayout();
+        if (layout === 'scroll' && blocksHaveRunningChrome(blocks)
+            && header && header.page && header.page.kind === 'print') {
+            return 'pages';
+        }
+        return layout;
+    }
+
     function remountTslMount(mount, parsed) {
         if (!mount || !parsed) {
             return null;
@@ -1931,7 +2055,7 @@
         mount._tslParsed = parsed;
         stampTslReadingCapabilities(parsed.header, mount);
         var layout = getTslLayout();
-        if (layout === 'scroll') {
+        if (layout === 'scroll' && !blocksHaveRunningChrome(parsed.blocks || [])) {
             return mountLeanHtml(mount, parsed);
         }
         return render(mount, parsed);
@@ -2253,6 +2377,20 @@
         });
     }
 
+    function runningChromeSlotText(block, slot) {
+        if (!block) {
+            return '';
+        }
+        var key = slot === 'left' ? 'textLeft' : (slot === 'center' ? 'textCenter' : 'textRight');
+        var raw = block[key];
+        if (raw == null || String(raw) === '') {
+            if (slot === 'center' && block.text) {
+                raw = block.text;
+            }
+        }
+        return raw != null ? String(raw) : '';
+    }
+
     function renderRegion(block, kind, rule, ctx, readMode) {
         var el = document.createElement('div');
         el.className = 'tsl-region tsl-region--' + kind;
@@ -2260,11 +2398,9 @@
             el.setAttribute('data-tsl-rule', '1');
         }
         ['left', 'center', 'right'].forEach(function (slot) {
-            var key = slot === 'left' ? 'textLeft' : (slot === 'center' ? 'textCenter' : 'textRight');
             var span = document.createElement('span');
             span.className = 'tsl-region-slot tsl-region-slot--' + slot;
-            var raw = block[key] || '';
-            span.textContent = resolveFields(raw, ctx);
+            span.textContent = resolveFields(runningChromeSlotText(block, slot), ctx);
             el.appendChild(span);
         });
         return el;

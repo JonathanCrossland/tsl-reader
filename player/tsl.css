@@ -374,6 +374,14 @@
     max-width: calc((100% - var(--tsl-pager-gutter)) / 2);
 }
 
+/* One page in a spread (missing pair): same width as paired pages, no flex shrink */
+.tsl-root[data-tsl-layout="pages"][data-tsl-page-view="spread"] .tsl-spread.is-active .tsl-page:only-child {
+    flex: 0 0 auto;
+    min-width: auto;
+    width: var(--tsl-page-fit-w);
+    max-width: var(--tsl-page-fit-w);
+}
+
 .tsl-root[data-tsl-layout="pages"][data-tsl-page-view="spread"] .tsl-pages > .tsl-page.is-active {
     display: flex;
     width: var(--tsl-page-fit-w);
@@ -492,7 +500,7 @@
 }
 
 .tsl-region--footer {
-    margin-top: auto;
+    margin-top: 0;
     padding-top: 0.5em;
     border-top: 1px solid transparent;
     flex-shrink: 0;
@@ -526,11 +534,15 @@
     height: var(--tsl-page-h);
     min-height: var(--tsl-page-h);
     max-height: var(--tsl-page-h);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    align-content: stretch;
 }
 
 .tsl-root[data-tsl-layout="pages"] .tsl-page:not([data-tsl-full-bleed="1"]) .tsl-body {
-    flex: 1 1 auto;
+    flex: none;
     min-height: 0;
+    overflow: visible;
 }
 
 .tsl-measure-chrome {
@@ -1175,37 +1187,60 @@
     }
 
     .tsl-root[data-tsl-layout="pages"] .tsl-spread,
-    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-spread {
-        display: contents !important;
+    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-spread,
+    .tsl-root[data-tsl-print-all="1"][data-tsl-layout="pages"] .tsl-spread {
+        display: block !important;
         width: auto !important;
         height: auto !important;
+        max-height: none !important;
         transform: none !important;
+        overflow: visible !important;
     }
 
-    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-pages > .tsl-page:not([aria-hidden="true"]) {
-        display: flex !important;
-    }
-
-    .tsl-root[data-tsl-layout="pages"] .tsl-page:not([aria-hidden="true"]),
-    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-page:not([aria-hidden="true"]) {
-        display: flex !important;
+    .tsl-root[data-tsl-layout="pages"] .tsl-pages > .tsl-page:not([aria-hidden="true"]):not([data-tsl-full-bleed="1"]),
+    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-pages > .tsl-page:not([aria-hidden="true"]):not([data-tsl-full-bleed="1"]),
+    .tsl-root[data-tsl-print-all="1"][data-tsl-layout="pages"] .tsl-pages > .tsl-page:not([aria-hidden="true"]):not([data-tsl-full-bleed="1"]),
+    .tsl-root[data-tsl-layout="pages"] .tsl-spread .tsl-page:not([aria-hidden="true"]):not([data-tsl-full-bleed="1"]),
+    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-spread .tsl-page:not([aria-hidden="true"]):not([data-tsl-full-bleed="1"]),
+    .tsl-root[data-tsl-print-all="1"][data-tsl-layout="pages"] .tsl-spread .tsl-page:not([aria-hidden="true"]):not([data-tsl-full-bleed="1"]),
+    .tsl-root[data-tsl-layout="pages"] .tsl-page:not([aria-hidden="true"]):not([data-tsl-full-bleed="1"]),
+    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-page:not([aria-hidden="true"]):not([data-tsl-full-bleed="1"]),
+    .tsl-root[data-tsl-print-all="1"][data-tsl-layout="pages"] .tsl-page:not([aria-hidden="true"]):not([data-tsl-full-bleed="1"]) {
+        display: grid !important;
+        grid-template-rows: auto minmax(0, 1fr) auto !important;
+        align-content: stretch !important;
         flex: none !important;
         width: var(--tsl-page-w) !important;
         height: var(--tsl-page-h) !important;
         min-height: var(--tsl-page-h) !important;
-        max-height: none !important;
+        max-height: var(--tsl-page-h) !important;
         max-width: none !important;
         min-width: 0 !important;
         margin: 0 auto !important;
         transform: none !important;
         visibility: visible !important;
+        overflow: hidden !important;
     }
 
-    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-spread .tsl-page,
-    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-spread.is-active .tsl-page,
-    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-page.is-active,
-    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-page:not(.is-active):not([aria-hidden="true"]) {
+    .tsl-page:not([data-tsl-full-bleed="1"]) .tsl-region--header {
+        grid-row: 1;
+    }
+
+    .tsl-page:not([data-tsl-full-bleed="1"]) .tsl-body {
+        grid-row: 2;
+        min-height: 0 !important;
+        overflow: visible !important;
+    }
+
+    .tsl-page:not([data-tsl-full-bleed="1"]) .tsl-region--footer {
+        grid-row: 3;
+        align-self: end;
+    }
+
+    .tsl-root[data-tsl-layout="pages"] .tsl-page[data-tsl-full-bleed="1"]:not([aria-hidden="true"]),
+    html[data-tsl-printing] .tsl-root[data-tsl-layout="pages"] .tsl-page[data-tsl-full-bleed="1"]:not([aria-hidden="true"]) {
         display: flex !important;
+        flex-direction: column !important;
     }
 
     .tsl-page[aria-hidden="true"] {
