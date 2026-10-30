@@ -272,8 +272,7 @@
     if (readToggle && readMenu) {
         readToggle.addEventListener('click', function (e) {
             e.stopPropagation();
-            var open = readMenu.hidden;
-            setReadMenuOpen(open);
+            setReadMenuOpen(readMenu.hidden);
         });
 
         readMenu.addEventListener('click', function (e) {
@@ -281,7 +280,9 @@
         });
 
         document.addEventListener('click', function () {
-            setReadMenuOpen(false);
+            if (!readMenu.hidden) {
+                setReadMenuOpen(false);
+            }
         });
 
         document.addEventListener('keydown', function (e) {

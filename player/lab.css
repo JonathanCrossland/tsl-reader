@@ -68,9 +68,7 @@ body {
     flex-wrap: nowrap;
     align-items: center;
     gap: 0.45rem 0.65rem;
-    overflow-x: auto;
-    overflow-y: hidden;
-    -webkit-overflow-scrolling: touch;
+    overflow: visible;
     max-width: var(--lab-header-max);
     margin: 0 auto;
     min-height: 2.35rem;
@@ -79,6 +77,19 @@ body {
     border: 1px solid var(--lab-border);
     border-radius: var(--lab-radius-md);
     box-shadow: var(--lab-shadow-sm);
+}
+
+.tsl-lab-bar-scroll {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.45rem 0.65rem;
+    min-width: 0;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
 }
 
 .tsl-lab-mark {
@@ -249,6 +260,7 @@ body {
 .tsl-lab-typo-wrap {
     position: relative;
     flex: 0 0 auto;
+    z-index: 210;
     margin-left: 0.15rem;
 }
 
