@@ -157,7 +157,7 @@
         lastParsed = parsed;
         TalesmithTsl.display(mount, parsed);
         rebuildLabContents(parsed);
-        setStatus('Loaded ' + label);
+        setStatus('');
     }
 
     function resolveTslUrl(url) {
@@ -171,7 +171,7 @@
         url = resolveTslUrl(url);
         lastUrl = url;
         syncSampleSelect(url);
-        setStatus('Loading ' + url + '…');
+        setStatus('');
         fetch(url).then(function (res) {
             if (!res.ok) {
                 throw new Error('Could not load ' + url);

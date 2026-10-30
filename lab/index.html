@@ -11,18 +11,6 @@
     <header class="tsl-lab-header">
         <div class="tsl-lab-bar">
             <span class="tsl-lab-mark" aria-hidden="true">TSL</span>
-            <details class="tsl-lab-about">
-                <summary class="tsl-lab-about-summary">
-                    <span class="tsl-lab-about-title">Talesmith Lang</span>
-                </summary>
-                <div class="tsl-lab-about-body">
-                    <p>
-                        Loads <a href="../spec/tsl-spec.tsl">spec/tsl-spec.tsl</a> by default.
-                        Rendering uses <code>player/tsl.css</code> and <code>player/tsl.js</code>.
-                        Preferences persist as <code>reader:prefs</code> on this device.
-                    </p>
-                </div>
-            </details>
             <label class="tsl-lab-sample-label">
                 <span class="tsl-lab-sample-text">Document</span>
                 <span class="tsl-lab-select-wrap">
@@ -43,7 +31,6 @@
             <button type="button" class="tsl-lab-btn tsl-lab-btn-ghost" data-tsl-reload hidden>Reload</button>
             <button type="button" class="tsl-lab-btn tsl-lab-btn-ghost" data-tsl-contents-toggle aria-expanded="false" aria-controls="tsl-lab-contents" title="Document outline (])">Contents</button>
             <button type="button" class="tsl-lab-btn tsl-lab-btn-secondary" data-tsl-print title="Print or save as PDF">Print</button>
-            <span class="tsl-lab-status" data-tsl-status role="status" aria-live="polite"></span>
             <div class="tsl-lab-typo-wrap">
                 <button type="button" class="tsl-lab-typo-btn" data-tsl-read-toggle aria-expanded="false" aria-haspopup="dialog" aria-controls="tsl-read-menu" title="Reading settings">
                     <span class="tsl-lab-typo-icon" aria-hidden="true">T</span>
@@ -112,6 +99,7 @@
                     </section>
                 </div>
             </div>
+            <span class="tsl-lab-status" data-tsl-status role="status" aria-live="polite"></span>
         </div>
     </header>
     <div class="tsl-lab-body">

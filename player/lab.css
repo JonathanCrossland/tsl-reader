@@ -65,9 +65,12 @@ body {
 
 .tsl-lab-bar {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     align-items: center;
     gap: 0.45rem 0.65rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
     max-width: var(--lab-header-max);
     margin: 0 auto;
     min-height: 2.35rem;
@@ -93,96 +96,6 @@ body {
     background: linear-gradient(145deg, #4a6278 0%, #2f4759 100%);
     border-radius: 6px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), var(--lab-shadow-sm);
-}
-
-.tsl-lab-about {
-    position: relative;
-    margin: 0;
-    min-width: 0;
-    flex-shrink: 1;
-}
-
-.tsl-lab-about-summary {
-    cursor: pointer;
-    list-style: none;
-    display: inline-flex;
-    flex-wrap: nowrap;
-    align-items: center;
-    gap: 0.35rem;
-    padding: 0.15rem 0;
-    border-radius: 6px;
-    outline-offset: 3px;
-    white-space: nowrap;
-}
-
-.tsl-lab-about-summary::-webkit-details-marker {
-    display: none;
-}
-
-.tsl-lab-about-title {
-    font-family: var(--lab-font-display);
-    font-size: 0.9rem;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    color: var(--lab-ink);
-}
-
-.tsl-lab-about-summary::after {
-    content: "·";
-    color: var(--lab-ink-faint);
-    font-weight: 400;
-}
-
-.tsl-lab-about:not([open]) .tsl-lab-about-summary::after {
-    content: "About";
-    font-family: var(--lab-font-ui);
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: var(--lab-ink-faint);
-    text-decoration: underline;
-    text-decoration-color: rgba(120, 113, 108, 0.4);
-    text-underline-offset: 0.12em;
-}
-
-.tsl-lab-about[open] .tsl-lab-about-summary::after {
-    content: "Hide";
-    font-family: var(--lab-font-ui);
-    font-size: 0.72rem;
-    font-weight: 500;
-    color: var(--lab-accent);
-    text-decoration: none;
-}
-
-.tsl-lab-about-body {
-    position: absolute;
-    left: 0;
-    top: calc(100% + 0.35rem);
-    z-index: 50;
-    width: min(22rem, calc(100vw - 2rem));
-    padding: 0.65rem 0.85rem;
-    background: var(--lab-surface-elevated);
-    border: 1px solid var(--lab-border);
-    border-radius: var(--lab-radius-md);
-    box-shadow: var(--lab-shadow-md);
-}
-
-.tsl-lab-about-body p {
-    margin: 0;
-    font-size: 0.8125rem;
-    color: var(--lab-ink-muted);
-    line-height: 1.55;
-}
-
-.tsl-lab-about-body a {
-    color: var(--lab-accent);
-    font-weight: 500;
-}
-
-.tsl-lab-about-body code {
-    font-size: 0.78em;
-    padding: 0.1em 0.35em;
-    border-radius: 4px;
-    background: rgba(28, 25, 23, 0.05);
 }
 
 /* Segmented control */
@@ -335,7 +248,7 @@ body {
 
 .tsl-lab-typo-wrap {
     position: relative;
-    flex-shrink: 0;
+    flex: 0 0 auto;
     margin-left: 0.15rem;
 }
 
@@ -537,15 +450,18 @@ body {
 /* Status */
 
 .tsl-lab-status {
-    flex: 1 1 6rem;
+    flex: 0 1 auto;
     min-width: 0;
     font-size: 0.72rem;
     color: var(--lab-ink-faint);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    text-align: right;
-    padding: 0 0.25rem;
+    padding: 0 0.15rem;
+}
+
+.tsl-lab-status:empty {
+    display: none;
 }
 
 .tsl-lab-status:not(:empty) {
@@ -557,13 +473,6 @@ body {
 }
 
 @media (max-width: 720px) {
-    .tsl-lab-status {
-        order: 10;
-        flex: 1 1 100%;
-        text-align: left;
-        padding-top: 0.15rem;
-    }
-
     .tsl-lab-read-menu {
         position: fixed;
         left: 1rem;
