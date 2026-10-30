@@ -1155,6 +1155,7 @@
         var values = mergeFieldValues(header);
         var readMode = header.readMode !== false;
         var runningHeader = '';
+        var blockRenderCtx = { allBlocks: blocks };
 
         function pickSide(state, side) {
             if (state[side]) {
@@ -1229,7 +1230,7 @@
                 ul.appendChild(renderListItem(b, type));
                 return;
             }
-            col.appendChild(renderBlock(b, {}));
+            col.appendChild(renderBlock(b, blockRenderCtx));
         }
 
         function appendFlowRow(blocksInRow, rowClass) {
@@ -1302,14 +1303,32 @@
                 bleedRow.className = 'tsl-row tsl-row--full';
                 var bleedCol = document.createElement('div');
                 bleedCol.className = 'tsl-col';
-                bleedCol.appendChild(renderBlock(b, {}));
+                bleedCol.appendChild(renderBlock(b, blockRenderCtx));
                 bleedRow.appendChild(bleedCol);
                 current.body.appendChild(bleedRow);
                 current = null;
                 bi += 1;
                 continue;
             }
-            if (type === 'paywall' || type === 'document') {
+            if (type === 'toc' || type === 'image-index' || type === 'manuscript-title') {
+                appendFlowRow([b], 'full');
+                var markerPage = pages[pages.length - 1];
+                if (markerPage) {
+                    if (type === 'toc') {
+                        markerPage.tocBlock = b;
+                    } else if (type === 'image-index') {
+                        markerPage.imageIndexBlock = b;
+                    }
+                }
+                bi += 1;
+                continue;
+            }
+            if (type === 'paywall') {
+                appendFlowRow([b], 'full');
+                bi += 1;
+                continue;
+            }
+            if (type === 'document') {
                 bi += 1;
                 continue;
             }
@@ -1341,6 +1360,7 @@
             bi += 1;
         }
         pages = pages.filter(function (p) { return p.body.childNodes.length > 0; });
+        refreshIndexBlocksInPages(pages, blocks);
         var pageCount = pages.length;
         var spreadEl = null;
         pages.forEach(function (pg) {
@@ -1687,6 +1707,266 @@
         return li;
     }
 
+    function normaliseTocMaxLevel(block) {
+        var ml = block && parseInt(block.maxLevel, 10);
+        return (ml >= 1 && ml <= 3) ? ml : 3;
+    }
+
+    function isTocHeadingBlock(b) {
+        return !!(b && /^h[1-3]$/.test(b.type) && plainText(b.text).trim());
+    }
+
+    function headingAnchorId(block) {
+        if (!block || !block.id) {
+            return '';
+        }
+        return 'tsl-h-' + String(block.id).replace(/[^a-zA-Z0-9_-]/g, '');
+    }
+
+    function stampBlockMeta(el, block) {
+        if (!el || !block || !block.id) {
+            return;
+        }
+        el.setAttribute('data-tsl-block-id', block.id);
+        if (block.type) {
+            el.setAttribute('data-tsl-block-type', block.type);
+        }
+        if (/^h[1-3]$/.test(block.type) || block.type === 'title') {
+            var aid = headingAnchorId(block);
+            if (aid) {
+                el.id = aid;
+            }
+        }
+    }
+
+    /** Outline from document headings; respects toc block maxLevel when a toc block is passed. */
+    function collectTocEntries(blocks, tocBlock) {
+        var through = tocBlock ? normaliseTocMaxLevel(tocBlock) : 3;
+        var entries = [];
+        var i;
+        if (!Array.isArray(blocks)) {
+            return entries;
+        }
+        for (i = 0; i < blocks.length; i += 1) {
+            var b = blocks[i];
+            if (!isTocHeadingBlock(b)) {
+                continue;
+            }
+            var lvl = parseInt(String(b.type).charAt(1), 10);
+            if (lvl > through) {
+                continue;
+            }
+            entries.push({
+                id: b.id,
+                level: lvl,
+                type: b.type,
+                text: (headingDisplayPrefix(b) + plainText(b.text).trim()).trim()
+            });
+        }
+        return entries;
+    }
+
+    function collectImageIndexEntries(blocks) {
+        var entries = [];
+        if (!Array.isArray(blocks)) {
+            return entries;
+        }
+        blocks.forEach(function (b) {
+            if (b && b.type === 'image' && b.src) {
+                entries.push({
+                    id: b.id,
+                    caption: plainText(b.caption || '') || '',
+                    src: b.src
+                });
+            }
+        });
+        return entries;
+    }
+
+    function indexHeadingPageNumbers(pages) {
+        var map = {};
+        pages.forEach(function (pg) {
+            if (!pg.body || pg.pageNo == null) {
+                return;
+            }
+            Array.prototype.forEach.call(
+                pg.body.querySelectorAll('[data-tsl-block-id][data-tsl-block-type]'),
+                function (node) {
+                    var t = node.getAttribute('data-tsl-block-type') || '';
+                    if (!/^h[1-3]$/.test(t) && t !== 'title') {
+                        return;
+                    }
+                    var bid = node.getAttribute('data-tsl-block-id');
+                    if (bid) {
+                        map[bid] = pg.pageNo;
+                    }
+                }
+            );
+        });
+        return map;
+    }
+
+    function indexImagePageNumbers(pages) {
+        var map = {};
+        pages.forEach(function (pg) {
+            if (!pg.body || pg.pageNo == null) {
+                return;
+            }
+            Array.prototype.forEach.call(
+                pg.body.querySelectorAll('[data-tsl-block-id][data-tsl-block-type="image"]'),
+                function (node) {
+                    var bid = node.getAttribute('data-tsl-block-id');
+                    if (bid) {
+                        map[bid] = pg.pageNo;
+                    }
+                }
+            );
+        });
+        return map;
+    }
+
+    function replaceIndexNavInPage(pg, selector, navEl) {
+        if (!pg.body || !navEl) {
+            return;
+        }
+        var old = pg.body.querySelector(selector);
+        if (old && old.parentNode) {
+            old.parentNode.replaceChild(navEl, old);
+        }
+    }
+
+    function refreshIndexBlocksInPages(pages, blocks) {
+        if (!pages.length) {
+            return;
+        }
+        var pageByBlockId = indexHeadingPageNumbers(pages);
+        var imagePageById = indexImagePageNumbers(pages);
+        pages.forEach(function (pg) {
+            if (pg.tocBlock) {
+                replaceIndexNavInPage(
+                    pg,
+                    '.tsl-toc, .studio-lean-toc',
+                    renderTocNav(pg.tocBlock, blocks, pageByBlockId)
+                );
+            }
+            if (pg.imageIndexBlock) {
+                replaceIndexNavInPage(
+                    pg,
+                    '.tsl-image-index, .studio-lean-image-index',
+                    renderImageIndexNav(pg.imageIndexBlock, blocks, imagePageById)
+                );
+            }
+        });
+    }
+
+    function collectDocumentOutline(blocks, opts) {
+        opts = opts || {};
+        var tocBlock = opts.tocBlock || null;
+        if (!tocBlock && Array.isArray(blocks)) {
+            var i;
+            for (i = 0; i < blocks.length; i += 1) {
+                if (blocks[i] && blocks[i].type === 'toc') {
+                    tocBlock = blocks[i];
+                    break;
+                }
+            }
+        }
+        return collectTocEntries(blocks, tocBlock);
+    }
+
+    function renderTocNav(block, blocks, pageByBlockId) {
+        var entries = collectTocEntries(blocks, block);
+        var nav = document.createElement('nav');
+        nav.className = 'tsl-toc studio-lean-toc';
+        nav.setAttribute('aria-label', 'Table of contents');
+        if (!entries.length) {
+            var empty = document.createElement('p');
+            empty.className = 'studio-lean-toc-empty';
+            empty.textContent = 'No headings to include.';
+            nav.appendChild(empty);
+            return nav;
+        }
+        var leader = block && block.leader != null ? String(block.leader) : '.';
+        var ul = document.createElement('ul');
+        ul.className = 'studio-lean-toc-list';
+        entries.forEach(function (e) {
+            var li = document.createElement('li');
+            li.className = 'studio-lean-toc-item studio-lean-toc-item--h' + e.level;
+            var a = document.createElement('a');
+            a.className = 'studio-lean-toc-link';
+            a.href = '#' + headingAnchorId({ id: e.id });
+            var label = document.createElement('span');
+            label.className = 'studio-lean-toc-label';
+            label.textContent = e.text;
+            a.appendChild(label);
+            if (leader !== '') {
+                var fill = document.createElement('span');
+                fill.className = 'studio-lean-toc-leader';
+                fill.setAttribute('aria-hidden', 'true');
+                fill.textContent = leader.repeat(40);
+                a.appendChild(fill);
+            }
+            if (pageByBlockId && pageByBlockId[e.id] != null) {
+                var pgEl = document.createElement('span');
+                pgEl.className = 'studio-lean-toc-page';
+                pgEl.textContent = String(pageByBlockId[e.id]);
+                a.appendChild(pgEl);
+            }
+            li.appendChild(a);
+            ul.appendChild(li);
+        });
+        nav.appendChild(ul);
+        return nav;
+    }
+
+    function renderImageIndexNav(block, blocks, imagePageById) {
+        var title = block && block.title ? String(block.title).trim() : 'Image index';
+        if (!title) {
+            title = 'Image index';
+        }
+        var leader = block && block.leader != null ? String(block.leader) : '.';
+        var entries = collectImageIndexEntries(blocks);
+        var section = document.createElement('section');
+        section.className = 'tsl-image-index studio-lean-image-index';
+        var h = document.createElement('h2');
+        h.className = 'studio-lean-image-index-title';
+        h.textContent = title;
+        section.appendChild(h);
+        if (!entries.length) {
+            var empty = document.createElement('p');
+            empty.className = 'studio-lean-image-index-empty';
+            empty.textContent = 'No images in the document yet.';
+            section.appendChild(empty);
+            return section;
+        }
+        var list = document.createElement('ol');
+        list.className = 'studio-lean-image-index-list';
+        entries.forEach(function (e, idx) {
+            var li = document.createElement('li');
+            li.className = 'studio-lean-image-index-item';
+            var label = document.createElement('span');
+            label.className = 'studio-lean-image-index-label';
+            label.textContent = e.caption || ('Image ' + (idx + 1));
+            li.appendChild(label);
+            if (leader !== '') {
+                var fill = document.createElement('span');
+                fill.className = 'studio-lean-image-index-leader';
+                fill.setAttribute('aria-hidden', 'true');
+                fill.textContent = leader.repeat(40);
+                li.appendChild(fill);
+            }
+            if (imagePageById && e.id && imagePageById[e.id] != null) {
+                var pgEl = document.createElement('span');
+                pgEl.className = 'studio-lean-image-index-page';
+                pgEl.textContent = String(imagePageById[e.id]);
+                li.appendChild(pgEl);
+            }
+            list.appendChild(li);
+        });
+        section.appendChild(list);
+        return section;
+    }
+
     function renderBlock(b, ctx) {
         var type = b.type;
         var el;
@@ -1715,6 +1995,27 @@
             fpInner.className = 'tsl-full-page-inner';
             fpInner.innerHTML = inlineHtml(b.text);
             el.appendChild(fpInner);
+            stampBlockMeta(el, b);
+            return el;
+        }
+        if (type === 'toc') {
+            el = renderTocNav(b, ctx && ctx.allBlocks ? ctx.allBlocks : [], null);
+            stampBlockMeta(el, b);
+            return el;
+        }
+        if (type === 'image-index') {
+            el = renderImageIndexNav(b, ctx && ctx.allBlocks ? ctx.allBlocks : [], null);
+            stampBlockMeta(el, b);
+            return el;
+        }
+        if (type === 'manuscript-title') {
+            el = document.createElement('section');
+            el.className = 'tsl-block tsl-block--manuscript-title studio-lean-manuscript-title';
+            var mp = document.createElement('div');
+            mp.className = 'studio-lean-manuscript-page';
+            mp.innerHTML = inlineHtml(b.title || b.text || '');
+            el.appendChild(mp);
+            stampBlockMeta(el, b);
             return el;
         }
         if (type === 'image') {
@@ -1734,7 +2035,19 @@
                 cap.innerHTML = inlineHtml(b.caption);
                 fig.appendChild(cap);
             }
+            stampBlockMeta(fig, b);
             return fig;
+        }
+        if (type === 'paywall') {
+            el = document.createElement('aside');
+            el.className = 'tsl-block tsl-block--paywall studio-lean-paywall';
+            el.setAttribute('role', 'note');
+            var pw = document.createElement('p');
+            pw.className = 'studio-lean-paywall-message';
+            pw.innerHTML = inlineHtml(b.text || '');
+            el.appendChild(pw);
+            stampBlockMeta(el, b);
+            return el;
         }
         if (type === 'code') {
             el = document.createElement('pre');
@@ -1804,6 +2117,7 @@
             }
         }
         el.innerHTML = inner;
+        stampBlockMeta(el, b);
         return el;
     }
 
@@ -1861,6 +2175,66 @@
             return '';
         }
         return ' data-heading-number="' + escapeHtml(headingNumberLabel(block.number)) + '"';
+    }
+
+    function leanHeadingIdAttr(block) {
+        var aid = headingAnchorId(block);
+        return aid ? ' id="' + escapeHtml(aid) + '"' : '';
+    }
+
+    function leanTocBlockHtml(block, blocks, header, readMode, pageByBlockId) {
+        var entries = collectTocEntries(blocks, block);
+        if (!entries.length) {
+            return '<nav class="studio-lean-toc tsl-toc" aria-label="Table of contents">'
+                + '<p class="studio-lean-toc-empty">No headings to include.</p></nav>';
+        }
+        var leader = block && block.leader != null ? String(block.leader) : '.';
+        var html = '<nav class="studio-lean-toc tsl-toc" aria-label="Table of contents"><ul class="studio-lean-toc-list">';
+        entries.forEach(function (e) {
+            var cls = 'studio-lean-toc-item studio-lean-toc-item--h' + e.level;
+            html += '<li class="' + cls + '"><a class="studio-lean-toc-link" href="#'
+                + escapeHtml(headingAnchorId({ id: e.id })) + '">';
+            html += '<span class="studio-lean-toc-label">' + escapeHtml(e.text) + '</span>';
+            if (leader !== '') {
+                html += '<span class="studio-lean-toc-leader" aria-hidden="true">'
+                    + escapeHtml(leader.repeat(40)) + '</span>';
+            }
+            if (pageByBlockId && pageByBlockId[e.id] != null) {
+                html += '<span class="studio-lean-toc-page">' + escapeHtml(String(pageByBlockId[e.id])) + '</span>';
+            }
+            html += '</a></li>';
+        });
+        return html + '</ul></nav>';
+    }
+
+    function leanImageIndexBlockHtml(block, blocks, header, readMode, imagePageById) {
+        var title = block && block.title ? String(block.title).trim() : 'Image index';
+        if (!title) {
+            title = 'Image index';
+        }
+        var leader = block && block.leader != null ? String(block.leader) : '.';
+        var entries = collectImageIndexEntries(blocks);
+        var html = '<section class="studio-lean-image-index tsl-image-index">'
+            + '<h2 class="studio-lean-image-index-title">' + escapeHtml(title) + '</h2>';
+        if (!entries.length) {
+            return html + '<p class="studio-lean-image-index-empty">No images in the document yet.</p></section>';
+        }
+        html += '<ol class="studio-lean-image-index-list">';
+        entries.forEach(function (e, idx) {
+            var label = e.caption || ('Image ' + (idx + 1));
+            html += '<li class="studio-lean-image-index-item">';
+            html += '<span class="studio-lean-image-index-label">' + escapeHtml(label) + '</span>';
+            if (leader !== '') {
+                html += '<span class="studio-lean-image-index-leader" aria-hidden="true">'
+                    + escapeHtml(leader.repeat(40)) + '</span>';
+            }
+            if (imagePageById && e.id && imagePageById[e.id] != null) {
+                html += '<span class="studio-lean-image-index-page">'
+                    + escapeHtml(String(imagePageById[e.id])) + '</span>';
+            }
+            html += '</li>';
+        });
+        return html + '</ol></section>';
     }
 
     function toRoman(n) {
@@ -2128,13 +2502,13 @@
             if (!plainText(t)) {
                 return '';
             }
-            return '<h1 class="studio-lean-title" style="' + style + '">' + t + '</h1>';
+            return '<h1 class="studio-lean-title"' + leanHeadingIdAttr(block) + ' style="' + style + '">' + t + '</h1>';
         }
         if (type === 'h1' || type === 'h2' || type === 'h3') {
             if (!plainText(block.text)) {
                 return '';
             }
-            return '<' + type + headingNumberAttr(block) + ' style="' + style + '">'
+            return '<' + type + leanHeadingIdAttr(block) + headingNumberAttr(block) + ' style="' + style + '">'
                 + headingBodyHtml(block, header, readMode) + '</' + type + '>';
         }
         if (type === 'paragraph') {
@@ -2218,6 +2592,16 @@
             return '<section class="studio-lean-manuscript-title"><div class="studio-lean-manuscript-page">'
                 + leanInlineHtml(block.title || '[Title]', header, readMode) + '</div></section>';
         }
+        if (type === 'toc') {
+            return leanTocBlockHtml(block, header._leanAllBlocks || [], header, readMode, null);
+        }
+        if (type === 'image-index') {
+            return leanImageIndexBlockHtml(block, header._leanAllBlocks || [], header, readMode, null);
+        }
+        if (type === 'paywall') {
+            return '<aside class="studio-lean-paywall" role="note"><p class="studio-lean-paywall-message">'
+                + leanInlineHtml(block.text || '', header, readMode) + '</p></aside>';
+        }
         return '';
     }
 
@@ -2275,6 +2659,7 @@
     function blocksToLeanHtml(blocks, header, readMode, roundTrip) {
         var html = '';
         var i = 0;
+        header = Object.assign({}, header, { _leanAllBlocks: blocks });
         while (i < blocks.length) {
             var block = blocks[i];
             if (!block || typeof block !== 'object') {
@@ -2915,6 +3300,9 @@
         enhancePublishedLean: enhancePublishedLean,
         mountReaderEnvelope: mountReaderEnvelope,
         bindReadingPrefsUI: bindReadingPrefsUI,
-        resetReadingPrefs: resetReadingPrefs
+        resetReadingPrefs: resetReadingPrefs,
+        collectDocumentOutline: collectDocumentOutline,
+        collectTocEntries: collectTocEntries,
+        headingAnchorId: headingAnchorId
     };
 })(typeof window !== 'undefined' ? window : globalThis);

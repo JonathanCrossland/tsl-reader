@@ -41,6 +41,7 @@
             </label>
             <button type="button" class="tsl-lab-btn tsl-lab-btn-ghost" data-tsl-download hidden>Download</button>
             <button type="button" class="tsl-lab-btn tsl-lab-btn-ghost" data-tsl-reload hidden>Reload</button>
+            <button type="button" class="tsl-lab-btn tsl-lab-btn-ghost" data-tsl-contents-toggle aria-expanded="false" aria-controls="tsl-lab-contents" title="Document outline (])">Contents</button>
             <button type="button" class="tsl-lab-btn tsl-lab-btn-secondary" data-tsl-print title="Print or save as PDF">Print</button>
             <span class="tsl-lab-status" data-tsl-status role="status" aria-live="polite"></span>
             <div class="tsl-lab-typo-wrap">
@@ -113,9 +114,18 @@
             </div>
         </div>
     </header>
-    <main class="tsl-lab-stage" data-tsl-fit-container>
-        <div class="tsl-lab-mount" data-tsl-mount></div>
-    </main>
+    <div class="tsl-lab-body">
+        <aside class="tsl-lab-contents" id="tsl-lab-contents" data-tsl-lab-contents hidden>
+            <div class="tsl-lab-contents-head">
+                <h2 class="tsl-lab-contents-title">Contents</h2>
+                <button type="button" class="tsl-lab-contents-close" data-tsl-contents-close aria-label="Hide contents">×</button>
+            </div>
+            <nav class="tsl-lab-toc" data-tsl-lab-toc aria-label="Table of contents"></nav>
+        </aside>
+        <main class="tsl-lab-stage" data-tsl-fit-container>
+            <div class="tsl-lab-mount" data-tsl-mount></div>
+        </main>
+    </div>
     <script>
     (function (g) {
         g.__TalesmithTslStorage = {

@@ -595,6 +595,112 @@ body {
     }
 }
 
+/* Document layout + contents panel */
+
+.tsl-lab-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+}
+
+.tsl-lab-contents {
+    flex: 0 0 16.5rem;
+    max-width: min(16.5rem, 42vw);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--lab-surface);
+    border-right: 1px solid var(--lab-border);
+    box-shadow: var(--lab-shadow-sm);
+}
+
+.tsl-lab-contents[hidden] {
+    display: none !important;
+}
+
+.tsl-lab-contents-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.65rem 0.75rem;
+    border-bottom: 1px solid var(--lab-border);
+}
+
+.tsl-lab-contents-title {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--lab-ink-muted);
+}
+
+.tsl-lab-contents-close {
+    border: 0;
+    background: transparent;
+    color: var(--lab-ink-muted);
+    font-size: 1.25rem;
+    line-height: 1;
+    padding: 0.15rem 0.35rem;
+    border-radius: var(--lab-radius-sm);
+    cursor: pointer;
+}
+
+.tsl-lab-contents-close:hover {
+    background: var(--lab-accent-soft);
+    color: var(--lab-ink);
+}
+
+.tsl-lab-toc {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    padding: 0.5rem 0.65rem 1rem;
+    font-size: 0.8125rem;
+}
+
+.tsl-lab-toc-empty {
+    margin: 0.75rem 0;
+    color: var(--lab-ink-faint);
+    font-style: italic;
+}
+
+.tsl-lab-toc-link {
+    display: block;
+    padding: 0.28rem 0.35rem;
+    border-radius: var(--lab-radius-sm);
+    color: var(--lab-ink);
+    text-decoration: none;
+}
+
+.tsl-lab-toc-link:hover {
+    background: var(--lab-accent-soft);
+}
+
+.tsl-lab-toc-link--h2 {
+    padding-left: 0.85rem;
+}
+
+.tsl-lab-toc-link--h3 {
+    padding-left: 1.35rem;
+    font-size: 0.95em;
+}
+
+@media (max-width: 900px) {
+    .tsl-lab-contents {
+        position: fixed;
+        z-index: 90;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        max-width: min(18rem, 88vw);
+        box-shadow: var(--lab-shadow-menu);
+    }
+}
+
 /* Reader mount */
 
 .tsl-lab-stage {
@@ -682,7 +788,8 @@ body {
 
 @media print {
     .tsl-lab-header,
-    .tsl-lab-float {
+    .tsl-lab-float,
+    .tsl-lab-contents {
         display: none !important;
     }
 

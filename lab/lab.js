@@ -18,6 +18,65 @@
     }
 
     var printBtn = document.querySelector('[data-tsl-print]');
+    var contentsPanel = document.querySelector('[data-tsl-lab-contents]');
+    var contentsNav = document.querySelector('[data-tsl-lab-toc]');
+    var contentsToggle = document.querySelector('[data-tsl-contents-toggle]');
+    var contentsClose = document.querySelector('[data-tsl-contents-close]');
+
+    function setContentsOpen(open) {
+        if (!contentsPanel) {
+            return;
+        }
+        contentsPanel.hidden = !open;
+        if (contentsToggle) {
+            contentsToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+            contentsToggle.classList.toggle('is-on', open);
+        }
+    }
+
+    function rebuildLabContents(parsed) {
+        if (!contentsNav || !parsed || !TalesmithTsl.collectDocumentOutline) {
+            return;
+        }
+        contentsNav.textContent = '';
+        var entries = TalesmithTsl.collectDocumentOutline(parsed.blocks || []);
+        if (!entries.length) {
+            var empty = document.createElement('p');
+            empty.className = 'tsl-lab-toc-empty';
+            empty.textContent = 'No headings in this document.';
+            contentsNav.appendChild(empty);
+            return;
+        }
+        entries.forEach(function (e) {
+            var a = document.createElement('a');
+            a.className = 'tsl-lab-toc-link tsl-lab-toc-link--h' + e.level;
+            a.href = '#' + TalesmithTsl.headingAnchorId({ id: e.id });
+            a.textContent = e.text;
+            a.addEventListener('click', function (ev) {
+                ev.preventDefault();
+                var root = mount && mount.querySelector('.tsl-root');
+                var target = document.getElementById(TalesmithTsl.headingAnchorId({ id: e.id }));
+                if (root && target && typeof root._tslPagerGoToElement === 'function') {
+                    root._tslPagerGoToElement(target);
+                } else if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            });
+            contentsNav.appendChild(a);
+        });
+    }
+
+    if (contentsToggle) {
+        contentsToggle.addEventListener('click', function () {
+            setContentsOpen(contentsPanel && contentsPanel.hidden);
+        });
+    }
+    if (contentsClose) {
+        contentsClose.addEventListener('click', function () {
+            setContentsOpen(false);
+        });
+    }
+
     if (printBtn) {
         printBtn.addEventListener('click', function () {
             window.print();
@@ -89,6 +148,7 @@
         }
         lastParsed = parsed;
         TalesmithTsl.display(mount, parsed);
+        rebuildLabContents(parsed);
         setStatus('Loaded ' + label);
     }
 
