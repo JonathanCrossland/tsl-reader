@@ -306,7 +306,7 @@ body {
     right: 0;
     top: calc(100% + 0.5rem);
     z-index: 200;
-    width: min(21rem, calc(100vw - 2rem));
+    width: min(22rem, calc(100vw - 2rem));
     max-height: calc(100dvh - 5rem);
     padding: 0.85rem 1rem 1rem;
     overflow-x: hidden;
@@ -641,6 +641,8 @@ body {
 .tsl-lab-mount .tsl-root[data-tsl-layout="pages"] {
     flex: 1 1 auto;
     min-height: 0;
+    height: auto;
+    max-height: none;
     display: flex;
     flex-direction: column;
     padding-bottom: 0.5rem;

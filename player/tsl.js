@@ -1195,18 +1195,40 @@
 
         var current = null;
 
+        function pageTrimWidthPx() {
+            return Math.max(120, parseCssLengthToPx(root, page.trimMM.width + 'mm'));
+        }
+
+        function pageBodyInnerWidthPx(side) {
+            var trim = pageTrimWidthPx();
+            var out = parseCssLengthToPx(root, page.marginsMM.outside + 'mm');
+            var gut = parseCssLengthToPx(root, page.marginsMM.gutter + 'mm');
+            if (side === 'left') {
+                return Math.max(120, trim - out - gut);
+            }
+            if (side === 'right') {
+                return Math.max(120, trim - gut - out);
+            }
+            return Math.max(120, trim - out - out);
+        }
+
         function bodyMaxHeightPx(side) {
             var mm = 96 / 25.4;
             var bodyHmm = page.trimMM.height - page.marginsMM.top - page.marginsMM.bottom
                 - (page.headerTopMM || 0) - (page.footerBottomMM || 0);
-            return Math.max(120, bodyHmm * mm) / paginationReaderScale();
+            var maxPx = Math.max(120, bodyHmm * mm);
+            var scale = paginationReaderScale();
+            if (scale > 0.001) {
+                maxPx = maxPx / scale;
+            }
+            return maxPx;
         }
 
-        function measurePageContentWidthPx() {
-            var nominal = parseCssLengthToPx(root, page.trimMM.width + 'mm');
+        function measurePageContentWidthPx(side) {
             if (layoutMode === 'pages' || tslAuthorPrintLayout() || getPageFit() === 'native') {
-                return Math.max(120, nominal);
+                return pageBodyInnerWidthPx(side || (current && current.side) || 'any');
             }
+            var nominal = pageTrimWidthPx();
             var mount = root.closest('[data-tsl-mount]') || root.parentElement;
             var mountW = mount && mount.clientWidth ? mount.clientWidth : 0;
             var scaledNominal = nominal * paginationReaderScale();
@@ -1216,8 +1238,13 @@
             return Math.max(120, scaledNominal);
         }
 
-        function syncMeasurePageBox() {
-            measurePage.style.width = measurePageContentWidthPx() + 'px';
+        function syncMeasurePageBox(side) {
+            var s = side || (current && current.side) || 'any';
+            measurePage.setAttribute('data-tsl-side', s);
+            measurePage.style.width = pageTrimWidthPx() + 'px';
+            var innerW = pageBodyInnerWidthPx(s);
+            measureBody.style.width = innerW + 'px';
+            measureBody.style.maxWidth = innerW + 'px';
         }
 
         function ensurePage() {
@@ -1253,7 +1280,7 @@
                 appendBlockToColumn(col, pb);
                 row.appendChild(col);
             });
-            syncMeasurePageBox();
+            syncMeasurePageBox(current.side);
             measureBody.innerHTML = '';
             measureBody.appendChild(row);
             var rowH = measureBody.offsetHeight;
@@ -1267,7 +1294,7 @@
             current.usedH = used + rowH + 4;
         }
 
-        function measureTocNavRowHeight(block, entries, pageByBlockId) {
+        function measureTocNavRowHeight(block, entries, pageByBlockId, side) {
             var nav = buildTocNavElement(block, entries, pageByBlockId);
             var row = document.createElement('div');
             row.className = 'tsl-row tsl-row--full';
@@ -1275,7 +1302,7 @@
             col.className = 'tsl-col';
             col.appendChild(nav);
             row.appendChild(col);
-            syncMeasurePageBox();
+            syncMeasurePageBox(side || (current && current.side) || 'any');
             measureBody.innerHTML = '';
             measureBody.appendChild(row);
             return measureBody.offsetHeight;
@@ -1289,7 +1316,7 @@
             col.className = 'tsl-col';
             col.appendChild(nav);
             row.appendChild(col);
-            var rowH = measureTocNavRowHeight(block, entries, pageByBlockId);
+            var rowH = measureTocNavRowHeight(block, entries, pageByBlockId, current.side);
             current.body.appendChild(row);
             current.usedH = (current.usedH || 0) + rowH + 4;
         }
@@ -1322,7 +1349,7 @@
                     trySlice.forEach(function (e) {
                         tryBy[e.id] = dummyPageBy[e.id];
                     });
-                    var h = measureTocNavRowHeight(b, trySlice, tryBy);
+                    var h = measureTocNavRowHeight(b, trySlice, tryBy, current.side);
                     if (h > maxH) {
                         break;
                     }
@@ -1591,7 +1618,43 @@
         });
     }
 
+    function ensureLeanBackupFromParsed(readerArticle, parsed) {
+        if (!readerArticle || readerArticle._tslLeanBackup || !parsed) {
+            return;
+        }
+        var tmp = document.createElement('div');
+        mountLeanHtml(tmp, parsed);
+        readerArticle._tslLeanBackup = tmp.innerHTML;
+    }
+
+    function restoreLeanScrollWrap(wrap, readerArticle) {
+        if (!wrap) {
+            return null;
+        }
+        wrap.classList.remove('tsl-reader-player-mount');
+        wrap.removeAttribute('data-tsl-mount');
+        if (readerArticle._tslLeanBackup) {
+            wrap.innerHTML = readerArticle._tslLeanBackup;
+        } else if (readerArticle._tslParsedEnvelope) {
+            mountLeanHtml(wrap, readerArticle._tslParsedEnvelope);
+        }
+        return findTslLeanArticle(wrap);
+    }
+
+    function remountTslMount(mount, parsed) {
+        if (!mount || !parsed) {
+            return null;
+        }
+        mount._tslParsed = parsed;
+        var layout = getTslLayout();
+        if (layout === 'scroll') {
+            return mountLeanHtml(mount, parsed);
+        }
+        return render(mount, parsed);
+    }
+
     function getTslLayout() {
+        var stored = loadStored(TSL_LAYOUT_KEY, 'pages') === 'scroll' ? 'scroll' : 'pages';
         if (typeof document !== 'undefined' && document.querySelector) {
             var readerArticle = document.querySelector('[data-reader-article][data-tsl-layout]');
             if (readerArticle) {
@@ -1601,7 +1664,7 @@
                 }
             }
         }
-        return loadStored(TSL_LAYOUT_KEY, 'pages') === 'scroll' ? 'scroll' : 'pages';
+        return stored;
     }
 
     function readerSizeScale(sizePx) {
@@ -1631,7 +1694,7 @@
         }
         document.querySelectorAll('[data-tsl-mount]').forEach(function (mount) {
             if (mount._tslParsed) {
-                render(mount, mount._tslParsed);
+                remountTslMount(mount, mount._tslParsed);
             }
         });
     }
@@ -1658,7 +1721,7 @@
         if (relayout) {
             document.querySelectorAll('[data-tsl-mount]').forEach(function (mount) {
                 if (mount._tslParsed) {
-                    render(mount, mount._tslParsed);
+                    remountTslMount(mount, mount._tslParsed);
                 }
             });
         } else {
@@ -1688,7 +1751,7 @@
             p[key] = value;
         }
         saveStored(READER_PREFS_KEY, p);
-        if (key === 'size') {
+        if (key === 'size' || key === 'font' || key === 'theme' || key === 'width') {
             refreshAllReadingPrefs(true);
         } else {
             refreshAllReadingPrefs(false);
@@ -3245,7 +3308,7 @@
             if (mode === 'lean') {
                 return mountLeanHtml(mount, parsed);
             }
-            return render(mount, parsed);
+            return remountTslMount(mount, parsed);
         });
     }
 
@@ -3254,7 +3317,7 @@
         if (mode === 'lean') {
             return mountLeanHtml(mount, parsed);
         }
-        return render(mount, parsed);
+        return remountTslMount(mount, parsed);
     }
 
     function display(mount, parsed, mode) {
@@ -3264,7 +3327,7 @@
         if (mode === 'lean') {
             return mountLeanHtml(mount, parsed);
         }
-        return render(mount, parsed);
+        return remountTslMount(mount, parsed);
     }
 
     function findTslLeanArticle(root) {
@@ -3321,12 +3384,15 @@
         if (layout === 'scroll') {
             wrap.classList.remove('tsl-reader-player-mount');
             wrap.removeAttribute('data-tsl-mount');
+            readerArticle._tslParsedEnvelope = parsed;
             mountLeanHtml(wrap, parsed);
             applyTslLayoutVarsToArticle(findTslLeanArticle(wrap));
             applyLeanReadingPrefs(findTslLeanArticle(wrap));
             readerArticle._tslPlayer = { mode: 'scroll' };
             return readerArticle._tslPlayer;
         }
+        ensureLeanBackupFromParsed(readerArticle, parsed);
+        readerArticle._tslParsedEnvelope = parsed;
         wrap.innerHTML = '';
         wrap.classList.add('tsl-reader-player-mount');
         wrap.setAttribute('data-tsl-mount', 'reader');
@@ -3377,10 +3443,6 @@
         if (!readerArticle) {
             readerArticle = host;
         }
-        var existing = readerArticle._tslPlayer;
-        if (existing && existing.mode === 'pages' && existing.root && existing.root.isConnected) {
-            return existing;
-        }
         var shell = readerArticle.querySelector('.document-tsl');
         if (!shell) {
             var leanOnly = findTslLeanArticle(readerArticle);
@@ -3390,7 +3452,8 @@
             applyTslLayoutVarsToArticle(leanOnly);
             applyLeanReadingPrefs(leanOnly);
             bindInDocumentAnchorClicks(leanOnly);
-            return { mode: 'scroll' };
+            readerArticle._tslPlayer = { mode: 'scroll' };
+            return readerArticle._tslPlayer;
         }
         var wrap = shell.querySelector('.post-lean-html-article-wrap') || shell;
         var leanArticle = findTslLeanArticle(wrap);
@@ -3401,16 +3464,22 @@
         if (layout !== 'scroll' && layout !== 'pages') {
             layout = getTslLayout();
         }
+        var existing = readerArticle._tslPlayer;
+        if (layout === 'pages' && existing && existing.mode === 'pages' && existing.root && existing.root.isConnected) {
+            return existing;
+        }
+        if (layout === 'scroll' && existing && existing.mode === 'scroll' && findTslLeanArticle(wrap)) {
+            applyTslLayoutVarsToArticle(findTslLeanArticle(wrap));
+            applyLeanReadingPrefs(findTslLeanArticle(wrap));
+            return existing;
+        }
         if (layout === 'scroll') {
-            if (readerArticle._tslLeanBackup && !findTslLeanArticle(wrap)) {
-                wrap.innerHTML = readerArticle._tslLeanBackup;
-                leanArticle = findTslLeanArticle(wrap);
-            }
-            applyTslLayoutVarsToArticle(leanArticle);
-            applyLeanReadingPrefs(leanArticle);
-            bindInDocumentAnchorClicks(leanArticle);
-            readerArticle._tslPlayer = null;
-            return { mode: 'scroll' };
+            var leanScroll = restoreLeanScrollWrap(wrap, readerArticle);
+            applyTslLayoutVarsToArticle(leanScroll);
+            applyLeanReadingPrefs(leanScroll);
+            bindInDocumentAnchorClicks(leanScroll);
+            readerArticle._tslPlayer = { mode: 'scroll' };
+            return readerArticle._tslPlayer;
         }
         if (readerArticle._tslLeanBackup && !findTslLeanArticle(wrap)) {
             wrap.innerHTML = readerArticle._tslLeanBackup;
@@ -3419,10 +3488,12 @@
         if (!leanArticle || !leanSupportsPagination(leanArticle, wrap.innerHTML)) {
             applyTslLayoutVarsToArticle(leanArticle);
             applyLeanReadingPrefs(leanArticle);
-            return { mode: 'scroll' };
+            readerArticle._tslPlayer = { mode: 'scroll' };
+            return readerArticle._tslPlayer;
         }
         var envelope = leanHtmlToEnvelope('<div class="document-tsl post-lean-html">' + wrap.innerHTML + '</div>');
         var parsed = { header: envelope.header, blocks: envelope.document.blocks };
+        readerArticle._tslParsedEnvelope = parsed;
         wrap.innerHTML = '';
         wrap.classList.add('tsl-reader-player-mount');
         wrap.setAttribute('data-tsl-mount', 'reader');
@@ -3464,6 +3535,37 @@
         return player;
     }
 
+    function repaginateReaderArticle(readerArticle) {
+        if (!readerArticle) {
+            return null;
+        }
+        var layout = readerArticle.getAttribute('data-tsl-layout');
+        if (layout !== 'scroll' && layout !== 'pages') {
+            layout = getTslLayout();
+        }
+        if (layout === 'scroll') {
+            var shell = readerArticle.querySelector('.document-tsl');
+            var wrap = shell ? (shell.querySelector('.post-lean-html-article-wrap') || shell) : readerArticle;
+            var lean = findTslLeanArticle(wrap);
+            if (lean) {
+                applyTslLayoutVarsToArticle(lean);
+                applyLeanReadingPrefs(lean);
+            }
+            return readerArticle._tslPlayer;
+        }
+        var prevIdx = 0;
+        var prev = readerArticle._tslPlayer;
+        if (prev && prev.mode === 'pages' && typeof prev.progress === 'function') {
+            prevIdx = prev.progress().index;
+        }
+        readerArticle._tslPlayer = null;
+        var player = enhancePublishedLean(readerArticle);
+        if (player && player.mode === 'pages' && typeof player.goToIndex === 'function' && prevIdx > 0) {
+            player.goToIndex(prevIdx);
+        }
+        return player;
+    }
+
     global.TalesmithTsl = {
         parse: parse,
         resolveHeader: resolveHeader,
@@ -3486,6 +3588,7 @@
         applyTslLayoutVarsToArticle: applyTslLayoutVarsToArticle,
         applyLeanReadingPrefs: applyLeanReadingPrefs,
         enhancePublishedLean: enhancePublishedLean,
+        repaginateReaderArticle: repaginateReaderArticle,
         mountReaderEnvelope: mountReaderEnvelope,
         bindReadingPrefsUI: bindReadingPrefsUI,
         resetReadingPrefs: resetReadingPrefs,

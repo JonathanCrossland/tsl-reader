@@ -254,7 +254,15 @@
 
 .tsl-root[data-tsl-page-fit="native"] .tsl-pager-viewport {
     overflow: auto;
-    max-height: none;
+    flex: 1 1 0;
+    min-height: 0;
+}
+
+[data-tsl-mount] > .tsl-root[data-tsl-layout="pages"],
+[data-tsl-fit-container] > .tsl-root[data-tsl-layout="pages"],
+[data-tsl-fit-container] [data-tsl-mount] > .tsl-root[data-tsl-layout="pages"] {
+    min-height: 0;
+    flex: 1 1 auto;
 }
 
 @media (max-width: 959px) {
