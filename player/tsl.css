@@ -215,12 +215,50 @@
     max-height: 100%;
 }
 
+.tsl-root[data-tsl-stage-cramped],
+.tsl-root[data-tsl-scale-unreasonable] {
+    --tsl-page-fit-w: var(--tsl-page-w);
+}
+
+.tsl-root[data-tsl-stage-cramped] .tsl-pager-viewport,
+.tsl-root[data-tsl-scale-unreasonable] .tsl-pager-viewport {
+    overflow: auto;
+    flex: 1 1 auto;
+    min-height: 12rem;
+    max-height: none;
+}
+
 .tsl-root[data-tsl-layout="pages"][data-tsl-page-view="spread"] {
     --tsl-page-fit-w: min(var(--tsl-page-w), calc((100% - var(--tsl-pager-gutter)) / 2));
 }
 
+/* Actual size (print trim): overrides fit-width, spread halving, and reader width prefs */
+.tsl-root[data-tsl-page-fit="native"][data-tsl-layout="pages"],
+.tsl-root[data-tsl-page-fit="native"][data-tsl-layout="pages"][data-tsl-page-view="spread"],
+.tsl-root[data-tsl-page-fit="native"][data-tsl-reader-width="narrow"],
+.tsl-root[data-tsl-page-fit="native"][data-tsl-reader-width="wide"] {
+    --tsl-page-fit-w: var(--tsl-page-w);
+}
+
+.tsl-root[data-tsl-page-fit="native"][data-tsl-layout="pages"] .tsl-page:not([aria-hidden="true"]) {
+    width: var(--tsl-page-w);
+    min-height: var(--tsl-page-h);
+    max-width: none;
+}
+
+.tsl-root[data-tsl-page-fit="native"][data-tsl-layout="pages"][data-tsl-page-view="spread"] .tsl-spread.is-active .tsl-page {
+    flex: 0 0 auto;
+    width: var(--tsl-page-w);
+    max-width: none;
+}
+
+.tsl-root[data-tsl-page-fit="native"] .tsl-pager-viewport {
+    overflow: auto;
+    max-height: none;
+}
+
 @media (max-width: 959px) {
-    .tsl-root[data-tsl-layout="pages"][data-tsl-page-view="single"] {
+    .tsl-root[data-tsl-layout="pages"][data-tsl-page-view="single"]:not([data-tsl-page-fit="native"]) {
         --tsl-page-fit-w: min(var(--tsl-page-w), 100%);
     }
 }

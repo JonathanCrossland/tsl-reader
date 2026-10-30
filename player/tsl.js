@@ -504,9 +504,31 @@
     }
 
     var TSL_SPREAD_GAP_PX = 12;
-    /* Two-up from ~960px content width (same threshold as Talesmith EPUB Reader) */
-    var TSL_SPREAD_MIN_VIEWPORT_PX = 960;
-    var TSL_SPREAD_MIN_HALF_PX = 240;
+    /** Smallest scale applied in “fit screen”; below this we show trim size + scroll. */
+    var TSL_MIN_FIT_SCREEN_SCALE = 0.42;
+    /** Host width/height below this fraction of trim → treat as too small to shrink the page. */
+    var TSL_HOST_CRAMPED_RATIO = 0.55;
+
+    function pageFitsTwoUp(availW, pageW) {
+        if (availW < 1) {
+            return false;
+        }
+        if (pageW < 1) {
+            pageW = 280;
+        }
+        return availW >= pageW * 2 + TSL_SPREAD_GAP_PX;
+    }
+
+    function hostStageCramped(avail, layout) {
+        if (!layout || layout.w < 1 || layout.h < 1) {
+            return false;
+        }
+        if (!avail || avail.w < 1 || avail.h < 1) {
+            return true;
+        }
+        return avail.w < layout.w * TSL_HOST_CRAMPED_RATIO
+            || avail.h < layout.h * TSL_HOST_CRAMPED_RATIO;
+    }
 
     function parseCssLengthToPx(root, value) {
         if (!value) {
@@ -706,14 +728,55 @@
 
         function pageViewMode() {
             var avail = containerWidthPx();
-            if (avail < TSL_SPREAD_MIN_VIEWPORT_PX) {
-                return 'single';
-            }
-            var half = (avail - TSL_SPREAD_GAP_PX) / 2;
-            if (half < TSL_SPREAD_MIN_HALF_PX) {
+            var nom = nominalTrimPageSizePx();
+            if (!pageFitsTwoUp(avail, nom.w)) {
                 return 'single';
             }
             return 'spread';
+        }
+
+        /** Fit width: honor host box unless unreasonably small. */
+        function applyFitWidthPolicy() {
+            var fit = getPageFit();
+            if (fit === 'native') {
+                applyNativePrintSizePolicy();
+                return;
+            }
+            var nom = nominalTrimPageSizePx();
+            var availW = containerWidthPx();
+            if (nom.w > 0 && availW > 0 && availW < nom.w * TSL_HOST_CRAMPED_RATIO) {
+                root.setAttribute('data-tsl-stage-cramped', '1');
+            } else {
+                root.removeAttribute('data-tsl-stage-cramped');
+            }
+            root.removeAttribute('data-tsl-scale-unreasonable');
+        }
+
+        /** Actual size: print trim (--tsl-page-w/h), not container fit; scroll if the host is too small. */
+        function applyNativePrintSizePolicy() {
+            root.removeAttribute('data-tsl-stage-cramped');
+            root.removeAttribute('data-tsl-scale-unreasonable');
+            viewport.style.alignItems = 'flex-start';
+            viewport.style.justifyContent = 'center';
+            viewport.style.overflowX = 'auto';
+            viewport.style.overflowY = 'auto';
+            viewport.style.height = '';
+            viewport.style.maxHeight = '';
+            viewport.style.minHeight = '';
+            viewport.style.flex = '';
+        }
+
+        function bailFitScreenToScroll(layout, avail) {
+            root.setAttribute('data-tsl-scale-unreasonable', '1');
+            applyFitWidthPolicy();
+            viewport.style.alignItems = 'flex-start';
+            viewport.style.justifyContent = 'center';
+            viewport.style.overflowX = 'auto';
+            viewport.style.overflowY = 'auto';
+            viewport.style.height = '';
+            viewport.style.maxHeight = '';
+            viewport.style.minHeight = '';
+            viewport.style.flex = '';
         }
 
         function stepsForView(view) {
@@ -897,18 +960,34 @@
             viewport.style.overflowX = 'auto';
             viewport.style.overflowY = 'auto';
 
-            if (fit === 'native' || fit === 'fit') {
+            if (fit === 'native') {
+                applyNativePrintSizePolicy();
+                return;
+            }
+            if (fit === 'fit') {
+                applyFitWidthPolicy();
                 return;
             }
 
             var layout = stepLayoutSize(current);
             var avail = pagerStageSize();
-            if (layout.w < 1 || layout.h < 1 || avail.w < 1 || avail.h < 1) {
+            if (layout.w < 1 || layout.h < 1) {
+                bailFitScreenToScroll(layout, avail);
+                return;
+            }
+            if (hostStageCramped(avail, layout)) {
+                bailFitScreenToScroll(layout, avail);
                 return;
             }
 
             var s = Math.min(avail.w / layout.w, avail.h / layout.h) * 0.985;
-            s = Math.max(0.05, Math.min(s, 1));
+            if (s < TSL_MIN_FIT_SCREEN_SCALE) {
+                bailFitScreenToScroll(layout, avail);
+                return;
+            }
+            s = Math.min(s, 1);
+            root.removeAttribute('data-tsl-scale-unreasonable');
+            root.removeAttribute('data-tsl-stage-cramped');
             applyStepTransform(current, layout, s, { lockHeight: true, stageHeight: avail.h });
         }
 
@@ -1114,7 +1193,7 @@
 
         function measurePageContentWidthPx() {
             var nominal = parseCssLengthToPx(root, page.trimMM.width + 'mm');
-            if (tslAuthorPrintLayout()) {
+            if (layoutMode === 'pages' || tslAuthorPrintLayout() || getPageFit() === 'native') {
                 return Math.max(120, nominal);
             }
             var mount = root.closest('[data-tsl-mount]') || root.parentElement;
@@ -1440,7 +1519,10 @@
     }
 
     function paginationReaderScale() {
-        return tslAuthorPrintLayout() ? 1 : readerSizeScale(getReadingPrefs().size);
+        if (tslAuthorPrintLayout() || getPageFit() === 'native') {
+            return 1;
+        }
+        return readerSizeScale(getReadingPrefs().size);
     }
 
     function rerenderAllTslMounts() {
@@ -1495,11 +1577,7 @@
             var pf = getReadingPrefs();
             pf.pageFit = value === 'native' || value === 'scale' ? value : 'fit';
             saveStored(READER_PREFS_KEY, pf);
-            document.querySelectorAll('.tsl-root').forEach(function (r) {
-                if (typeof r._tslPagerRefresh === 'function') {
-                    r._tslPagerRefresh();
-                }
-            });
+            refreshAllReadingPrefs(false);
             applyLeanReadingPrefs(document.querySelector('.studio-lean-tsl'));
             return;
         }
