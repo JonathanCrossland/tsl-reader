@@ -1267,6 +1267,74 @@
             current.usedH = used + rowH + 4;
         }
 
+        function measureTocNavRowHeight(block, entries, pageByBlockId) {
+            var nav = buildTocNavElement(block, entries, pageByBlockId);
+            var row = document.createElement('div');
+            row.className = 'tsl-row tsl-row--full';
+            var col = document.createElement('div');
+            col.className = 'tsl-col';
+            col.appendChild(nav);
+            row.appendChild(col);
+            syncMeasurePageBox();
+            measureBody.innerHTML = '';
+            measureBody.appendChild(row);
+            return measureBody.offsetHeight;
+        }
+
+        function appendTocNavRowToPage(block, entries, pageByBlockId) {
+            var nav = buildTocNavElement(block, entries, pageByBlockId);
+            var row = document.createElement('div');
+            row.className = 'tsl-row tsl-row--full';
+            var col = document.createElement('div');
+            col.className = 'tsl-col';
+            col.appendChild(nav);
+            row.appendChild(col);
+            var rowH = measureTocNavRowHeight(block, entries, pageByBlockId);
+            current.body.appendChild(row);
+            current.usedH = (current.usedH || 0) + rowH + 4;
+        }
+
+        /** Split long TOC lists across pages (matches Studio print pagination). */
+        function appendPaginatedTocBlock(b) {
+            var allEntries = collectTocEntries(blocks, b);
+            if (!allEntries.length) {
+                ensurePage();
+                current.tocSlice = { block: b, start: 0, end: 0 };
+                appendTocNavRowToPage(b, [], null);
+                return;
+            }
+            var dummyPageBy = {};
+            allEntries.forEach(function (e) {
+                dummyPageBy[e.id] = 888;
+            });
+            var entryIdx = 0;
+            while (entryIdx < allEntries.length) {
+                ensurePage();
+                if ((current.usedH || 0) > 0) {
+                    current = startPage();
+                }
+                var maxH = bodyMaxHeightPx(current.side);
+                var remain = allEntries.length - entryIdx;
+                var best = entryIdx + 1;
+                for (var n = 1; n <= remain; n += 1) {
+                    var trySlice = allEntries.slice(entryIdx, entryIdx + n);
+                    var tryBy = {};
+                    trySlice.forEach(function (e) {
+                        tryBy[e.id] = dummyPageBy[e.id];
+                    });
+                    var h = measureTocNavRowHeight(b, trySlice, tryBy);
+                    if (h > maxH) {
+                        break;
+                    }
+                    best = entryIdx + n;
+                }
+                var chunk = allEntries.slice(entryIdx, best);
+                appendTocNavRowToPage(b, chunk, null);
+                current.tocSlice = { block: b, start: entryIdx, end: best };
+                entryIdx = best;
+            }
+        }
+
         var bi = 0;
         while (bi < blocks.length) {
             var pre = blocks[bi];
@@ -1320,15 +1388,16 @@
                 bi += 1;
                 continue;
             }
-            if (type === 'toc' || type === 'image-index' || type === 'manuscript-title') {
+            if (type === 'toc') {
+                appendPaginatedTocBlock(b);
+                bi += 1;
+                continue;
+            }
+            if (type === 'image-index' || type === 'manuscript-title') {
                 appendFlowRow([b], 'full');
                 var markerPage = pages[pages.length - 1];
-                if (markerPage) {
-                    if (type === 'toc') {
-                        markerPage.tocBlock = b;
-                    } else if (type === 'image-index') {
-                        markerPage.imageIndexBlock = b;
-                    }
+                if (markerPage && type === 'image-index') {
+                    markerPage.imageIndexBlock = b;
                 }
                 bi += 1;
                 continue;
@@ -1934,6 +2003,56 @@
         }
     }
 
+    function appendTocEntryToList(ul, block, entry, pageByBlockId) {
+        var leader = block && block.leader != null ? String(block.leader) : '.';
+        var li = document.createElement('li');
+        li.className = 'studio-lean-toc-item studio-lean-toc-item--h' + entry.level;
+        var a = document.createElement('a');
+        a.className = 'studio-lean-toc-link';
+        a.href = '#' + headingAnchorId({ id: entry.id });
+        var label = document.createElement('span');
+        label.className = 'studio-lean-toc-label';
+        label.textContent = entry.text;
+        a.appendChild(label);
+        if (leader !== '') {
+            var fill = document.createElement('span');
+            fill.className = 'studio-lean-toc-leader';
+            fill.setAttribute('aria-hidden', 'true');
+            fill.textContent = leader.repeat(40);
+            a.appendChild(fill);
+        }
+        if (pageByBlockId && pageByBlockId[entry.id] != null) {
+            var pgEl = document.createElement('span');
+            pgEl.className = 'studio-lean-toc-page';
+            pgEl.textContent = String(pageByBlockId[entry.id]);
+            a.appendChild(pgEl);
+        }
+        li.appendChild(a);
+        ul.appendChild(li);
+        return li;
+    }
+
+    function buildTocNavElement(block, entries, pageByBlockId) {
+        var nav = document.createElement('nav');
+        nav.className = 'tsl-toc studio-lean-toc';
+        nav.setAttribute('aria-label', 'Table of contents');
+        if (!entries.length) {
+            var empty = document.createElement('p');
+            empty.className = 'studio-lean-toc-empty';
+            empty.textContent = 'No headings to include.';
+            nav.appendChild(empty);
+        } else {
+            var ul = document.createElement('ul');
+            ul.className = 'studio-lean-toc-list';
+            entries.forEach(function (e) {
+                appendTocEntryToList(ul, block, e, pageByBlockId);
+            });
+            nav.appendChild(ul);
+        }
+        stampBlockMeta(nav, block);
+        return nav;
+    }
+
     function refreshIndexBlocksInPages(pages, blocks) {
         if (!pages.length) {
             return;
@@ -1941,7 +2060,16 @@
         var pageByBlockId = indexHeadingPageNumbers(pages);
         var imagePageById = indexImagePageNumbers(pages);
         pages.forEach(function (pg) {
-            if (pg.tocBlock) {
+            if (pg.tocSlice) {
+                var tocBlock = pg.tocSlice.block;
+                var allEntries = collectTocEntries(blocks, tocBlock);
+                var slice = allEntries.slice(pg.tocSlice.start, pg.tocSlice.end);
+                replaceIndexNavInPage(
+                    pg,
+                    '.tsl-toc, .studio-lean-toc',
+                    buildTocNavElement(tocBlock, slice, pageByBlockId)
+                );
+            } else if (pg.tocBlock) {
                 replaceIndexNavInPage(
                     pg,
                     '.tsl-toc, .studio-lean-toc',
@@ -1974,48 +2102,7 @@
     }
 
     function renderTocNav(block, blocks, pageByBlockId) {
-        var entries = collectTocEntries(blocks, block);
-        var nav = document.createElement('nav');
-        nav.className = 'tsl-toc studio-lean-toc';
-        nav.setAttribute('aria-label', 'Table of contents');
-        if (!entries.length) {
-            var empty = document.createElement('p');
-            empty.className = 'studio-lean-toc-empty';
-            empty.textContent = 'No headings to include.';
-            nav.appendChild(empty);
-            return nav;
-        }
-        var leader = block && block.leader != null ? String(block.leader) : '.';
-        var ul = document.createElement('ul');
-        ul.className = 'studio-lean-toc-list';
-        entries.forEach(function (e) {
-            var li = document.createElement('li');
-            li.className = 'studio-lean-toc-item studio-lean-toc-item--h' + e.level;
-            var a = document.createElement('a');
-            a.className = 'studio-lean-toc-link';
-            a.href = '#' + headingAnchorId({ id: e.id });
-            var label = document.createElement('span');
-            label.className = 'studio-lean-toc-label';
-            label.textContent = e.text;
-            a.appendChild(label);
-            if (leader !== '') {
-                var fill = document.createElement('span');
-                fill.className = 'studio-lean-toc-leader';
-                fill.setAttribute('aria-hidden', 'true');
-                fill.textContent = leader.repeat(40);
-                a.appendChild(fill);
-            }
-            if (pageByBlockId && pageByBlockId[e.id] != null) {
-                var pgEl = document.createElement('span');
-                pgEl.className = 'studio-lean-toc-page';
-                pgEl.textContent = String(pageByBlockId[e.id]);
-                a.appendChild(pgEl);
-            }
-            li.appendChild(a);
-            ul.appendChild(li);
-        });
-        nav.appendChild(ul);
-        return nav;
+        return buildTocNavElement(block, collectTocEntries(blocks, block), pageByBlockId);
     }
 
     function renderImageIndexNav(block, blocks, imagePageById) {
@@ -2098,8 +2185,7 @@
             return el;
         }
         if (type === 'toc') {
-            el = renderTocNav(b, ctx && ctx.allBlocks ? ctx.allBlocks : [], null);
-            stampBlockMeta(el, b);
+            el = buildTocNavElement(b, collectTocEntries(ctx && ctx.allBlocks ? ctx.allBlocks : [], b), null);
             return el;
         }
         if (type === 'image-index') {
