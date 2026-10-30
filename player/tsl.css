@@ -512,6 +512,10 @@
     text-align: var(--tsl-text-align);
 }
 
+.tsl-measure-chrome {
+    flex: 0 0 auto;
+}
+
 /* Block width: cols=2 (default) = full row; cols=1 = half row, paired like Studio print layout */
 .tsl-row {
     display: flex;

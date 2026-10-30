@@ -1143,6 +1143,7 @@
         root.style.setProperty('--tsl-text-align', ty.paragraphAlign);
         root.style.setProperty('--tsl-indent', ty.paragraphIndentIn > 0 ? ty.paragraphIndentIn + 'in' : '0');
         root.style.setProperty('--tsl-para-space', ty.paragraphSpacingPt > 0 ? ty.paragraphSpacingPt + 'pt' : '0.85em');
+        root.style.setProperty('--tsl-row-gap', (page.rowGapMM != null ? page.rowGapMM : 2) + 'mm');
 
         var pagesEl = document.createElement('div');
         pagesEl.className = 'tsl-pages';
@@ -1150,10 +1151,19 @@
         measurePage.className = 'tsl-page';
         measurePage.setAttribute('data-tsl-side', 'any');
         measurePage.setAttribute('aria-hidden', 'true');
-        measurePage.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none;height:auto;min-height:0;';
+        measurePage.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;';
+        var measureHeaderSlot = document.createElement('div');
+        measureHeaderSlot.className = 'tsl-measure-chrome';
         var measureBody = document.createElement('div');
         measureBody.className = 'tsl-body';
+        measureBody.style.flex = '1 1 auto';
+        measureBody.style.minHeight = '0';
+        measureBody.style.overflow = 'hidden';
+        var measureFooterSlot = document.createElement('div');
+        measureFooterSlot.className = 'tsl-measure-chrome';
+        measurePage.appendChild(measureHeaderSlot);
         measurePage.appendChild(measureBody);
+        measurePage.appendChild(measureFooterSlot);
         root.appendChild(measurePage);
         mount.innerHTML = '';
         mount.appendChild(root);
@@ -1194,6 +1204,8 @@
         }
 
         var current = null;
+        var mmPx = 96 / 25.4;
+        var rowGapPx = (page.rowGapMM != null ? page.rowGapMM : 2) * mmPx;
 
         function pageTrimWidthPx() {
             return Math.max(120, parseCssLengthToPx(root, page.trimMM.width + 'mm'));
@@ -1212,16 +1224,49 @@
             return Math.max(120, trim - out - out);
         }
 
-        function bodyMaxHeightPx(side) {
-            var mm = 96 / 25.4;
-            var bodyHmm = page.trimMM.height - page.marginsMM.top - page.marginsMM.bottom
-                - (page.headerTopMM || 0) - (page.footerBottomMM || 0);
-            var maxPx = Math.max(120, bodyHmm * mm);
-            var scale = paginationReaderScale();
-            if (scale > 0.001) {
-                maxPx = maxPx / scale;
+        function syncMeasurePageBox(side) {
+            var s = side || (current && current.side) || 'any';
+            measurePage.setAttribute('data-tsl-side', s);
+            measurePage.style.width = pageTrimWidthPx() + 'px';
+            measurePage.style.height = page.trimMM.height + 'mm';
+            measurePage.style.minHeight = page.trimMM.height + 'mm';
+            measurePage.style.maxHeight = page.trimMM.height + 'mm';
+            var innerW = pageBodyInnerWidthPx(s);
+            measureBody.style.width = innerW + 'px';
+            measureBody.style.maxWidth = innerW + 'px';
+        }
+
+        function syncMeasurePageRegions(side) {
+            var s = side || (current && current.side) || 'any';
+            syncMeasurePageBox(s);
+            measureHeaderSlot.innerHTML = '';
+            measureFooterSlot.innerHTML = '';
+            var hdr = pickSide(headerState, s);
+            var ftr = pickSide(footerState, s);
+            var draftCtx = {
+                values: values,
+                runningHeader: runningHeader,
+                pageNo: 1,
+                side: s
+            };
+            if (hdr) {
+                measureHeaderSlot.appendChild(renderRegion(hdr, 'header', page.headerRule, draftCtx, readMode));
             }
-            return maxPx;
+            if (ftr) {
+                measureFooterSlot.appendChild(renderRegion(ftr, 'footer', page.footerRule, draftCtx, readMode));
+            }
+        }
+
+        function measureBodyBudgetPx(side) {
+            syncMeasurePageRegions(side);
+            return Math.max(120, measureBody.clientHeight);
+        }
+
+        function measureRowHeight(row, side) {
+            syncMeasurePageRegions(side);
+            measureBody.innerHTML = '';
+            measureBody.appendChild(row);
+            return row.getBoundingClientRect().height || 0;
         }
 
         function measurePageContentWidthPx(side) {
@@ -1236,15 +1281,6 @@
                 return Math.max(120, Math.min(scaledNominal, mountW));
             }
             return Math.max(120, scaledNominal);
-        }
-
-        function syncMeasurePageBox(side) {
-            var s = side || (current && current.side) || 'any';
-            measurePage.setAttribute('data-tsl-side', s);
-            measurePage.style.width = pageTrimWidthPx() + 'px';
-            var innerW = pageBodyInnerWidthPx(s);
-            measureBody.style.width = innerW + 'px';
-            measureBody.style.maxWidth = innerW + 'px';
         }
 
         function ensurePage() {
@@ -1280,18 +1316,18 @@
                 appendBlockToColumn(col, pb);
                 row.appendChild(col);
             });
-            syncMeasurePageBox(current.side);
-            measureBody.innerHTML = '';
-            measureBody.appendChild(row);
-            var rowH = measureBody.offsetHeight;
-            var maxH = bodyMaxHeightPx(current.side);
+            syncMeasurePageRegions(current.side);
+            var maxH = measureBody.clientHeight;
+            var rowH = measureRowHeight(row, current.side);
             var used = current.usedH || 0;
             if (used > 0 && used + rowH > maxH) {
                 current = startPage();
                 used = 0;
+                syncMeasurePageRegions(current.side);
+                maxH = measureBody.clientHeight;
             }
             current.body.appendChild(row);
-            current.usedH = used + rowH + 4;
+            current.usedH = used + rowH + rowGapPx;
         }
 
         function measureTocNavRowHeight(block, entries, pageByBlockId, side) {
@@ -1302,10 +1338,7 @@
             col.className = 'tsl-col';
             col.appendChild(nav);
             row.appendChild(col);
-            syncMeasurePageBox(side || (current && current.side) || 'any');
-            measureBody.innerHTML = '';
-            measureBody.appendChild(row);
-            return measureBody.offsetHeight;
+            return measureRowHeight(row, side || (current && current.side) || 'any');
         }
 
         function appendTocNavRowToPage(block, entries, pageByBlockId) {
@@ -1318,7 +1351,7 @@
             row.appendChild(col);
             var rowH = measureTocNavRowHeight(block, entries, pageByBlockId, current.side);
             current.body.appendChild(row);
-            current.usedH = (current.usedH || 0) + rowH + 4;
+            current.usedH = (current.usedH || 0) + rowH + rowGapPx;
         }
 
         /** Split long TOC lists across pages (matches Studio print pagination). */
@@ -1340,7 +1373,7 @@
                 if ((current.usedH || 0) > 0) {
                     current = startPage();
                 }
-                var maxH = bodyMaxHeightPx(current.side);
+                var maxH = measureBodyBudgetPx(current.side);
                 var remain = allEntries.length - entryIdx;
                 var best = entryIdx + 1;
                 for (var n = 1; n <= remain; n += 1) {
@@ -1682,7 +1715,7 @@
     }
 
     function paginationReaderScale() {
-        if (tslAuthorPrintLayout() || getPageFit() === 'native') {
+        if (tslAuthorPrintLayout()) {
             return 1;
         }
         return readerSizeScale(getReadingPrefs().size);
