@@ -562,6 +562,11 @@
      *   attr    value maps to an attribute (formatted by format, see TSL_RULE_FORMAT).
      *   derive  the value is derived from block content, not read from a property
      *           (see TSL_RULE_DERIVE); e.g. spec §6.2 empty paragraph → no indent.
+     *   normalize  type 'object': the stored value is normalised by a named function
+     *           (see TSL_RULE_NORMALIZE) — null means off; a flag fires when it is set.
+     *   blankIsDefault  type 'string': a blank value ('' / whitespace) uses def.
+     *   renderers  limit the class/var/attr mapping to these renderers ('paged', 'lean');
+     *           the value still resolves everywhere. Omit to map in every renderer.
      *
      * The ruleset is extensible: hosts (the lab) call TalesmithTsl.defineBlockRules()
      * to replace or extend rules per type without forking the player — see below.
@@ -581,8 +586,20 @@
             // the block's own align wins over typography.paragraphAlign, even when left.
             paragraph: {
                 alignOverride: { type: 'boolean', def: false, forces: 'align' },
-                noIndent: { derive: 'emptyText', type: 'boolean', def: false, flag: 'no-indent' }
+                noIndent: { derive: 'emptyText', type: 'boolean', def: false, flag: 'no-indent' },
+                // Studio drop cap: block.dropCap is the Studio object { lines, style, characters,
+                // includeLeadingPunctuation, spacingEm, opticalMargin, alignBaseline, uppercase,
+                // variant, capStyle } (or a 1–3 line count / JSON string from a lean comment);
+                // null / false / 0 = off. The resolved value is the normalised spec (normalizeDropCap).
+                // Only the lean renderer builds the cap today, so the flag maps there only; paged
+                // drop caps are deferred (remove renderers to flag paged paragraphs too).
+                dropCap: { type: 'object', normalize: 'dropCap', def: null, flag: 'studio-has-dropcap', renderers: ['lean'] },
+                // Text that already carries a Studio drop-cap span (Studio-baked lean HTML).
+                dropCapMarkup: { derive: 'dropCapMarkup', type: 'boolean', def: false, flag: 'studio-has-dropcap' }
             },
+            // §6.1 Document title. Presentation is the common rules (align, cols, theme) plus
+            // .tsl-block--title / .studio-lean-title in tsl.css; role=doc-title is semantics.
+            title: {},
             // §6.3–6.5 Headings. number is the outline label ("1", "1.2"); spec/specification-0.1.tsl.
             h1: { number: { type: 'string', def: null, attr: 'data-heading-number', format: 'headingNumber' } },
             h2: { number: { type: 'string', def: null, attr: 'data-heading-number', format: 'headingNumber' } },
@@ -608,14 +625,45 @@
                 leader: { type: 'string', maxLength: 4, def: '.' }
             },
             'image-index': { leader: { type: 'string', maxLength: 4, def: '.' } },
-            'manuscript-title': { kind: { values: ['novel', 'short-story', 'poem'], def: 'novel', cls: 'kind' } }
+            'manuscript-title': { kind: { values: ['novel', 'short-story', 'poem'], def: 'novel', cls: 'kind' } },
+            // §6.6 Block quotation: common rules + .tsl-block--quote (tsl.css).
+            quote: {},
+            // §6.7 Preformatted text: plain text only, HTML not interpreted; common rules +
+            // .tsl-block--code / .studio-lean-code (tsl.css).
+            code: {},
+            // §6.8 Callout. icon: single emoji or short text prefix, not a URL (spec §5.5);
+            // default light-bulb. Blank uses the default; lab can set def '' to hide icons.
+            aside: { icon: { type: 'string', def: '\uD83D\uDCA1', blankIsDefault: true } },
+            // §6.11 Horizontal rule / §6.12 Page break: no extra fields; common rules only.
+            divider: {},
+            newpage: {},
+            // §6.17 Cover image: src is content. expanded (§5.5, §12.3) is Studio editor state —
+            // true selects the full-bleed cover layout in Studio, false only collapses editor
+            // chrome — so it is validated for round-trip but maps to no player class. The
+            // full-bleed page itself is pagination (startPage fullBleed), not a block property.
+            'front-cover': { expanded: { type: 'boolean', def: true } },
+            // §6.21 Embed another document: documentId / title are references, not presentation;
+            // players skip the block (not flattened inside .tsl export).
+            document: {},
+            // §6.22 Paywall marker: text is content; roles (§5.5) gate publishing and are not
+            // enforced by this player. Common rules only.
+            paywall: {}
         }
     };
 
     /** Named content derivations for derive: rules (a rule may also pass a function). */
     var TSL_RULE_DERIVE = {
         // spec §6.2: "Empty text suppresses paragraph indent in the player."
-        emptyText: function (block) { return !plainText(block && block.text); }
+        emptyText: function (block) { return !plainText(block && block.text); },
+        // Studio-baked drop-cap span already inside the text.
+        dropCapMarkup: function (block) {
+            return /class="[^"]*(?:dropcap|studio-dropcap)/i.test(String((block && block.text) || ''));
+        }
+    };
+
+    /** Named normalisers for normalize: rules (a rule may also pass a function). Return null for off. */
+    var TSL_RULE_NORMALIZE = {
+        dropCap: function (raw) { return parseDropCapComment(raw); }
     };
 
     /** Named value formatters for attr: rules (a rule may also pass a function). */
@@ -646,6 +694,7 @@
     });
     var TSL_RULE_DERIVE_SPEC = Object.assign({}, TSL_RULE_DERIVE);
     var TSL_RULE_FORMAT_SPEC = Object.assign({}, TSL_RULE_FORMAT);
+    var TSL_RULE_NORMALIZE_SPEC = Object.assign({}, TSL_RULE_NORMALIZE);
 
     function mergeRuleGroup(target, patch, replace) {
         if (replace) {
@@ -669,7 +718,8 @@
      *     common: { prop: rule },                    // rules for every block type
      *     types:  { paragraph: { prop: rule } },     // per-type rules; null removes a type
      *     derive: { name: function (block) {…} },    // named derivations for derive:
-     *     format: { name: function (value) {…} }     // named formatters for attr:
+     *     format: { name: function (value) {…} },    // named formatters for attr:
+     *     normalize: { name: function (raw) {…} }    // named normalisers for normalize:
      *   }, { replace: false })
      * Per property, a rule object is merged onto the existing rule (so { def: 'justify' }
      * only changes the default); null removes the property. With { replace: true } each
@@ -692,6 +742,7 @@
         });
         Object.assign(TSL_RULE_DERIVE, patch.derive || {});
         Object.assign(TSL_RULE_FORMAT, patch.format || {});
+        Object.assign(TSL_RULE_NORMALIZE, patch.normalize || {});
         tslRuleIssuesSeen = {};
         return TSL_BLOCK_RULES;
     }
@@ -707,6 +758,8 @@
         Object.assign(TSL_RULE_DERIVE, TSL_RULE_DERIVE_SPEC);
         Object.keys(TSL_RULE_FORMAT).forEach(function (k) { delete TSL_RULE_FORMAT[k]; });
         Object.assign(TSL_RULE_FORMAT, TSL_RULE_FORMAT_SPEC);
+        Object.keys(TSL_RULE_NORMALIZE).forEach(function (k) { delete TSL_RULE_NORMALIZE[k]; });
+        Object.assign(TSL_RULE_NORMALIZE, TSL_RULE_NORMALIZE_SPEC);
         tslRuleIssuesSeen = {};
         return TSL_BLOCK_RULES;
     }
@@ -754,8 +807,14 @@
     }
 
     function validateRuleValue(rule, raw) {
-        if (raw === undefined || raw === null || (raw === '' && rule.type !== 'string')) {
+        if (raw === undefined || raw === null || (raw === '' && rule.type !== 'string')
+            || (rule.blankIsDefault && typeof raw === 'string' && !raw.trim())) {
             return { value: rule.def, ok: true, omitted: true };
+        }
+        if (rule.type === 'object' && rule.normalize) {
+            var norm = ruleNamedFn(TSL_RULE_NORMALIZE, rule.normalize);
+            var nv = norm ? norm(raw) : raw;
+            return { value: nv === null || nv === undefined ? rule.def : nv, ok: true };
         }
         if (rule.values) {
             var v = raw;
@@ -838,13 +897,17 @@
         Object.keys(rules).forEach(function (prop) {
             var rule = rules[prop];
             var value = resolved.props[prop];
+            if (rule.renderers && opts.renderer && rule.renderers.indexOf(opts.renderer) < 0) {
+                return;
+            }
             if (rule.cls && value !== null && value !== undefined) {
                 var emitDefault = opts.emitDefaults || forced[prop] || rule.emitDefault !== false;
                 if (emitDefault || value !== rule.def) {
                     classes.push(rule.cls + '-' + ruleClassToken(value));
                 }
             }
-            if (rule.flag && value === true) {
+            if (rule.flag && (value === true || (rule.type === 'object' && value))
+                && classes.indexOf(rule.flag) < 0) {
                 classes.push(rule.flag);
             }
             if (rule.cssVar && !resolved.omitted[prop]) {
@@ -865,7 +928,7 @@
         if (!el || !block) {
             return el;
         }
-        var map = blockRuleMapping(block, opts);
+        var map = blockRuleMapping(block, Object.assign({ renderer: 'paged' }, opts));
         map.classes.forEach(function (c) { el.classList.add(c); });
         Object.keys(map.vars).forEach(function (k) { el.style.setProperty(k, map.vars[k]); });
         Object.keys(map.attrs).forEach(function (k) { el.setAttribute(k, map.attrs[k]); });
@@ -874,8 +937,9 @@
 
     /** Lean HTML renderer: class="…" (and style="--var:…") attribute string. */
     function leanRuleAttrs(block, baseClasses, opts) {
-        var map = blockRuleMapping(block, opts);
-        var cls = (baseClasses ? [baseClasses] : []).concat(map.classes).join(' ');
+        var map = blockRuleMapping(block, Object.assign({ renderer: 'lean' }, opts));
+        var base = String(baseClasses || '').split(/\s+/).filter(Boolean);
+        var cls = base.concat(map.classes.filter(function (c) { return base.indexOf(c) < 0; })).join(' ');
         var attrs = cls ? ' class="' + escapeHtml(cls) + '"' : '';
         var vars = Object.keys(map.vars).map(function (k) { return k + ':' + map.vars[k]; }).join(';');
         if (vars) {
@@ -2671,7 +2735,41 @@
         document.querySelectorAll('.studio-lean-tsl, article.studio-lean-article[data-tsl-w-mm]').forEach(applyLeanReadingPrefs);
     }
 
+    /**
+     * Which reader prefs apply to the current layout. Pages are fixed print trim (the
+     * spec's page format), so line width only applies to the reflowable scroll layout;
+     * page size (fit / fit screen / actual) only applies to pages.
+     */
+    function readingPrefApplies(key, layout) {
+        var l = layout || getTslLayout();
+        if (key === 'width') {
+            return l === 'scroll';
+        }
+        if (key === 'pageFit') {
+            return l === 'pages';
+        }
+        if (key === 'layout') {
+            return getTslReadingCapabilities().allowScrollMode;
+        }
+        return true;
+    }
+
+    /** Tell hosts (lab chrome, reader shell) that reading prefs changed. */
+    function notifyReadingPrefs(key) {
+        if (typeof document === 'undefined' || typeof CustomEvent !== 'function' || !document.dispatchEvent) {
+            return;
+        }
+        document.dispatchEvent(new CustomEvent('tsl:readingprefs', {
+            detail: { key: key || null, prefs: getReadingPrefs(), layout: getTslLayout() }
+        }));
+    }
+
     function setReadingPref(key, value) {
+        setReadingPrefInner(key, value);
+        notifyReadingPrefs(key);
+    }
+
+    function setReadingPrefInner(key, value) {
         if (key === 'layout') {
             if (value === 'scroll' && !getTslReadingCapabilities().allowScrollMode) {
                 return;
@@ -2700,7 +2798,10 @@
         }
         if (key === 'theme') {
             refreshAllReadingPrefs(false);
-        } else if (key === 'size' || key === 'font' || key === 'width') {
+        } else if (key === 'width') {
+            // Line width does not apply to fixed-trim pages (readingPrefApplies); no relayout.
+            refreshAllReadingPrefs(false);
+        } else if (key === 'size' || key === 'font') {
             refreshAllReadingPrefs(true);
         } else {
             refreshAllReadingPrefs(false);
@@ -2711,6 +2812,7 @@
         saveStored(READER_PREFS_KEY, READER_DEFAULT_PREFS);
         saveStored(TSL_LAYOUT_KEY, 'pages');
         refreshAllReadingPrefs(true);
+        notifyReadingPrefs(null);
     }
 
     function syncReadingPrefsUI(container) {
@@ -2728,8 +2830,24 @@
             var cur = key === 'layout' ? layout : (key === 'size' ? String(p.size)
                 : (key === 'pageFit' ? getPageFit() : p[key]));
             var on = b.getAttribute('data-value') === cur;
+            var applies = readingPrefApplies(key, layout);
             b.setAttribute('aria-checked', on ? 'true' : 'false');
             b.classList.toggle('is-on', on);
+            b.disabled = !applies;
+            if (applies) {
+                b.removeAttribute('aria-disabled');
+            } else {
+                b.setAttribute('aria-disabled', 'true');
+            }
+        });
+        /* Rows that name a pref (data-tsl-pref-row="width") show they are unavailable in this layout. */
+        container.querySelectorAll('[data-tsl-pref-row]').forEach(function (row) {
+            var applies = readingPrefApplies(row.getAttribute('data-tsl-pref-row'), layout);
+            row.toggleAttribute('data-tsl-unavailable', !applies);
+            row.setAttribute('aria-disabled', applies ? 'false' : 'true');
+            row.querySelectorAll('[data-tsl-pref-note]').forEach(function (note) {
+                note.hidden = applies;
+            });
         });
     }
 
@@ -2889,11 +3007,12 @@
             var cb = document.createElement('input');
             cb.type = 'checkbox';
             cb.disabled = true;
-            cb.checked = !!b.checked;
+            var todoChecked = resolveBlockRules(b).props.checked;
+            cb.checked = todoChecked;
             li.appendChild(cb);
             var span = document.createElement('span');
             span.innerHTML = inlineHtml(b.text);
-            if (b.checked) {
+            if (todoChecked) {
                 span.className = 'tsl-done';
             }
             li.appendChild(span);
@@ -3294,10 +3413,13 @@
         if (type === 'aside') {
             el = document.createElement('aside');
             el.className = 'tsl-block tsl-block--aside';
-            if (b.icon) {
+            // §6.8 icon through the ruleset (default light-bulb; blank → default).
+            var asideIcon = resolveBlockRules(b).props.icon;
+            if (asideIcon) {
                 var ic = document.createElement('span');
+                ic.className = 'tsl-aside-icon';
                 ic.setAttribute('aria-hidden', 'true');
-                ic.textContent = b.icon;
+                ic.textContent = asideIcon;
                 el.appendChild(ic);
             }
             var inner = document.createElement('div');
@@ -3633,11 +3755,13 @@
     }
 
     function buildDropCapLeanInner(restInlineHtml, plain, block, header) {
-        var spec = normalizeDropCap(block.dropCap);
+        // paragraph.dropCap / dropCapMarkup come from the ruleset (normalised Studio object).
+        var dcProps = resolveBlockRules(block).props;
+        var spec = dcProps.dropCap || null;
         if (spec === null || !plainText(plain)) {
             return null;
         }
-        if (/class="[^"]*(?:dropcap|studio-dropcap)/i.test(String(block.text || ''))) {
+        if (dcProps.dropCapMarkup) {
             return null;
         }
         var parts = splitDropCapPlain(plain, spec);
@@ -3727,11 +3851,8 @@
             if (!plainText(pBody)) {
                 return '<p' + leanTextRuleAttrs(block, 'studio-lean-empty') + '>&nbsp;</p>';
             }
-            var pClass = block.dropCap ? 'studio-has-dropcap' : '';
-            if (/class="[^"]*(?:dropcap|studio-dropcap)/i.test(String(block.text || ''))) {
-                pClass = 'studio-has-dropcap';
-            }
-            return '<p' + leanTextRuleAttrs(block, pClass) + '>' + pBody + '</p>';
+            // studio-has-dropcap comes from the paragraph dropCap / dropCapMarkup flag rules.
+            return '<p' + leanTextRuleAttrs(block, '') + '>' + pBody + '</p>';
         }
         if (type === 'quote') {
             return '<blockquote' + leanTextRuleAttrs(block, '') + '>' + leanInlineHtml(block.text, header, readMode) + '</blockquote>';
@@ -3772,13 +3893,13 @@
             return tbl + '</table>';
         }
         if (type === 'aside') {
-            var icon = String(block.icon || '💡').trim();
+            var icon = String(resolveBlockRules(block).props.icon || '').trim();
             var iconH = icon ? '<span class="studio-lean-aside-icon" aria-hidden="true">' + escapeHtml(icon) + '</span> ' : '';
             return '<aside' + leanTextRuleAttrs(block, 'studio-lean-aside') + '>' + iconH
                 + leanInlineHtml(block.text, header, readMode) + '</aside>';
         }
         if (type === 'divider') {
-            return '<hr class="studio-lean-divider">';
+            return '<hr' + leanRuleAttrs(block, 'studio-lean-divider') + '>';
         }
         if (type === 'image' && block.src) {
             var fig = '<figure' + leanRuleAttrs(block, 'studio-lean-figure') + '><img src="' + escapeHtml(block.src) + '" alt="">';
@@ -3812,7 +3933,7 @@
             return leanImageIndexBlockHtml(block, header._leanAllBlocks || [], header, readMode, null);
         }
         if (type === 'paywall') {
-            return '<aside class="studio-lean-paywall" role="note"><p class="studio-lean-paywall-message">'
+            return '<aside' + leanRuleAttrs(block, 'studio-lean-paywall') + ' role="note"><p class="studio-lean-paywall-message">'
                 + leanInlineHtml(block.text || '', header, readMode) + '</p></aside>';
         }
         return '';
@@ -4153,7 +4274,7 @@
         if (type === 'front-cover') {
             var srcMatch = innerHtml.match(/<img[^>]+src=["']([^"']+)["']/i);
             block.src = srcMatch ? srcMatch[1] : '';
-            block.expanded = block.expanded !== false;
+            block.expanded = resolveBlockRules({ id: block.id, type: 'front-cover', expanded: block.expanded }).props.expanded;
         }
         if (type === 'bullet') {
             // Read bulletStyle back from the list's rule class; text is the item, not the list markup.
@@ -4318,10 +4439,13 @@
         });
         article.innerHTML = lean.bodyHtml;
         applyTslLayoutVarsToArticle(article);
-        applyLeanReadingPrefs(article);
         wrap.appendChild(article);
         shell.appendChild(wrap);
         mount.appendChild(shell);
+        /* After attach: applyLeanReadingPrefs also stamps theme/width/layout on the
+           .document-tsl shell via closest(); before attach the shell kept the light
+           defaults on first load/refresh in scroll layout. */
+        applyLeanReadingPrefs(article);
         bindInDocumentAnchorClicks(article);
         syncMountHostLayout(mount);
         return article;
@@ -4615,6 +4739,7 @@
         loadUrl: loadUrl,
         loadText: loadText,
         getReadingPrefs: getReadingPrefs,
+        readingPrefApplies: readingPrefApplies,
         getTslLayout: getTslLayout,
         getTslReadingCapabilities: getTslReadingCapabilities,
         getPageFit: getPageFit,

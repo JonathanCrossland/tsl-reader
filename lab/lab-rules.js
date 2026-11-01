@@ -14,7 +14,7 @@
  * TalesmithTsl.defineBlockRules(patch, { replace: false })
  *   patch.common            rules for every block type (align, cols, theme)
  *   patch.types[type]       rules for one block type; null removes the type's rules
- *   patch.derive / .format  named functions for derive: / format: rules
+ *   patch.derive / .format / .normalize  named functions for derive: / format: / normalize: rules
  *   Per property, a rule object is merged onto the existing rule; null removes the
  *   property. With { replace: true }, each group named in the patch is swapped wholesale.
  * TalesmithTsl.resetBlockRules()     back to the spec ruleset
@@ -23,7 +23,8 @@
  * Rule fields: values | type ('boolean'|'int'|'string') + min/max/clamp/maxLength,
  * def, cls (class "<cls>-<value>"), emitDefault, flag (class when true),
  * forces (emit another prop's class even at default), cssVar + unit,
- * attr + format, derive.
+ * attr + format, derive, normalize (type 'object'), blankIsDefault (type 'string'),
+ * renderers (['paged', 'lean']: limit the class/var/attr mapping to those renderers).
  *
  * Examples (not active; T = window.TalesmithTsl):
  *
@@ -37,6 +38,9 @@
  *   // Headings: format numbers as "§1" instead of "1."
  *   T.defineBlockRules({ format: { labNumber: function (v) { return '§' + String(v).replace(/\.$/, ''); } },
  *                        types: { h1: { number: { format: 'labNumber' } } } });
+ *
+ *   // Callouts: hide the default icon (an aside's own icon still shows)
+ *   T.defineBlockRules({ types: { aside: { icon: { def: '' } } } });
  *
  *   // A lab-only derived flag, styled in lab.css (.lab-short { … })
  *   T.defineBlockRules({ types: { paragraph: { short: {

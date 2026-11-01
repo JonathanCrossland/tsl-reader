@@ -151,21 +151,9 @@
     --tsl-page-fit-w: min(var(--tsl-page-w), 100%);
 }
 
-.tsl-root[data-tsl-layout="pages"][data-tsl-reader-width="narrow"] {
-    --tsl-page-fit-w: min(var(--tsl-page-w), 58ch, 92%);
-}
-
-.tsl-root[data-tsl-layout="pages"][data-tsl-reader-width="wide"] {
-    --tsl-page-fit-w: min(100%, max(var(--tsl-page-w), 76ch));
-}
-
-.tsl-root[data-tsl-layout="pages"][data-tsl-page-view="spread"][data-tsl-reader-width="narrow"] {
-    --tsl-page-fit-w: min(var(--tsl-page-w), calc((100% - var(--tsl-pager-gutter)) / 2 * 0.92));
-}
-
-.tsl-root[data-tsl-layout="pages"][data-tsl-page-view="spread"][data-tsl-reader-width="wide"] {
-    --tsl-page-fit-w: min(var(--tsl-page-w), calc((100% - var(--tsl-pager-gutter)) / 2 * 1.06));
-}
+/* Reader line width (narrow/medium/wide) does not resize pages: a page is the spec's
+   fixed trim, paginated at that width. Width applies to the scroll layout only
+   (--tsl-reader-measure); the reader UI disables it in pages (readingPrefApplies). */
 
 .tsl-root[data-tsl-page-fit="native"] {
     --tsl-page-fit-w: var(--tsl-page-w);

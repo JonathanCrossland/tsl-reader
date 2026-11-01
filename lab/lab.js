@@ -115,20 +115,21 @@
         });
     }
 
-    function syncPageFitRowVisibility() {
-        var row = document.querySelector('[data-tsl-pagefit-row]');
-        if (!row || !TalesmithTsl.getTslLayout) {
-            return;
-        }
-        row.hidden = TalesmithTsl.getTslLayout() === 'scroll';
+    /* Reader theme drives the lab chrome too (player/lab.css html[data-tsl-reader-theme]).
+       index.html stamps it before first paint; keep it in sync with the T menu. */
+    function syncChromeTheme() {
+        var prefs = TalesmithTsl.getReadingPrefs ? TalesmithTsl.getReadingPrefs() : null;
+        var theme = prefs && (prefs.theme === 'sepia' || prefs.theme === 'dark') ? prefs.theme : 'light';
+        document.documentElement.setAttribute('data-tsl-reader-theme', theme);
     }
 
-    if (settings) {
-        settings.addEventListener('click', function () {
-            window.setTimeout(syncPageFitRowVisibility, 0);
-        });
-    }
-    syncPageFitRowVisibility();
+    document.addEventListener('tsl:readingprefs', function () {
+        syncChromeTheme();
+        if (settings && TalesmithTsl.syncReadingPrefsUI) {
+            TalesmithTsl.syncReadingPrefsUI(settings);
+        }
+    });
+    syncChromeTheme();
 
     function setStatus(msg, isError) {
         if (!status) {
@@ -189,7 +190,6 @@
         if (settings && TalesmithTsl.syncReadingPrefsUI) {
             TalesmithTsl.syncReadingPrefsUI(settings);
         }
-        syncPageFitRowVisibility();
         rebuildLabContents(parsed);
         setStatus('');
     }

@@ -17,6 +17,12 @@
     --lab-shadow-sm: 0 1px 2px rgba(28, 25, 23, 0.06);
     --lab-shadow-md: 0 8px 24px rgba(28, 25, 23, 0.1), 0 2px 6px rgba(28, 25, 23, 0.04);
     --lab-shadow-menu: 0 16px 40px rgba(28, 25, 23, 0.14), 0 4px 12px rgba(28, 25, 23, 0.06);
+    --lab-tint: rgba(28, 25, 23, 0.06);
+    --lab-tint-strong: rgba(28, 25, 23, 0.12);
+    --lab-mark-bg: linear-gradient(145deg, #4a6278 0%, #2f4759 100%);
+    --lab-mark-ink: #fffcf7;
+    --lab-error: #9f2c2c;
+    color-scheme: light;
     --lab-radius-sm: 8px;
     --lab-radius-md: 12px;
     --lab-radius-pill: 999px;
@@ -27,6 +33,66 @@
     --tsl-lab-contents-width: min(16.5rem, 42vw);
     /* 16px avoids iOS Safari focus-zoom on selects and inputs */
     --lab-control-font-size: 1rem;
+}
+
+/* —— Reader theme → lab chrome ——
+   The T menu "Page colour" (reader:prefs theme) is stamped on <html> as
+   data-tsl-reader-theme (inline script in lab/index.html before paint, then lab.js on
+   tsl:readingprefs), so header, menu, contents and stage follow the page palette
+   (player/tsl.css .tsl-root[data-tsl-reader-theme]). Light = the :root defaults. */
+
+html[data-tsl-reader-theme="sepia"] {
+    --lab-bg: #e8dfd0;
+    --lab-bg-subtle: linear-gradient(180deg, #ece4d6 0%, #e2d8c6 100%);
+    --lab-surface: #f4ecdd;
+    --lab-surface-elevated: #f9f3e8;
+    --lab-ink: #433a2e;
+    --lab-ink-muted: #6e6150;
+    --lab-ink-faint: #8a7a64;
+    --lab-border: rgba(67, 58, 46, 0.14);
+    --lab-border-strong: rgba(67, 58, 46, 0.22);
+    --lab-accent: #8a6440;
+    --lab-accent-hover: #6f4f31;
+    --lab-accent-soft: #ead9c1;
+    --lab-accent-ring: rgba(138, 100, 64, 0.35);
+    --lab-shadow-sm: 0 1px 2px rgba(67, 58, 46, 0.08);
+    --lab-shadow-md: 0 8px 24px rgba(67, 58, 46, 0.12), 0 2px 6px rgba(67, 58, 46, 0.05);
+    --lab-shadow-menu: 0 16px 40px rgba(67, 58, 46, 0.16), 0 4px 12px rgba(67, 58, 46, 0.07);
+    --lab-tint: rgba(67, 58, 46, 0.07);
+    --lab-tint-strong: rgba(67, 58, 46, 0.14);
+    --lab-mark-bg: linear-gradient(145deg, #9a7550 0%, #6f4f31 100%);
+    --lab-mark-ink: #f9f3e8;
+    --lab-error: #9a3324;
+    color-scheme: light;
+}
+
+html[data-tsl-reader-theme="dark"] {
+    --lab-bg: #121110;
+    --lab-bg-subtle: linear-gradient(180deg, #171614 0%, #0f0e0d 100%);
+    --lab-surface: #1e1c19;
+    --lab-surface-elevated: #2a2723;
+    --lab-ink: #d2cdc4;
+    --lab-ink-muted: #a39d92;
+    --lab-ink-faint: #857f75;
+    --lab-border: rgba(210, 205, 196, 0.12);
+    --lab-border-strong: rgba(210, 205, 196, 0.2);
+    --lab-accent: #8fb0cb;
+    --lab-accent-hover: #abc5da;
+    --lab-accent-soft: rgba(143, 176, 203, 0.16);
+    --lab-accent-ring: rgba(143, 176, 203, 0.4);
+    --lab-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --lab-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+    --lab-shadow-menu: 0 16px 40px rgba(0, 0, 0, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
+    --lab-tint: rgba(210, 205, 196, 0.07);
+    --lab-tint-strong: rgba(210, 205, 196, 0.18);
+    --lab-mark-bg: linear-gradient(145deg, #5b7790 0%, #3d5a73 100%);
+    --lab-mark-ink: #f1ede6;
+    --lab-error: #e08a7e;
+    color-scheme: dark;
+}
+
+html[data-tsl-reader-theme] {
+    background: var(--lab-bg);
 }
 
 *,
@@ -106,8 +172,8 @@ body {
     font-size: 0.62rem;
     font-weight: 700;
     letter-spacing: 0.06em;
-    color: var(--lab-surface);
-    background: linear-gradient(145deg, #4a6278 0%, #2f4759 100%);
+    color: var(--lab-mark-ink);
+    background: var(--lab-mark-bg);
     border-radius: 6px;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), var(--lab-shadow-sm);
 }
@@ -118,7 +184,7 @@ body {
     display: inline-flex;
     padding: 3px;
     gap: 2px;
-    background: rgba(28, 25, 23, 0.06);
+    background: var(--lab-tint);
     border-radius: var(--lab-radius-pill);
     border: 1px solid var(--lab-border);
 }
@@ -361,6 +427,41 @@ body {
     margin-bottom: 0.65rem;
 }
 
+.tsl-lab-read-row[hidden] {
+    display: none;
+}
+
+/* A pref that does not apply to the current layout (tsl.js readingPrefApplies). */
+.tsl-lab-read-row[data-tsl-unavailable] .tsl-lab-read-label {
+    opacity: 0.6;
+}
+
+.tsl-lab-read-row[data-tsl-unavailable] .tsl-lab-seg {
+    opacity: 0.45;
+}
+
+.tsl-lab-read .tsl-lab-seg button:disabled,
+.tsl-lab-read .tsl-lab-seg button[aria-disabled="true"] {
+    cursor: not-allowed;
+    color: var(--lab-ink-faint);
+}
+
+.tsl-lab-read .tsl-lab-seg button:disabled:hover {
+    color: var(--lab-ink-faint);
+}
+
+.tsl-lab-read-note {
+    grid-column: 2;
+    margin-top: -0.25rem;
+    font-size: 0.7rem;
+    line-height: 1.3;
+    color: var(--lab-ink-faint);
+}
+
+.tsl-lab-read-note[hidden] {
+    display: none;
+}
+
 .tsl-lab-read-row:last-of-type {
     margin-bottom: 0;
 }
@@ -419,7 +520,7 @@ body {
     padding: 0;
     border-radius: 50%;
     border: 1px solid var(--lab-border-strong);
-    background: rgba(28, 25, 23, 0.12);
+    background: var(--lab-tint-strong);
     cursor: pointer;
     transition: transform 0.12s ease, background 0.12s ease, border-color 0.12s ease;
 }
@@ -484,7 +585,7 @@ body {
 }
 
 .tsl-lab-status.is-error {
-    color: #9f2c2c;
+    color: var(--lab-error);
 }
 
 @media (max-width: 720px) {
@@ -765,7 +866,7 @@ body {
         height: auto !important;
         max-height: none !important;
         overflow: visible !important;
-        background: #fff;
+        background: #fff !important;
     }
 
     body {

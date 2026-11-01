@@ -6,6 +6,18 @@
     <title>Talesmith Lang (.tsl) player</title>
     <link rel="stylesheet" href="../player/tsl.css">
     <link rel="stylesheet" href="../player/lab.css">
+    <script>
+    /* Stamp the saved reader theme on <html> before first paint so lab chrome and page
+       agree on load/refresh (lab.js keeps it in sync on tsl:readingprefs). */
+    (function (d) {
+        var t = 'light';
+        try {
+            var p = JSON.parse(localStorage.getItem('reader:prefs') || 'null');
+            if (p && (p.theme === 'sepia' || p.theme === 'dark' || p.theme === 'light')) { t = p.theme; }
+        } catch (e) { /* private mode */ }
+        d.documentElement.setAttribute('data-tsl-reader-theme', t);
+    })(document);
+    </script>
 </head>
 <body>
     <header class="tsl-lab-header">
@@ -71,13 +83,14 @@
                                 <button type="button" role="radio" data-tsl-pref="theme" data-value="dark">Dark</button>
                             </div>
                         </div>
-                        <div class="tsl-lab-read-row">
+                        <div class="tsl-lab-read-row" data-tsl-pref-row="width">
                             <span class="tsl-lab-read-label">Line width</span>
                             <div class="tsl-lab-seg" role="radiogroup" aria-label="Line width">
                                 <button type="button" role="radio" data-tsl-pref="width" data-value="narrow">Narrow</button>
                                 <button type="button" role="radio" data-tsl-pref="width" data-value="medium">Medium</button>
                                 <button type="button" role="radio" data-tsl-pref="width" data-value="wide">Wide</button>
                             </div>
+                            <span class="tsl-lab-read-note" data-tsl-pref-note hidden>Scroll layout only. Pages keep the document's trim size.</span>
                         </div>
                         <div class="tsl-lab-read-row" data-tsl-layout-row>
                             <span class="tsl-lab-read-label">Layout</span>
@@ -86,13 +99,14 @@
                                 <button type="button" role="radio" data-tsl-pref="layout" data-value="scroll">Scroll</button>
                             </div>
                         </div>
-                        <div class="tsl-lab-read-row" data-tsl-pagefit-row>
+                        <div class="tsl-lab-read-row" data-tsl-pagefit-row data-tsl-pref-row="pageFit">
                             <span class="tsl-lab-read-label">Page size</span>
                             <div class="tsl-lab-seg" role="radiogroup" aria-label="Page size on screen">
                                 <button type="button" role="radio" data-tsl-pref="pageFit" data-value="fit">Fit width</button>
                                 <button type="button" role="radio" data-tsl-pref="pageFit" data-value="scale">Fit screen</button>
                                 <button type="button" role="radio" data-tsl-pref="pageFit" data-value="native">Actual</button>
                             </div>
+                            <span class="tsl-lab-read-note" data-tsl-pref-note hidden>Pages layout only.</span>
                         </div>
                         <div class="tsl-lab-read-foot">
                             <span>Saved on this device</span>
