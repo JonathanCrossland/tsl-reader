@@ -443,22 +443,37 @@
         return /(\*\*|__|\*(?!\*)|_(?!_)|~~[^~\n]+~~|\+\+[^+\n]+\+\+|`[^`\n]+`|\[[^\]]+\]\([^)]+\)|\\[\[(]|\\\(|\n)/.test(s);
     }
 
-    /** Studio inline markdown → HTML (small subset); then sanitized like authored HTML. */
+    /** Matches one HTML tag (or comment) in block text; `<code>…</code>` is taken whole so markdown never applies inside it. */
+    var INLINE_HTML_TOKEN_RE = /<code\b[^>]*>[\s\S]*?<\/code\s*>|<!--[\s\S]*?-->|<\/?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*)?\/?>/g;
+
+    /**
+     * Studio inline markdown → HTML (small subset); then sanitized like authored HTML.
+     * Text that already contains HTML tags still gets markdown: tags are held aside as opaque
+     * slots (so `*`/`_` in attributes are untouched), markdown runs on the surrounding text, and
+     * the tags are restored before sanitizing. Authored entities are kept, and newlines in HTML
+     * text stay as whitespace, as before.
+     */
     function markdownInlineToHtml(raw) {
         var s = String(raw || '');
         if (!s) {
             return '';
         }
-        if (looksLikeLegacyInlineHtml(s)) {
-            return sanitizeInlineHtmlFragment(s);
+        var hasHtml = INLINE_HTML_TOKEN_RE.test(s);
+        INLINE_HTML_TOKEN_RE.lastIndex = 0;
+        var tagSlots = [];
+        if (hasHtml) {
+            s = s.replace(INLINE_HTML_TOKEN_RE, function (tag) {
+                tagSlots.push(tag);
+                return '\x02TSL_TAG' + (tagSlots.length - 1) + '\x02';
+            });
         }
         var codeSlots = [];
         s = s.replace(/`([^`\n]+)`/g, function (_, inner) {
             var key = '\x01TSL_CODE' + codeSlots.length + '\x01';
-            codeSlots.push('<code>' + escapeHtml(inner) + '</code>');
+            codeSlots.push('<code>' + (hasHtml ? inner.replace(/</g, '&lt;').replace(/>/g, '&gt;') : escapeHtml(inner)) + '</code>');
             return key;
         });
-        var out = s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var out = hasHtml ? s : s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_, label, href) {
             return '<a href="' + escapeHtml(href) + '">' + label + '</a>';
         });
@@ -472,7 +487,13 @@
         codeSlots.forEach(function (html, i) {
             out = out.replace('\x01TSL_CODE' + i + '\x01', html);
         });
-        out = out.replace(/\n/g, '<br>');
+        if (hasHtml) {
+            out = out.replace(/\x02TSL_TAG(\d+)\x02/g, function (_, i) {
+                return tagSlots[+i];
+            });
+        } else {
+            out = out.replace(/\n/g, '<br>');
+        }
         return sanitizeInlineHtmlFragment(out);
     }
 
@@ -482,11 +503,17 @@
         }
         var doc = new DOMParser().parseFromString('<div>' + s + '</div>', 'text/html');
         var allowed = { b: 1, strong: 1, i: 1, em: 1, u: 1, a: 1, br: 1, span: 1, sup: 1, sub: 1, code: 1 };
+        var dropWithContent = { script: 1, style: 1, template: 1, iframe: 1, object: 1, embed: 1, noscript: 1 };
         function cleanInline(node) {
             var kids = Array.prototype.slice.call(node.childNodes);
             kids.forEach(function (child) {
                 if (child.nodeType === 1) {
                     var tag = child.tagName.toLowerCase();
+                    Array.prototype.slice.call(child.attributes).forEach(function (attr) {
+                        if (/^on/i.test(attr.name)) {
+                            child.removeAttribute(attr.name);
+                        }
+                    });
                     if (tag === 'span' && isDropCapSpan(child)) {
                         cleanDropCapSpan(child);
                         return;
@@ -495,9 +522,17 @@
                         cleanInline(child);
                         return;
                     }
-                    if (!allowed[tag]) {
+                    if (dropWithContent[tag]) {
+                        node.removeChild(child);
+                    } else if (!allowed[tag]) {
+                        // Unwrap, then clean what was inside (it is now a direct child of node).
+                        var holder = child.ownerDocument.createElement('span');
                         while (child.firstChild) {
-                            node.insertBefore(child.firstChild, child);
+                            holder.appendChild(child.firstChild);
+                        }
+                        cleanInline(holder);
+                        while (holder.firstChild) {
+                            node.insertBefore(holder.firstChild, child);
                         }
                         node.removeChild(child);
                     } else {
@@ -2132,8 +2167,11 @@
          * no drop cap (so no studio-has-dropcap flag) and tsl-block--continued (tsl.css
          * drops the first-line indent there).
          */
-        function fragmentBlock(b, startSegment) {
+        function fragmentBlock(b, startSegment, inlineHtmlText) {
             var c = cloneBlockShallow(b);
+            if (inlineHtmlText) {
+                c._tslInlineHtml = true;
+            }
             if (startSegment > 0) {
                 c.dropCap = null;
                 c._tslContinued = true;
@@ -2152,7 +2190,7 @@
                 || b.type === 'title' || b.type === 'h1' || b.type === 'h2' || b.type === 'h3';
         }
 
-        function appendSplittableSegments(b, rowClass, segments, joinFn) {
+        function appendSplittableSegments(b, rowClass, segments, joinFn, inlineHtmlText) {
             if (!segments.length) {
                 ensurePage();
                 current.body.appendChild(buildFlowRow([b], rowClass));
@@ -2170,7 +2208,7 @@
                 var best = 0;
                 while (lo <= hi) {
                     var mid = Math.floor((lo + hi) / 2);
-                    var trial = fragmentBlock(b, si);
+                    var trial = fragmentBlock(b, si, inlineHtmlText);
                     trial.text = joinFn(segments.slice(si, si + mid));
                     var trialRow = buildFlowRow([trial], rowClass);
                     if (fitsOnPage(current, trialRow)) {
@@ -2189,7 +2227,7 @@
                     }
                     best = 1;
                 }
-                var chunkBlock = fragmentBlock(b, si);
+                var chunkBlock = fragmentBlock(b, si, inlineHtmlText);
                 chunkBlock.text = joinFn(segments.slice(si, si + best));
                 current.body.appendChild(buildFlowRow([chunkBlock], rowClass));
                 si += best;
@@ -2203,15 +2241,16 @@
                 });
                 return;
             }
-            var plain = plainText(b.text);
-            if (!plain) {
+            // Split at word boundaries but carry the inline HTML runs (bold, italic, links…).
+            var src = inlineWordRanges(blockInlineHtml(b));
+            if (!src.words.length) {
                 ensurePage();
                 current.body.appendChild(buildFlowRow([b], rowClass));
                 return;
             }
-            appendSplittableSegments(b, rowClass, plain.split(/\s+/).filter(Boolean), function (words) {
-                return words.join(' ');
-            });
+            appendSplittableSegments(b, rowClass, src.words, function (words) {
+                return sliceInlineWords(src.root, words[0], words[words.length - 1]);
+            }, true);
         }
 
         function buildFlowRow(blocksInRow, rowClass) {
@@ -3042,6 +3081,87 @@
         return (d.textContent || '').trim();
     }
 
+    /**
+     * Sanitised inline HTML for a block's text. Page fragments of a split block carry
+     * already-converted inline HTML (_tslInlineHtml), so they are sanitised, not re-parsed
+     * as markdown.
+     */
+    function blockInlineHtml(b) {
+        if (b && b._tslInlineHtml) {
+            return sanitizeInlineHtmlFragment(String(b.text || ''));
+        }
+        return inlineHtml(b && b.text);
+    }
+
+    function blockPlainText(b) {
+        var d = document.createElement('div');
+        d.innerHTML = blockInlineHtml(b);
+        return (d.textContent || '').trim();
+    }
+
+    /**
+     * Word boundaries over inline HTML: each word is a text-node range; a word that runs
+     * across inline elements (e.g. **dis**parate) stays one word, so a split never breaks it.
+     */
+    function inlineWordRanges(html) {
+        var root = document.createElement('div');
+        root.innerHTML = html;
+        var words = [];
+        var gap = true;
+        (function walk(node) {
+            Array.prototype.forEach.call(node.childNodes, function (child) {
+                if (child.nodeType === 3) {
+                    var v = child.nodeValue;
+                    var re = /\S+/g;
+                    var m;
+                    var last = 0;
+                    while ((m = re.exec(v))) {
+                        var joined = !gap && m.index === 0 && words.length;
+                        if (joined) {
+                            words[words.length - 1].endNode = child;
+                            words[words.length - 1].end = m.index + m[0].length;
+                        } else {
+                            words.push({ node: child, start: m.index, endNode: child, end: m.index + m[0].length });
+                        }
+                        gap = false;
+                        last = m.index + m[0].length;
+                    }
+                    if (last < v.length) {
+                        gap = true;
+                    }
+                } else if (child.nodeType === 1) {
+                    if (child.tagName.toLowerCase() === 'br') {
+                        gap = true;
+                    } else {
+                        walk(child);
+                    }
+                }
+            });
+        })(root);
+        return { root: root, words: words };
+    }
+
+    /** Inline HTML for words[first..last] (partial ancestors cloned, so formatting is kept). */
+    function sliceInlineWords(root, first, last) {
+        var range = document.createRange();
+        range.setStart(first.node, first.start);
+        range.setEnd(last.endNode, last.end);
+        var d = document.createElement('div');
+        d.appendChild(range.cloneContents());
+        return d.innerHTML;
+    }
+
+    /** Remove the first n characters of text from an inline DOM (drop-cap letters). */
+    function removeLeadingTextChars(root, n) {
+        var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        var t;
+        while (n > 0 && (t = walker.nextNode())) {
+            var len = t.nodeValue.length;
+            t.nodeValue = t.nodeValue.slice(Math.min(n, len));
+            n -= len;
+        }
+    }
+
     function renderListItem(b, type) {
         var li = document.createElement('li');
         if (type === 'todo') {
@@ -3580,7 +3700,7 @@
                 el.appendChild(ic);
             }
             var inner = document.createElement('div');
-            inner.innerHTML = inlineHtml(b.text);
+            inner.innerHTML = blockInlineHtml(b);
             el.appendChild(inner);
             return el;
         }
@@ -3601,11 +3721,11 @@
         if (type === 'title') {
             el.setAttribute('role', 'doc-title');
         }
-        var inner = inlineHtml(b.text);
+        var inner = blockInlineHtml(b);
         if (type === 'paragraph') {
             // Same cap builder as Scroll; null when dropCap is off / text is empty / pre-baked.
-            var dcInner = buildDropCapInner(inner, plainText(b.text), b,
-                ctx && ctx.header && ctx.header.typography && ctx.header.typography.lineHeight, inlineHtml);
+            var dcInner = buildDropCapInner(inner, b,
+                ctx && ctx.header && ctx.header.typography && ctx.header.typography.lineHeight);
             if (dcInner) {
                 inner = dcInner;
             }
@@ -3617,7 +3737,7 @@
             var hp = headingDisplayPrefix(b);
             if (hp) {
                 // data-heading-number comes from the ruleset (h1–h3 number → attr) in applyBlockRules.
-                var plain = plainText(b.text);
+                var plain = blockPlainText(b);
                 var prefPlain = hp.trim();
                 if (plain.indexOf(prefPlain) !== 0 && plain.indexOf(prefPlain.replace(/\.$/, '')) !== 0) {
                     inner = escapeHtml(hp) + inner;
@@ -3638,6 +3758,14 @@
     }
 
     var DC_CAP_HEIGHT = 0.703;
+
+    // Drop-cap float box = exactly dropCap.lines body lines (lines × lineHeight), so text
+    // wraps beside the cap for that many lines. The cap is sized so its cap height equals
+    // that box (dcFloatMetrics), i.e. box = cap-size × cap-height ratio. A letter cap sets
+    // font-size to the cap size, so there the box is ratio × 1em; a glyph cap keeps the
+    // paragraph font-size. Values are the --ts-dc-* variables (sized by dcInlineStyle).
+    var DC_BOX_HEIGHT_LETTER = 'calc(var(--ts-dc-cap-height-ratio) * 1em)';
+    var DC_BOX_HEIGHT_GLYPH = 'calc(var(--ts-dc-cap-size) * var(--ts-dc-cap-height-ratio))';
 
     var NUMHEAD_MODES = { numerals: 'numerals', roman: 'roman' };
 
@@ -3923,31 +4051,36 @@
         var graphemes = Array.from(work);
         var n = Math.max(1, Math.min(8, spec.characters | 0));
         var cap = prefix + graphemes.slice(0, n).join('');
+        var rawLength = cap.length;
         var rest = graphemes.slice(n).join('');
         if (spec.uppercase) {
             cap = cap.toLocaleUpperCase();
         }
-        return { cap: cap, rest: rest };
+        return { cap: cap, rest: rest, rawLength: rawLength };
     }
 
-    function buildDropCapLeanInner(restInlineHtml, plain, block, header) {
-        return buildDropCapInner(restInlineHtml, plain, block,
-            header && header.typography && header.typography.lineHeight,
-            function (rest) { return leanInlineHtml(rest, header, header.readMode !== false); });
+    function buildDropCapLeanInner(paraInlineHtml, block, header) {
+        return buildDropCapInner(paraInlineHtml, block, header && header.typography && header.typography.lineHeight);
     }
 
     /**
      * Drop-cap inner HTML shared by Scroll (lean) and Pages: cap span + studio-dropcap-rest.
-     * restFromPlain renders the remaining plain text when the source has no inline markup.
+     * The cap letters come from the paragraph's text; the rest keeps the paragraph's inline
+     * HTML (bold, italic, links…) with those letters removed.
      */
-    function buildDropCapInner(restInlineHtml, plain, block, lineHeight, restFromPlain) {
+    function buildDropCapInner(paraInlineHtml, block, lineHeight) {
         // paragraph.dropCap / dropCapMarkup come from the ruleset (normalised Studio object).
         var dcProps = resolveBlockRules(block).props;
         var spec = dcProps.dropCap || null;
-        if (spec === null || !plainText(plain)) {
+        if (spec === null || dcProps.dropCapMarkup) {
             return null;
         }
-        if (dcProps.dropCapMarkup) {
+        var holder = document.createElement('div');
+        holder.innerHTML = paraInlineHtml;
+        var text = holder.textContent || '';
+        var lead = text.length - text.replace(/^\s+/, '').length;
+        var plain = text.slice(lead);
+        if (!plain.trim()) {
             return null;
         }
         var parts = splitDropCapPlain(plain, spec);
@@ -3965,18 +4098,16 @@
         if (glyph) {
             capClass += ' be-dc-glyph-cap be-dc-cap-style-' + spec.capStyle;
             capHtml = '<span class="' + capClass + '" style="' + style
-                + 'float:left;line-height:1;color:inherit;width:var(--ts-dc-cap-size);" aria-hidden="true">'
+                + 'float:left;line-height:1;color:inherit;height:' + DC_BOX_HEIGHT_GLYPH + ';" aria-hidden="true">'
                 + glyph + '</span>';
         } else {
             capHtml = '<span class="' + capClass + '" style="' + style
-                + 'float:left;line-height:1;color:inherit;font-size:var(--ts-dc-cap-size);" aria-hidden="true">'
+                + 'float:left;line-height:var(--ts-dc-cap-height-ratio);color:inherit;font-size:var(--ts-dc-cap-size);'
+                + 'height:' + DC_BOX_HEIGHT_LETTER + ';" aria-hidden="true">'
                 + escapeHtml(parts.cap) + '</span>';
         }
-        var restHtml = restInlineHtml;
-        if (!/<[a-z][\s\S]*>/i.test(String(block.text || ''))) {
-            restHtml = restFromPlain(parts.rest);
-        }
-        return capHtml + '<span class="studio-dropcap-rest">' + restHtml + '</span>';
+        removeLeadingTextChars(holder, lead + parts.rawLength);
+        return capHtml + '<span class="studio-dropcap-rest">' + holder.innerHTML + '</span>';
     }
 
     /**
@@ -4023,13 +4154,7 @@
                 + headingBodyHtml(block, header, readMode) + '</' + type + '>';
         }
         if (type === 'paragraph') {
-            var plain = plainText(block.text);
-            var pBody = buildDropCapLeanInner(
-                leanInlineHtml(block.text, header, readMode),
-                plain,
-                block,
-                header
-            );
+            var pBody = buildDropCapLeanInner(leanInlineHtml(block.text, header, readMode), block, header);
             if (!pBody) {
                 pBody = leanInlineHtml(block.text, header, readMode);
             }

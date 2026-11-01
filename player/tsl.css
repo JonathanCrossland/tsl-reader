@@ -1059,22 +1059,27 @@
     margin-left: var(--ts-dc-margin-left, 0);
 }
 
+/* The float box is exactly --ts-dc-lines body lines tall (cap-size × cap-height ratio), so
+   text wraps beside the cap for the configured number of lines. A letter cap's line-height
+   equals the cap-height ratio, which puts the cap's ink inside that box. */
 .dropcap:not(.be-dc-glyph-cap),
 .studio-dropcap:not(.be-dc-glyph-cap) {
     font-size: var(--ts-dc-cap-size, 2.5em);
+    line-height: var(--ts-dc-cap-height-ratio, 0.703);
+    height: calc(var(--ts-dc-cap-height-ratio, 0.703) * 1em);
 }
 
 .dropcap.be-dc-glyph-cap,
 .studio-dropcap.be-dc-glyph-cap {
-    width: var(--ts-dc-cap-size, 2.5em);
+    height: calc(var(--ts-dc-cap-size, 2.5em) * var(--ts-dc-cap-height-ratio, 0.703));
     color: inherit;
 }
 
 .dropcap.be-dc-glyph-cap .be-dc-glyph-svg,
 .studio-dropcap.be-dc-glyph-cap .be-dc-glyph-svg {
     display: block;
-    width: 100%;
-    height: auto;
+    width: auto;
+    height: 100%;
     fill: currentColor;
 }
 
