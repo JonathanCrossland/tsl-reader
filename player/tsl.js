@@ -536,8 +536,440 @@
         paywall: 1, toc: 1
     };
 
+    /* -----------------------------------------------------------------------
+     * TSL block ruleset — interpreted from the specification, not hard-coded.
+     *
+     * Source of truth: spec/tsl-spec.tsl §5 (properties common to all blocks),
+     * §5.2 (cols), §5.5 (scalar and enum constraints), §6 (block types); the
+     * option surface is the one demonstrated in spec/*.tsl and examples/*.tsl.
+     *
+     * Each property rule declares:
+     *   values  allowed enum values (anything else falls back to def)
+     *   type    'boolean' | 'int' | 'string' for non-enum values
+     *   min/max integer range; out of range → def, or clamped when clamp: true
+     *   maxLength strings longer than this are cut (an empty string is a value)
+     *   def     the spec default when omitted or invalid
+     *   cls     rule-class prefix: value v maps to class "<cls>-<v>"; tsl.css
+     *           imposes the rule for that class (e.g. full-page hAlign center →
+     *           .halign-center). Renderers never write the presentation values.
+     *   cssVar  continuous values map to a CSS custom property instead of a
+     *           class; tsl.css consumes the variable.
+     *   emitDefault false → the default value emits no class, so the inherited
+     *           document rule (e.g. typography.paragraphAlign) keeps applying.
+     *   forces  boolean rule: when true, the named property's class is emitted even
+     *           at its default (paragraph alignOverride → align wins over the preset).
+     *   flag    boolean rule: class emitted when the value is true.
+     *   attr    value maps to an attribute (formatted by format, see TSL_RULE_FORMAT).
+     *   derive  the value is derived from block content, not read from a property
+     *           (see TSL_RULE_DERIVE); e.g. spec §6.2 empty paragraph → no indent.
+     *
+     * The ruleset is extensible: hosts (the lab) call TalesmithTsl.defineBlockRules()
+     * to replace or extend rules per type without forking the player — see below.
+     *
+     * Source blocks are never mutated (spec §11.3: preserve properties for
+     * round-trip); resolveBlockRules() returns a validated view.
+     * --------------------------------------------------------------------- */
+    var TSL_ALIGN_VALUES = ['left', 'center', 'right', 'justify'];
+    var TSL_BLOCK_RULES = {
+        common: {
+            align: { values: TSL_ALIGN_VALUES, def: 'left', cls: 'align', emitDefault: false },
+            cols: { values: [1, 2], def: 2 },
+            theme: { values: [null, 'default', 'serif', 'dark', 'compact'], def: null }
+        },
+        types: {
+            // §6.2 Body text. alignOverride (Studio round-trip, spec/specification-0.1.tsl):
+            // the block's own align wins over typography.paragraphAlign, even when left.
+            paragraph: {
+                alignOverride: { type: 'boolean', def: false, forces: 'align' },
+                noIndent: { derive: 'emptyText', type: 'boolean', def: false, flag: 'no-indent' }
+            },
+            // §6.3–6.5 Headings. number is the outline label ("1", "1.2"); spec/specification-0.1.tsl.
+            h1: { number: { type: 'string', def: null, attr: 'data-heading-number', format: 'headingNumber' } },
+            h2: { number: { type: 'string', def: null, attr: 'data-heading-number', format: 'headingNumber' } },
+            h3: { number: { type: 'string', def: null, attr: 'data-heading-number', format: 'headingNumber' } },
+            'full-page': {
+                hAlign: { values: ['left', 'center', 'right'], def: 'center', cls: 'halign' },
+                vAlign: { values: ['top', 'center', 'bottom'], def: 'center', cls: 'valign' }
+            },
+            bullet: {
+                bulletStyle: {
+                    values: ['disc', 'circle', 'square', 'dash', 'number', 'lower-alpha', 'upper-alpha'],
+                    def: 'disc',
+                    cls: 'bullet'
+                }
+            },
+            todo: { checked: { type: 'boolean', def: false } },
+            table: { header: { type: 'boolean', def: true } },
+            image: { width: { type: 'int', min: 10, max: 100, clamp: true, def: 100, cssVar: '--tsl-image-width', unit: '%' } },
+            pageheader: { side: { values: ['any', 'left', 'right'], def: 'any' } },
+            pagefooter: { side: { values: ['any', 'left', 'right'], def: 'any' } },
+            toc: {
+                maxLevel: { type: 'int', min: 1, max: 3, def: 3 },
+                leader: { type: 'string', maxLength: 4, def: '.' }
+            },
+            'image-index': { leader: { type: 'string', maxLength: 4, def: '.' } },
+            'manuscript-title': { kind: { values: ['novel', 'short-story', 'poem'], def: 'novel', cls: 'kind' } }
+        }
+    };
+
+    /** Named content derivations for derive: rules (a rule may also pass a function). */
+    var TSL_RULE_DERIVE = {
+        // spec §6.2: "Empty text suppresses paragraph indent in the player."
+        emptyText: function (block) { return !plainText(block && block.text); }
+    };
+
+    /** Named value formatters for attr: rules (a rule may also pass a function). */
+    var TSL_RULE_FORMAT = {
+        headingNumber: function (v) { return headingNumberLabel(v); }
+    };
+
+    function cloneRule(rule) {
+        var out = {};
+        Object.keys(rule).forEach(function (k) {
+            out[k] = Array.isArray(rule[k]) ? rule[k].slice() : rule[k];
+        });
+        return out;
+    }
+
+    function cloneRuleGroup(group) {
+        var out = {};
+        Object.keys(group || {}).forEach(function (k) { out[k] = cloneRule(group[k]); });
+        return out;
+    }
+
+    var TSL_BLOCK_RULES_SPEC = {
+        common: cloneRuleGroup(TSL_BLOCK_RULES.common),
+        types: {}
+    };
+    Object.keys(TSL_BLOCK_RULES.types).forEach(function (t) {
+        TSL_BLOCK_RULES_SPEC.types[t] = cloneRuleGroup(TSL_BLOCK_RULES.types[t]);
+    });
+    var TSL_RULE_DERIVE_SPEC = Object.assign({}, TSL_RULE_DERIVE);
+    var TSL_RULE_FORMAT_SPEC = Object.assign({}, TSL_RULE_FORMAT);
+
+    function mergeRuleGroup(target, patch, replace) {
+        if (replace) {
+            Object.keys(target).forEach(function (k) { delete target[k]; });
+        }
+        Object.keys(patch || {}).forEach(function (prop) {
+            var r = patch[prop];
+            if (r === null || r === false) {
+                delete target[prop];
+                return;
+            }
+            target[prop] = target[prop] && !replace
+                ? Object.assign(cloneRule(target[prop]), r)
+                : cloneRule(r);
+        });
+    }
+
+    /**
+     * Extensibility hook (used by lab/lab-rules.js). Patch the live ruleset:
+     *   defineBlockRules({
+     *     common: { prop: rule },                    // rules for every block type
+     *     types:  { paragraph: { prop: rule } },     // per-type rules; null removes a type
+     *     derive: { name: function (block) {…} },    // named derivations for derive:
+     *     format: { name: function (value) {…} }     // named formatters for attr:
+     *   }, { replace: false })
+     * Per property, a rule object is merged onto the existing rule (so { def: 'justify' }
+     * only changes the default); null removes the property. With { replace: true } each
+     * group named in the patch is replaced wholesale. Renderers read the live ruleset, so
+     * re-render (TalesmithTsl.display) after defining rules on an already-shown document.
+     */
+    function defineBlockRules(patch, opts) {
+        patch = patch || {};
+        var replace = !!(opts && opts.replace);
+        if (patch.common) {
+            mergeRuleGroup(TSL_BLOCK_RULES.common, patch.common, replace);
+        }
+        Object.keys(patch.types || {}).forEach(function (t) {
+            if (patch.types[t] === null) {
+                delete TSL_BLOCK_RULES.types[t];
+                return;
+            }
+            TSL_BLOCK_RULES.types[t] = TSL_BLOCK_RULES.types[t] || {};
+            mergeRuleGroup(TSL_BLOCK_RULES.types[t], patch.types[t], replace);
+        });
+        Object.assign(TSL_RULE_DERIVE, patch.derive || {});
+        Object.assign(TSL_RULE_FORMAT, patch.format || {});
+        tslRuleIssuesSeen = {};
+        return TSL_BLOCK_RULES;
+    }
+
+    /** Drop every override and return to the ruleset interpreted from the spec. */
+    function resetBlockRules() {
+        mergeRuleGroup(TSL_BLOCK_RULES.common, TSL_BLOCK_RULES_SPEC.common, true);
+        Object.keys(TSL_BLOCK_RULES.types).forEach(function (t) { delete TSL_BLOCK_RULES.types[t]; });
+        Object.keys(TSL_BLOCK_RULES_SPEC.types).forEach(function (t) {
+            TSL_BLOCK_RULES.types[t] = cloneRuleGroup(TSL_BLOCK_RULES_SPEC.types[t]);
+        });
+        Object.keys(TSL_RULE_DERIVE).forEach(function (k) { delete TSL_RULE_DERIVE[k]; });
+        Object.assign(TSL_RULE_DERIVE, TSL_RULE_DERIVE_SPEC);
+        Object.keys(TSL_RULE_FORMAT).forEach(function (k) { delete TSL_RULE_FORMAT[k]; });
+        Object.assign(TSL_RULE_FORMAT, TSL_RULE_FORMAT_SPEC);
+        tslRuleIssuesSeen = {};
+        return TSL_BLOCK_RULES;
+    }
+
+    function ruleNamedFn(registry, ref) {
+        return typeof ref === 'function' ? ref : (ref ? registry[ref] : null);
+    }
+
+    /** A rule value as display text, through the rule's format ('' when unset). */
+    function ruleFormatValue(rule, value) {
+        if (!rule || value === null || value === undefined) {
+            return '';
+        }
+        var fmt = ruleNamedFn(TSL_RULE_FORMAT, rule.format);
+        var out = fmt ? fmt(value) : value;
+        return out === null || out === undefined ? '' : String(out);
+    }
+
+    /** Resolved + formatted value of one rule property for a block ('' when the type has no such rule). */
+    function blockRuleText(block, prop) {
+        var b = block || {};
+        return ruleFormatValue(ruleSetForType(b.type)[prop], resolveBlockRules(b).props[prop]);
+    }
+
+    var tslRuleIssuesSeen = {};
+
+    function reportRuleIssue(block, prop, value, used) {
+        var key = (block && block.type) + '.' + prop + '=' + String(value);
+        if (tslRuleIssuesSeen[key]) {
+            return;
+        }
+        tslRuleIssuesSeen[key] = 1;
+        if (typeof console !== 'undefined' && console.warn) {
+            console.warn('[tsl] block ' + ((block && block.id) || '?') + ' (' + (block && block.type)
+                + '): ' + prop + '=' + JSON.stringify(value) + ' is outside the spec; using ' + JSON.stringify(used));
+        }
+    }
+
+    function ruleSetForType(type) {
+        var own = TSL_BLOCK_RULES.types[type] || {};
+        var out = {};
+        Object.keys(TSL_BLOCK_RULES.common).forEach(function (k) { out[k] = TSL_BLOCK_RULES.common[k]; });
+        Object.keys(own).forEach(function (k) { out[k] = own[k]; });
+        return out;
+    }
+
+    function validateRuleValue(rule, raw) {
+        if (raw === undefined || raw === null || (raw === '' && rule.type !== 'string')) {
+            return { value: rule.def, ok: true, omitted: true };
+        }
+        if (rule.values) {
+            var v = raw;
+            if (typeof v === 'string') {
+                v = v.toLowerCase();
+            }
+            if (rule.values.indexOf(v) < 0 && typeof rule.values[0] === 'number') {
+                v = Number(raw);
+            }
+            return rule.values.indexOf(v) >= 0 ? { value: v, ok: true } : { value: rule.def, ok: false };
+        }
+        if (rule.type === 'boolean') {
+            return typeof raw === 'boolean' ? { value: raw, ok: true } : { value: !!raw, ok: false };
+        }
+        if (rule.type === 'int') {
+            var n = parseInt(raw, 10);
+            if (!isFinite(n)) {
+                return { value: rule.def, ok: false };
+            }
+            if (n >= rule.min && n <= rule.max) {
+                return { value: n, ok: n === Number(raw) };
+            }
+            return { value: rule.clamp ? Math.min(rule.max, Math.max(rule.min, n)) : rule.def, ok: false };
+        }
+        if (rule.type === 'string') {
+            var s = String(raw);
+            return rule.maxLength && s.length > rule.maxLength
+                ? { value: s.slice(0, rule.maxLength), ok: false }
+                : { value: s, ok: true };
+        }
+        return { value: raw, ok: true };
+    }
+
+    /**
+     * Validate a block's spec properties. Returns
+     * { type, props: { name: value }, omitted: { name: true }, issues: [ { prop, value, used } ] }.
+     */
+    function resolveBlockRules(block) {
+        var type = (block && block.type) || 'paragraph';
+        var rules = ruleSetForType(type);
+        var out = { type: type, props: {}, omitted: {}, issues: [] };
+        Object.keys(rules).forEach(function (prop) {
+            var derive = ruleNamedFn(TSL_RULE_DERIVE, rules[prop].derive);
+            if (rules[prop].derive) {
+                out.props[prop] = validateRuleValue(rules[prop], derive ? derive(block || {}) : undefined).value;
+                return;
+            }
+            var raw = block ? block[prop] : undefined;
+            var r = validateRuleValue(rules[prop], raw);
+            out.props[prop] = r.value;
+            if (r.omitted) {
+                out.omitted[prop] = true;
+            }
+            if (!r.ok && !r.omitted) {
+                out.issues.push({ prop: prop, value: raw, used: r.value });
+                reportRuleIssue(block, prop, raw, r.value);
+            }
+        });
+        return out;
+    }
+
+    function ruleClassToken(value) {
+        return String(value).toLowerCase().replace(/[^a-z0-9-]+/g, '-');
+    }
+
+    /** Map a block's validated properties to CSS rule classes and CSS variables. */
+    function blockRuleMapping(block, opts) {
+        opts = opts || {};
+        var resolved = resolveBlockRules(block);
+        var rules = ruleSetForType(resolved.type);
+        var classes = [];
+        var vars = {};
+        var attrs = {};
+        var forced = {};
+        Object.keys(rules).forEach(function (prop) {
+            if (rules[prop].forces && resolved.props[prop] === true) {
+                forced[rules[prop].forces] = true;
+            }
+        });
+        Object.keys(rules).forEach(function (prop) {
+            var rule = rules[prop];
+            var value = resolved.props[prop];
+            if (rule.cls && value !== null && value !== undefined) {
+                var emitDefault = opts.emitDefaults || forced[prop] || rule.emitDefault !== false;
+                if (emitDefault || value !== rule.def) {
+                    classes.push(rule.cls + '-' + ruleClassToken(value));
+                }
+            }
+            if (rule.flag && value === true) {
+                classes.push(rule.flag);
+            }
+            if (rule.cssVar && !resolved.omitted[prop]) {
+                vars[rule.cssVar] = value + (rule.unit || '');
+            }
+            if (rule.attr) {
+                var out = ruleFormatValue(rule, value);
+                if (out !== '') {
+                    attrs[rule.attr] = out;
+                }
+            }
+        });
+        return { classes: classes, vars: vars, attrs: attrs, props: resolved.props, issues: resolved.issues };
+    }
+
+    /** DOM renderer: stamp rule classes + variables onto a rendered block element. */
+    function applyBlockRules(el, block, opts) {
+        if (!el || !block) {
+            return el;
+        }
+        var map = blockRuleMapping(block, opts);
+        map.classes.forEach(function (c) { el.classList.add(c); });
+        Object.keys(map.vars).forEach(function (k) { el.style.setProperty(k, map.vars[k]); });
+        Object.keys(map.attrs).forEach(function (k) { el.setAttribute(k, map.attrs[k]); });
+        return el;
+    }
+
+    /** Lean HTML renderer: class="…" (and style="--var:…") attribute string. */
+    function leanRuleAttrs(block, baseClasses, opts) {
+        var map = blockRuleMapping(block, opts);
+        var cls = (baseClasses ? [baseClasses] : []).concat(map.classes).join(' ');
+        var attrs = cls ? ' class="' + escapeHtml(cls) + '"' : '';
+        var vars = Object.keys(map.vars).map(function (k) { return k + ':' + map.vars[k]; }).join(';');
+        if (vars) {
+            attrs += ' style="' + escapeHtml(vars) + ';"';
+        }
+        Object.keys(map.attrs).forEach(function (k) {
+            attrs += ' ' + k + '="' + escapeHtml(map.attrs[k]) + '"';
+        });
+        return attrs;
+    }
+
+    /** Inverse mapping: read a spec property back from rule classes or data-* on markup. */
+    function blockPropFromMarkup(el, type, prop) {
+        var rule = ruleSetForType(type)[prop];
+        if (!el || !rule || rule.derive) {
+            return undefined;
+        }
+        if (rule.cls && rule.values && el.classList) {
+            for (var i = 0; i < rule.values.length; i++) {
+                if (rule.values[i] !== null && el.classList.contains(rule.cls + '-' + ruleClassToken(rule.values[i]))) {
+                    return rule.values[i];
+                }
+            }
+        }
+        var data = el.getAttribute && el.getAttribute('data-' + prop.toLowerCase());
+        if (data != null && data !== '') {
+            return validateRuleValue(rule, data).value;
+        }
+        return undefined;
+    }
+
+    /**
+     * Upgrade Lean HTML published before rule classes existed (e.g. studio_publisher.php
+     * writes data-halign / data-valign on .studio-lean-full-page) so tsl.css rules apply.
+     */
+    function applyLeanRuleClasses(root) {
+        if (!root || !root.querySelectorAll) {
+            return;
+        }
+        root.querySelectorAll('.studio-lean-full-page').forEach(function (el) {
+            var block = {
+                type: 'full-page',
+                hAlign: blockPropFromMarkup(el, 'full-page', 'hAlign'),
+                vAlign: blockPropFromMarkup(el, 'full-page', 'vAlign')
+            };
+            blockRuleMapping(block).classes.forEach(function (c) {
+                if (/^(halign|valign)-/.test(c)) {
+                    el.classList.add(c);
+                }
+            });
+        });
+    }
+
+    /** pageheader / pagefooter side (spec §5.5: any | left | right, default any). */
+    function blockChromeSide(block) {
+        return resolveBlockRules(block).props.side || 'any';
+    }
+
+    /**
+     * bulletStyle values that count (spec §6.9 list: number, lower-alpha, upper-alpha) render
+     * as an ordered list; the bullet-* rule class supplies the marker. Others render as <ul>.
+     */
+    var TSL_ORDINAL_BULLET_STYLES = { number: 1, 'lower-alpha': 1, 'upper-alpha': 1 };
+
+    function bulletListTag(bulletStyle) {
+        return TSL_ORDINAL_BULLET_STYLES[bulletStyle] ? 'ol' : 'ul';
+    }
+
+    /**
+     * Spec §6.9: consecutive bullet blocks form one list. Position (1-based) of a bullet within
+     * its run of consecutive bullet blocks of the same bulletStyle.
+     */
+    function bulletRunPosition(block, allBlocks, bulletStyle) {
+        var idx = allBlocks ? allBlocks.indexOf(block) : -1;
+        var pos = 1;
+        while (idx > 0) {
+            idx -= 1;
+            var prev = allBlocks[idx];
+            if (!prev || prev.type !== 'bullet' || resolveBlockRules(prev).props.bulletStyle !== bulletStyle) {
+                break;
+            }
+            pos += 1;
+        }
+        return pos;
+    }
+
+    /** Validated view of one spec property, for blocks rendered by a dedicated builder (toc, image-index…). */
+    function blockRuleProp(block, type, prop) {
+        var b = block || {};
+        return resolveBlockRules(b.type ? b : Object.assign({ type: type }, b)).props[prop];
+    }
+
     function blockLayoutCols(block) {
-        return Number(block && block.cols) === 1 ? 1 : 2;
+        return resolveBlockRules(block || {}).props.cols;
     }
 
     function breaksColRun(block) {
@@ -1332,10 +1764,10 @@
                 return;
             }
             if (b.type === 'pageheader') {
-                headerState[b.side || 'any'] = b;
+                headerState[blockChromeSide(b)] = b;
             }
             if (b.type === 'pagefooter') {
-                footerState[b.side || 'any'] = b;
+                footerState[blockChromeSide(b)] = b;
             }
         });
 
@@ -1352,10 +1784,10 @@
                     return;
                 }
                 if (b.type === 'pageheader') {
-                    h[b.side || 'any'] = b;
+                    h[blockChromeSide(b)] = b;
                 }
                 if (b.type === 'pagefooter') {
-                    f[b.side || 'any'] = b;
+                    f[blockChromeSide(b)] = b;
                 }
             });
             var timeline = [];
@@ -1365,10 +1797,10 @@
             for (i = 0; i < blockList.length; i += 1) {
                 var blk = blockList[i];
                 if (blk && blk.type === 'pageheader') {
-                    h[blk.side || 'any'] = blk;
+                    h[blockChromeSide(blk)] = blk;
                 }
                 if (blk && blk.type === 'pagefooter') {
-                    f[blk.side || 'any'] = blk;
+                    f[blockChromeSide(blk)] = blk;
                 }
                 timeline[i] = { header: copySideChromeState(h), footer: copySideChromeState(f) };
             }
@@ -1582,15 +2014,18 @@
         function appendBlockToColumn(col, b) {
             var type = b.type;
             if (type === 'bullet' || type === 'todo') {
-                var listType = type === 'todo' ? 'todo' : (b.bulletStyle || 'disc');
+                var listType = type === 'todo' ? 'todo' : resolveBlockRules(b).props.bulletStyle;
                 var ul = col.querySelector('.tsl-list[data-list-type="' + listType + '"]');
                 if (!ul) {
-                    ul = document.createElement(type === 'todo' ? 'ul' : (listType === 'number' ? 'ol' : 'ul'));
+                    ul = document.createElement(type === 'todo' ? 'ul' : bulletListTag(listType));
                     ul.className = 'tsl-list' + (type === 'todo' ? ' tsl-list--todo' : '');
                     ul.setAttribute('data-list-type', listType);
+                    if (type === 'bullet') {
+                        applyBlockRules(ul, { type: 'bullet', bulletStyle: listType });
+                    }
                     col.appendChild(ul);
                 }
-                ul.appendChild(renderListItem(b, type));
+                ul.appendChild(applyBlockRules(renderListItem(b, type), b));
                 return;
             }
             col.appendChild(renderBlock(b, blockRenderCtx));
@@ -1776,7 +2211,7 @@
             }
             var type = b.type;
             if (type === 'pageheader') {
-                headerState[b.side || 'any'] = b;
+                headerState[blockChromeSide(b)] = b;
                 ensurePage();
                 current.endBlockIndex = bi;
                 refreshCurrentPageChrome();
@@ -1785,7 +2220,7 @@
                 continue;
             }
             if (type === 'pagefooter') {
-                footerState[b.side || 'any'] = b;
+                footerState[blockChromeSide(b)] = b;
                 ensurePage();
                 current.endBlockIndex = bi;
                 refreshCurrentPageChrome();
@@ -2469,8 +2904,7 @@
     }
 
     function normaliseTocMaxLevel(block) {
-        var ml = block && parseInt(block.maxLevel, 10);
-        return (ml >= 1 && ml <= 3) ? ml : 3;
+        return blockRuleProp(block, 'toc', 'maxLevel');
     }
 
     function isTocHeadingBlock(b) {
@@ -2597,7 +3031,7 @@
     }
 
     function appendTocEntryToList(ul, block, entry, pageByBlockId) {
-        var leader = block && block.leader != null ? String(block.leader) : '.';
+        var leader = blockRuleProp(block, 'toc', 'leader');
         var li = document.createElement('li');
         li.className = 'studio-lean-toc-item studio-lean-toc-item--h' + entry.level;
         var a = document.createElement('a');
@@ -2703,7 +3137,7 @@
         if (!title) {
             title = 'Image index';
         }
-        var leader = block && block.leader != null ? String(block.leader) : '.';
+        var leader = blockRuleProp(block, 'image-index', 'leader');
         var entries = collectImageIndexEntries(blocks);
         var section = document.createElement('section');
         section.className = 'tsl-image-index studio-lean-image-index';
@@ -2746,7 +3180,15 @@
         return section;
     }
 
+    /**
+     * Render one block: build its element, then let the spec ruleset map the block's
+     * validated properties to CSS rule classes (TSL_BLOCK_RULES → tsl.css).
+     */
     function renderBlock(b, ctx) {
+        return applyBlockRules(renderBlockElement(b, ctx), b);
+    }
+
+    function renderBlockElement(b, ctx) {
         var type = b.type;
         var el;
         if (type === 'divider') {
@@ -2768,8 +3210,6 @@
         if (type === 'full-page') {
             el = document.createElement('div');
             el.className = 'tsl-block tsl-block--full-page';
-            el.setAttribute('data-halign', b.hAlign || 'center');
-            el.setAttribute('data-valign', b.vAlign || 'center');
             var fpInner = document.createElement('div');
             fpInner.className = 'tsl-full-page-inner';
             fpInner.innerHTML = inlineHtml(b.text);
@@ -2803,9 +3243,6 @@
                 var img = document.createElement('img');
                 img.src = b.src;
                 img.alt = b.caption || '';
-                if (b.width) {
-                    img.style.width = Math.min(100, Math.max(10, b.width)) + '%';
-                }
                 fig.appendChild(img);
             }
             if (b.caption) {
@@ -2836,7 +3273,8 @@
         if (type === 'table' && Array.isArray(b.cells)) {
             var table = document.createElement('table');
             table.className = 'tsl-block tsl-block--table';
-            if (b.header) {
+            var tableHeader = resolveBlockRules(b).props.header;
+            if (tableHeader) {
                 table.setAttribute('data-tsl-table-header', '1');
             }
             b.cells.forEach(function (row, ri) {
@@ -2845,7 +3283,7 @@
                 }
                 var tr = document.createElement('tr');
                 row.forEach(function (cell) {
-                    var cellEl = document.createElement(b.header && ri === 0 ? 'th' : 'td');
+                    var cellEl = document.createElement(tableHeader && ri === 0 ? 'th' : 'td');
                     cellEl.innerHTML = inlineHtml(cell != null ? String(cell) : '');
                     tr.appendChild(cellEl);
                 });
@@ -2876,17 +3314,11 @@
         if (type === 'title') {
             el.setAttribute('role', 'doc-title');
         }
-        if (b.align && b.align !== 'left') {
-            el.setAttribute('data-align', b.align);
-        }
-        if (type === 'paragraph' && !plainText(b.text)) {
-            el.classList.add('tsl-block--no-indent');
-        }
         var inner = inlineHtml(b.text);
         if (/^h[1-3]$/.test(type)) {
             var hp = headingDisplayPrefix(b);
             if (hp) {
-                el.setAttribute('data-heading-number', headingNumberLabel(b.number));
+                // data-heading-number comes from the ruleset (h1–h3 number → attr) in applyBlockRules.
                 var plain = plainText(b.text);
                 var prefPlain = hp.trim();
                 if (plain.indexOf(prefPlain) !== 0 && plain.indexOf(prefPlain.replace(/\.$/, '')) !== 0) {
@@ -2925,10 +3357,9 @@
     }
 
     function headingDisplayPrefix(block) {
-        if (!block || block.number == null || String(block.number).trim() === '') {
-            return '';
-        }
-        return headingNumberLabel(block.number) + ' ';
+        // The outline label as the ruleset formats it (h1–h3 number rule; lab-overridable).
+        var label = blockRuleText(block, 'number');
+        return label ? label + ' ' : '';
     }
 
     function headingBodyHtml(block, header, readMode) {
@@ -2948,13 +3379,6 @@
         return escapeHtml(pref) + body;
     }
 
-    function headingNumberAttr(block) {
-        if (!block || block.number == null || String(block.number).trim() === '') {
-            return '';
-        }
-        return ' data-heading-number="' + escapeHtml(headingNumberLabel(block.number)) + '"';
-    }
-
     function leanHeadingIdAttr(block) {
         var aid = headingAnchorId(block);
         return aid ? ' id="' + escapeHtml(aid) + '"' : '';
@@ -2966,7 +3390,7 @@
             return '<nav class="studio-lean-toc tsl-toc" aria-label="Table of contents">'
                 + '<p class="studio-lean-toc-empty">No headings to include.</p></nav>';
         }
-        var leader = block && block.leader != null ? String(block.leader) : '.';
+        var leader = blockRuleProp(block, 'toc', 'leader');
         var html = '<nav class="studio-lean-toc tsl-toc" aria-label="Table of contents"><ul class="studio-lean-toc-list">';
         entries.forEach(function (e) {
             var cls = 'studio-lean-toc-item studio-lean-toc-item--h' + e.level;
@@ -2990,7 +3414,7 @@
         if (!title) {
             title = 'Image index';
         }
-        var leader = block && block.leader != null ? String(block.leader) : '.';
+        var leader = blockRuleProp(block, 'image-index', 'leader');
         var entries = collectImageIndexEntries(blocks);
         var html = '<section class="studio-lean-image-index tsl-image-index">'
             + '<h2 class="studio-lean-image-index-title">' + escapeHtml(title) + '</h2>';
@@ -3246,12 +3670,13 @@
         return capHtml + '<span class="studio-dropcap-rest">' + restHtml + '</span>';
     }
 
-    function leanAlignStyle(block) {
-        var align = String(block.align || 'left').toLowerCase();
-        if (['left', 'center', 'right', 'justify'].indexOf(align) < 0) {
-            align = 'left';
-        }
-        return 'text-align:' + align + ';';
+    /**
+     * Lean text blocks (title, h1–h3, paragraph, quote, todo, aside) always carry their
+     * align rule class — including align-left — so the block keeps its own alignment
+     * inside hosts that set a different text-align (matches the former inline style).
+     */
+    function leanTextRuleAttrs(block, baseClasses) {
+        return leanRuleAttrs(block, baseClasses, { emitDefaults: true });
     }
 
     function leanFieldCtx(header) {
@@ -3274,19 +3699,18 @@
 
     function leanBlockHtml(block, header, readMode) {
         var type = block.type || 'paragraph';
-        var style = leanAlignStyle(block);
         if (type === 'title') {
             var t = leanInlineHtml(block.text, header, readMode);
             if (!plainText(t)) {
                 return '';
             }
-            return '<h1 class="studio-lean-title"' + leanHeadingIdAttr(block) + ' style="' + style + '">' + t + '</h1>';
+            return '<h1' + leanTextRuleAttrs(block, 'studio-lean-title') + leanHeadingIdAttr(block) + '>' + t + '</h1>';
         }
         if (type === 'h1' || type === 'h2' || type === 'h3') {
             if (!plainText(block.text)) {
                 return '';
             }
-            return '<' + type + leanHeadingIdAttr(block) + headingNumberAttr(block) + ' style="' + style + '">'
+            return '<' + type + leanTextRuleAttrs(block, '') + leanHeadingIdAttr(block) + '>'
                 + headingBodyHtml(block, header, readMode) + '</' + type + '>';
         }
         if (type === 'paragraph') {
@@ -3301,39 +3725,46 @@
                 pBody = leanInlineHtml(block.text, header, readMode);
             }
             if (!plainText(pBody)) {
-                return '<p class="studio-lean-empty" style="' + style + '">&nbsp;</p>';
+                return '<p' + leanTextRuleAttrs(block, 'studio-lean-empty') + '>&nbsp;</p>';
             }
-            var pClass = block.dropCap ? ' class="studio-has-dropcap"' : '';
+            var pClass = block.dropCap ? 'studio-has-dropcap' : '';
             if (/class="[^"]*(?:dropcap|studio-dropcap)/i.test(String(block.text || ''))) {
-                pClass = ' class="studio-has-dropcap"';
+                pClass = 'studio-has-dropcap';
             }
-            return '<p' + pClass + ' style="' + style + '">' + pBody + '</p>';
+            return '<p' + leanTextRuleAttrs(block, pClass) + '>' + pBody + '</p>';
         }
         if (type === 'quote') {
-            return '<blockquote style="' + style + '">' + leanInlineHtml(block.text, header, readMode) + '</blockquote>';
+            return '<blockquote' + leanTextRuleAttrs(block, '') + '>' + leanInlineHtml(block.text, header, readMode) + '</blockquote>';
         }
         if (type === 'bullet') {
-            return '<ul><li>' + leanInlineHtml(block.text, header, readMode) + '</li></ul>';
+            // Each lean bullet is its own list element (one block region each); ordinal styles
+            // continue the count of the consecutive run via start=, so the run reads as one list.
+            var bulletStyle = resolveBlockRules(block).props.bulletStyle;
+            var listTag = bulletListTag(bulletStyle);
+            var listStart = listTag === 'ol' ? bulletRunPosition(block, header._leanAllBlocks || [], bulletStyle) : 1;
+            return '<' + listTag + leanRuleAttrs(block, '') + (listStart > 1 ? ' start="' + listStart + '"' : '') + '><li>'
+                + leanInlineHtml(block.text, header, readMode) + '</li></' + listTag + '>';
         }
         if (type === 'todo') {
-            var done = !!block.checked;
-            return '<p class="studio-lean-todo' + (done ? ' is-done' : '') + '" style="' + style + '">'
+            var done = resolveBlockRules(block).props.checked;
+            return '<p' + leanTextRuleAttrs(block, 'studio-lean-todo' + (done ? ' is-done' : '')) + '>'
                 + '<input type="checkbox" disabled' + (done ? ' checked' : '') + '> '
                 + leanInlineHtml(block.text, header, readMode) + '</p>';
         }
         if (type === 'code') {
-            return '<pre class="studio-lean-code"><code>' + escapeHtml(plainText(block.text)) + '</code></pre>';
+            return '<pre' + leanRuleAttrs(block, 'studio-lean-code') + '><code>' + escapeHtml(plainText(block.text)) + '</code></pre>';
         }
         if (type === 'table' && Array.isArray(block.cells)) {
             var rows = block.cells;
-            var tbl = '<table class="studio-lean-table">';
+            var leanTableHeader = resolveBlockRules(block).props.header;
+            var tbl = '<table' + leanRuleAttrs(block, 'studio-lean-table') + '>';
             rows.forEach(function (row, ri) {
                 if (!Array.isArray(row)) {
                     return;
                 }
                 tbl += '<tr>';
                 row.forEach(function (cell) {
-                    var tag = block.header && ri === 0 ? 'th' : 'td';
+                    var tag = leanTableHeader && ri === 0 ? 'th' : 'td';
                     tbl += '<' + tag + '>' + leanInlineHtml(String(cell != null ? cell : ''), header, readMode) + '</' + tag + '>';
                 });
                 tbl += '</tr>';
@@ -3343,15 +3774,14 @@
         if (type === 'aside') {
             var icon = String(block.icon || '💡').trim();
             var iconH = icon ? '<span class="studio-lean-aside-icon" aria-hidden="true">' + escapeHtml(icon) + '</span> ' : '';
-            return '<aside class="studio-lean-aside" style="' + style + '">' + iconH
+            return '<aside' + leanTextRuleAttrs(block, 'studio-lean-aside') + '>' + iconH
                 + leanInlineHtml(block.text, header, readMode) + '</aside>';
         }
         if (type === 'divider') {
             return '<hr class="studio-lean-divider">';
         }
         if (type === 'image' && block.src) {
-            var w = block.width ? ' style="width:' + Math.min(100, Math.max(10, block.width)) + '%;"' : '';
-            var fig = '<figure class="studio-lean-figure"><img src="' + escapeHtml(block.src) + '" alt=""' + w + '>';
+            var fig = '<figure' + leanRuleAttrs(block, 'studio-lean-figure') + '><img src="' + escapeHtml(block.src) + '" alt="">';
             if (block.caption) {
                 fig += '<figcaption>' + leanInlineHtml(block.caption, header, readMode) + '</figcaption>';
             }
@@ -3361,13 +3791,18 @@
             if (!block.src) {
                 return '';
             }
-            return '<figure class="studio-lean-front-cover"><img src="' + escapeHtml(block.src) + '" alt=""></figure>';
+            return '<figure' + leanRuleAttrs(block, 'studio-lean-front-cover') + '><img src="' + escapeHtml(block.src) + '" alt=""></figure>';
         }
         if (type === 'full-page') {
-            return '<div class="studio-lean-full-page" data-halign="' + escapeHtml(block.hAlign || 'center') + '" data-valign="' + escapeHtml(block.vAlign || 'center') + '"><div class="studio-lean-full-page-inner">' + leanInlineHtml(block.text, header, readMode) + '</div></div>';
+            // Rule classes (halign-*, valign-*) carry the presentation; data-* keep the validated
+            // values for round-trip parsing and for hosts that still key on them.
+            var fp = resolveBlockRules(block).props;
+            return '<div' + leanRuleAttrs(block, 'studio-lean-full-page')
+                + ' data-halign="' + escapeHtml(fp.hAlign) + '" data-valign="' + escapeHtml(fp.vAlign) + '">'
+                + '<div class="studio-lean-full-page-inner">' + leanInlineHtml(block.text, header, readMode) + '</div></div>';
         }
         if (type === 'manuscript-title') {
-            return '<section class="studio-lean-manuscript-title"><div class="studio-lean-manuscript-page">'
+            return '<section' + leanRuleAttrs(block, 'studio-lean-manuscript-title') + '><div class="studio-lean-manuscript-page">'
                 + leanInlineHtml(block.title || '[Title]', header, readMode) + '</div></section>';
         }
         if (type === 'toc') {
@@ -3529,6 +3964,7 @@
         if (!article) {
             return;
         }
+        applyLeanRuleClasses(article);
         var mm = function (name) { return article.getAttribute(name); };
         if (!mm('data-tsl-w-mm')) {
             return;
@@ -3719,10 +4155,45 @@
             block.src = srcMatch ? srcMatch[1] : '';
             block.expanded = block.expanded !== false;
         }
+        if (type === 'bullet') {
+            // Read bulletStyle back from the list's rule class; text is the item, not the list markup.
+            var listEl = meta.el && /^(UL|OL)$/.test(meta.el.tagName) ? meta.el : null;
+            if (typeof document !== 'undefined') {
+                var bHost = document.createElement('div');
+                bHost.innerHTML = innerHtml;
+                listEl = listEl || bHost.querySelector('ul, ol');
+                var bItem = (listEl || bHost).querySelector('li');
+                if (bItem) {
+                    block.text = bItem.innerHTML;
+                }
+            }
+            block.bulletStyle = resolveBlockRules({
+                id: block.id,
+                type: 'bullet',
+                bulletStyle: blockPropFromMarkup(listEl, 'bullet', 'bulletStyle')
+            }).props.bulletStyle;
+        }
         if (type === 'full-page') {
-            block.text = innerHtml;
-            block.hAlign = 'center';
-            block.vAlign = 'center';
+            // Read hAlign / vAlign back from the markup (rule classes or data-*), never assume them;
+            // text is the inner content, not the wrapper (which would nest a second full-page box).
+            var fpEl = meta.el || null;
+            if (typeof document !== 'undefined') {
+                var fpHost = document.createElement('div');
+                fpHost.innerHTML = innerHtml;
+                fpEl = fpEl || fpHost.querySelector('.studio-lean-full-page');
+                var fpInner = fpHost.querySelector('.studio-lean-full-page-inner');
+                if (fpInner) {
+                    block.text = fpInner.innerHTML;
+                }
+            }
+            var fpProps = resolveBlockRules({
+                id: block.id,
+                type: 'full-page',
+                hAlign: blockPropFromMarkup(fpEl, 'full-page', 'hAlign'),
+                vAlign: blockPropFromMarkup(fpEl, 'full-page', 'vAlign')
+            }).props;
+            block.hAlign = fpProps.hAlign;
+            block.vAlign = fpProps.vAlign;
         }
         if (meta.dropCap) {
             block.dropCap = parseDropCapComment(meta.dropCap);
@@ -3800,8 +4271,10 @@
                 var meta = {
                     type: type,
                     id: el.getAttribute('data-block-id') || '',
-                    align: 'left',
-                    cols: 2
+                    align: blockPropFromMarkup(el, type, 'align')
+                        || resolveBlockRules({ type: type, align: el.style && el.style.textAlign }).props.align,
+                    cols: 2,
+                    el: el
                 };
                 var piece = type === 'code' ? plainText(el.textContent) : el.innerHTML;
                 var blk = leanRegionToBlock(meta, piece);
@@ -4161,6 +4634,13 @@
         headingAnchorId: headingAnchorId,
         findInDocumentAnchorTarget: findInDocumentAnchorTarget,
         navigateToInDocumentAnchor: navigateToInDocumentAnchor,
-        bindInDocumentAnchorClicks: bindInDocumentAnchorClicks
+        bindInDocumentAnchorClicks: bindInDocumentAnchorClicks,
+        /* Spec ruleset (spec/tsl-spec.tsl §5): validate a block / map it to CSS rule classes. */
+        blockRules: TSL_BLOCK_RULES,
+        defineBlockRules: defineBlockRules,
+        resetBlockRules: resetBlockRules,
+        validateBlock: resolveBlockRules,
+        blockRuleMapping: blockRuleMapping,
+        applyLeanRuleClasses: applyLeanRuleClasses
     };
 })(typeof window !== 'undefined' ? window : globalThis);

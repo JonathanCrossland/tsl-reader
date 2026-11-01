@@ -645,7 +645,11 @@
     text-indent: var(--tsl-indent);
 }
 
-.tsl-block--paragraph.tsl-block--no-indent {
+/* Ruleset flag: paragraph noIndent (spec §6.2 — empty text suppresses indent).
+   .tsl-block--no-indent kept as a legacy alias. */
+.tsl-block--paragraph.no-indent,
+.tsl-block--paragraph.tsl-block--no-indent,
+.studio-lean-tsl p.no-indent {
     text-indent: 0;
 }
 
@@ -757,6 +761,20 @@
     text-align: center;
 }
 
+/* ==========================================================================
+ * TSL block rules (spec/tsl-spec.tsl §5, §5.5)
+ *
+ * tsl.js validates each block against TSL_BLOCK_RULES and maps the JSON
+ * properties to rule classes; these selectors impose the rule for each class.
+ * Renderers never write presentation values themselves.
+ *
+ *   full-page  { hAlign, vAlign }  → .halign-{left|center|right} .valign-{top|center|bottom}
+ *   any block  { align }           → .align-{left|center|right|justify}
+ *   bullet     { bulletStyle }     → .bullet-{disc|circle|square|dash|number|lower-alpha|upper-alpha}
+ *   image      { width }           → --tsl-image-width (10–100 %)
+ * ======================================================================== */
+
+/* full-page: the box only — position comes from the halign / valign rules below. */
 .tsl-block--full-page,
 .document-tsl .studio-lean-full-page {
     box-sizing: border-box;
@@ -764,28 +782,6 @@
     min-height: calc(var(--tsl-page-h) - var(--tsl-pad-t) - var(--tsl-pad-b));
     display: flex;
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}
-
-.tsl-block--full-page[data-valign="top"],
-.document-tsl .studio-lean-full-page[data-valign="top"] {
-    justify-content: flex-start;
-}
-
-.tsl-block--full-page[data-valign="bottom"],
-.document-tsl .studio-lean-full-page[data-valign="bottom"] {
-    justify-content: flex-end;
-}
-
-.tsl-block--full-page[data-halign="left"],
-.document-tsl .studio-lean-full-page[data-halign="left"] {
-    align-items: flex-start;
-}
-
-.tsl-block--full-page[data-halign="right"],
-.document-tsl .studio-lean-full-page[data-halign="right"] {
-    align-items: flex-end;
 }
 
 .tsl-full-page-inner,
@@ -794,25 +790,68 @@
     white-space: pre-wrap;
 }
 
-.tsl-block--full-page[data-halign="left"] .tsl-full-page-inner,
-.document-tsl .studio-lean-full-page[data-halign="left"] .studio-lean-full-page-inner {
+/* full-page vAlign → vertical position on the page (main axis). */
+.tsl-block--full-page.valign-top,
+.document-tsl .studio-lean-full-page.valign-top {
+    justify-content: flex-start;
+}
+
+.tsl-block--full-page.valign-center,
+.document-tsl .studio-lean-full-page.valign-center {
+    justify-content: center;
+}
+
+.tsl-block--full-page.valign-bottom,
+.document-tsl .studio-lean-full-page.valign-bottom {
+    justify-content: flex-end;
+}
+
+/* full-page hAlign → horizontal position (cross axis) and text alignment of the inner text. */
+.tsl-block--full-page.halign-left,
+.document-tsl .studio-lean-full-page.halign-left {
+    align-items: flex-start;
+}
+
+.tsl-block--full-page.halign-center,
+.document-tsl .studio-lean-full-page.halign-center {
+    align-items: center;
+}
+
+.tsl-block--full-page.halign-right,
+.document-tsl .studio-lean-full-page.halign-right {
+    align-items: flex-end;
+}
+
+.tsl-block--full-page.halign-left .tsl-full-page-inner,
+.document-tsl .studio-lean-full-page.halign-left .studio-lean-full-page-inner {
     text-align: left;
     width: 100%;
 }
 
-.tsl-block--full-page[data-halign="center"] .tsl-full-page-inner,
-.document-tsl .studio-lean-full-page[data-halign="center"] .studio-lean-full-page-inner,
-.tsl-block--full-page:not([data-halign]) .tsl-full-page-inner,
-.document-tsl .studio-lean-full-page:not([data-halign]) .studio-lean-full-page-inner {
+.tsl-block--full-page.halign-center .tsl-full-page-inner,
+.document-tsl .studio-lean-full-page.halign-center .studio-lean-full-page-inner {
     text-align: center;
     width: 100%;
 }
 
-.tsl-block--full-page[data-halign="right"] .tsl-full-page-inner,
-.document-tsl .studio-lean-full-page[data-halign="right"] .studio-lean-full-page-inner {
+.tsl-block--full-page.halign-right .tsl-full-page-inner,
+.document-tsl .studio-lean-full-page.halign-right .studio-lean-full-page-inner {
     text-align: right;
     width: 100%;
 }
+
+/* Legacy compat: Lean HTML published before rule classes (studio_publisher.php writes only
+ * data-halign / data-valign). tsl.js upgrades it to rule classes (applyLeanRuleClasses);
+ * these keep the same rule when the player script has not run. */
+.document-tsl .studio-lean-full-page[data-valign="top"]:not([class*="valign-"]) { justify-content: flex-start; }
+.document-tsl .studio-lean-full-page[data-valign="center"]:not([class*="valign-"]) { justify-content: center; }
+.document-tsl .studio-lean-full-page[data-valign="bottom"]:not([class*="valign-"]) { justify-content: flex-end; }
+.document-tsl .studio-lean-full-page[data-halign="left"]:not([class*="halign-"]) { align-items: flex-start; }
+.document-tsl .studio-lean-full-page[data-halign="center"]:not([class*="halign-"]) { align-items: center; }
+.document-tsl .studio-lean-full-page[data-halign="right"]:not([class*="halign-"]) { align-items: flex-end; }
+.document-tsl .studio-lean-full-page[data-halign="left"]:not([class*="halign-"]) .studio-lean-full-page-inner { text-align: left; width: 100%; }
+.document-tsl .studio-lean-full-page[data-halign="center"]:not([class*="halign-"]) .studio-lean-full-page-inner { text-align: center; width: 100%; }
+.document-tsl .studio-lean-full-page[data-halign="right"]:not([class*="halign-"]) .studio-lean-full-page-inner { text-align: right; width: 100%; }
 
 .tsl-block--front-cover img {
     width: 100%;
@@ -821,17 +860,43 @@
     min-height: var(--tsl-page-h);
 }
 
-.tsl-block[data-align="center"] {
+/* align (common to all blocks). In the paginated renderer align-left is not emitted, so
+ * blocks inherit typography.paragraphAlign via --tsl-text-align. */
+.tsl-root .align-left,
+.studio-lean-tsl .align-left {
+    text-align: left;
+}
+
+.tsl-root .align-center,
+.studio-lean-tsl .align-center {
     text-align: center;
 }
 
-.tsl-block[data-align="right"] {
+.tsl-root .align-right,
+.studio-lean-tsl .align-right {
     text-align: right;
 }
 
-.tsl-block[data-align="justify"] {
+.tsl-root .align-justify,
+.studio-lean-tsl .align-justify {
     text-align: justify;
 }
+
+/* image width (percent of the text column). Unset → natural size, as before. */
+.tsl-figure img,
+.studio-lean-tsl .studio-lean-figure img {
+    width: var(--tsl-image-width, auto);
+}
+
+/* bulletStyle → list marker. number / lower-alpha / upper-alpha render as <ol> (lean lists
+ * continue the count with start=); disc / circle / square / dash render as <ul>. */
+.tsl-list.bullet-disc, .studio-lean-tsl .bullet-disc { list-style-type: disc; }
+.tsl-list.bullet-circle, .studio-lean-tsl .bullet-circle { list-style-type: circle; }
+.tsl-list.bullet-square, .studio-lean-tsl .bullet-square { list-style-type: square; }
+.tsl-list.bullet-number, .studio-lean-tsl .bullet-number { list-style-type: decimal; }
+.tsl-list.bullet-lower-alpha, .studio-lean-tsl .bullet-lower-alpha { list-style-type: lower-alpha; }
+.tsl-list.bullet-upper-alpha, .studio-lean-tsl .bullet-upper-alpha { list-style-type: upper-alpha; }
+.tsl-list.bullet-dash, .studio-lean-tsl .bullet-dash { list-style-type: "\2013\00a0\00a0"; }
 
 .tsl-block a {
     color: inherit;
