@@ -442,7 +442,7 @@
         "type": "paragraph",
         "align": "left",
         "theme": null,
-        "text": "If the editor is the problem, another editor in the same lineage is not the answer. Talesmith's answer is to separate what the writer means from how it looks \u2014 the writer says \"this paragraph opens with a three-line drop cap, this page runs a header on the left,\" and the page, or the screen, works out the rest. That separation is Talesmith Language, and the rest of this document specifies it.",
+        "text": "If the editor is the problem, another editor in the same lineage is not the answer. Talesmith's answer is to separate what the writer means from how it looks — the writer says \"this paragraph opens with a three-line drop cap, this page runs a header on the left,\" and the page, or the screen, works out the rest. That separation is Talesmith Language, and the rest of this document specifies it.",
         "dropCap": null,
         "cols": 2
       },
@@ -474,56 +474,65 @@
         "cols": 2
       },
       {
-        "id": "b8",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "The bridge thesis",
-        "cols": 2,
-        "number": "1.3"
-      },
-      {
-        "id": "b9",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
         "id": "b10",
         "type": "h2",
         "align": "left",
         "theme": null,
         "text": "Relationship to HTML, PDF, and typesetting tools",
         "cols": 2,
-        "number": "1.4"
+        "number": "1.3"
       },
       {
         "id": "b11",
         "type": "paragraph",
         "align": "left",
         "theme": null,
-        "text": "",
+        "text": "HTML/CSS is the presentation of the web. The Talesmith Language is expressed in JSON format and any JSON serialiser can be used to read and the build a renderer. By default, the TSL lab is a working example JavaScript/HTML/CSS native renderer.\n",
         "dropCap": null,
         "cols": 2
       },
       {
-        "id": "b12",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Non-goals",
-        "cols": 2,
-        "number": "1.5"
-      },
-      {
-        "id": "b13",
+        "id": "b25812",
         "type": "paragraph",
         "align": "left",
         "theme": null,
-        "text": "",
+        "text": "HTML was first developed as a document for the web and included headings and paragraphs, bullet points and basic formatting like bold and underline. It was far too rudimentary for real document work, and subsequently a tug of war between application development or documents has existed. At the same time, great work was done on the PDF. The two platforms are mainly thought of as continuous flow vs fixed print-ready. The opposites are also basically true, web being not so print-ready and pdf not so flow capable.",
+        "dropCap": null,
+        "cols": 2
+      },
+      {
+        "id": "b25813",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "For a publisher the gap was largely filled by roles, the writer and editor worried about the words, the book designer did the typography and layout, and they often used an editor, paper print out and a DTP tool, importing and exporting whatever was required. The idea of setting up text and exporting it to PDF or ePub became normal. ",
+        "dropCap": null,
+        "cols": 2
+      },
+      {
+        "id": "b25814",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "Talesmith wants to change this for the digital age and remove the historical steps.",
+        "dropCap": null,
+        "cols": 2
+      },
+      {
+        "id": "b25815",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "ePub is HTML constrained and contorted. PDF is print. DTP tools are still the primary connector between author and reader. However, users want to change the font-size and read it on their favourite device. The modern formats are either trying to replicate a book, or replicate video/audio and web design. This is confusing what a digital book should be, with print and other media. It doesn't know what it is.",
+        "dropCap": null,
+        "cols": 2
+      },
+      {
+        "id": "b25816",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "Talesmith is designed to be a digital reading experience, not a showcase for animation or presentation. Talesmith will leave the audio visual experiences to those technologies that do that best. PDF and ePub are moving into an everything for everyone format. Talesmith is for digital books and for the author to published pipeline.",
         "dropCap": null,
         "cols": 2
       },

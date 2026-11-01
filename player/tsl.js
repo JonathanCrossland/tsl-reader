@@ -591,9 +591,9 @@
                 // includeLeadingPunctuation, spacingEm, opticalMargin, alignBaseline, uppercase,
                 // variant, capStyle } (or a 1–3 line count / JSON string from a lean comment);
                 // null / false / 0 = off. The resolved value is the normalised spec (normalizeDropCap).
-                // Only the lean renderer builds the cap today, so the flag maps there only; paged
-                // drop caps are deferred (remove renderers to flag paged paragraphs too).
-                dropCap: { type: 'object', normalize: 'dropCap', def: null, flag: 'studio-has-dropcap', renderers: ['lean'] },
+                // Both renderers draw the cap (buildDropCapInner); in Pages only the first fragment
+                // of a split paragraph keeps dropCap (continuations are cleared in pagination).
+                dropCap: { type: 'object', normalize: 'dropCap', def: null, flag: 'studio-has-dropcap' },
                 // Text that already carries a Studio drop-cap span (Studio-baked lean HTML).
                 dropCapMarkup: { derive: 'dropCapMarkup', type: 'boolean', def: false, flag: 'studio-has-dropcap' }
             },
@@ -647,7 +647,31 @@
             document: {},
             // §6.22 Paywall marker: text is content; roles (§5.5) gate publishing and are not
             // enforced by this player. Common rules only.
-            paywall: {}
+            paywall: {},
+            // §6.23 Screenplay, stage and Math (Studio extensions: block-editor-script.js,
+            // block-editor-stage.js, block-editor-math.js). text / character / source and the
+            // scene-number labels are content; only the props below are presentation. Layout
+            // (insets, casing) lives in tsl.css keyed on the per-type class.
+            'script-scene': {
+                // Studio: showSceneNumbers prints sceneNumberLeft / sceneNumberRight in the margins.
+                showSceneNumbers: { type: 'boolean', def: false, flag: 'tsl-scene-numbered' }
+            },
+            'script-action': {},
+            'script-character': {},
+            'script-dialogue': {},
+            'script-parenthetical': {},
+            'script-transition': {},
+            'script-shot': {},
+            'stage-scene': {},
+            'stage-action': {},
+            'stage-direction': {},
+            'stage-speech': {},
+            mathml: {
+                // Studio normalise: display !== false (block layout); false sets the math inline.
+                display: { type: 'boolean', def: true, flag: 'tsl-math-display' },
+                // Editor state only (source panel open); validated for round-trip, no class.
+                sourceExpanded: { type: 'boolean', def: false }
+            }
         }
     };
 
@@ -1902,7 +1926,7 @@
         var values = mergeFieldValues(header);
         var readMode = header.readMode !== false;
         var runningHeader = '';
-        var blockRenderCtx = { allBlocks: blocks };
+        var blockRenderCtx = { allBlocks: blocks, header: header };
 
         function pickSide(state, side) {
             if (state[side]) {
@@ -2103,6 +2127,20 @@
             return c;
         }
 
+        /**
+         * One page fragment of a split block. Non-first fragments are continuations:
+         * no drop cap (so no studio-has-dropcap flag) and tsl-block--continued (tsl.css
+         * drops the first-line indent there).
+         */
+        function fragmentBlock(b, startSegment) {
+            var c = cloneBlockShallow(b);
+            if (startSegment > 0) {
+                c.dropCap = null;
+                c._tslContinued = true;
+            }
+            return c;
+        }
+
         function blockTypeIsSplittable(b) {
             if (!b || !b.type) {
                 return false;
@@ -2132,7 +2170,7 @@
                 var best = 0;
                 while (lo <= hi) {
                     var mid = Math.floor((lo + hi) / 2);
-                    var trial = cloneBlockShallow(b);
+                    var trial = fragmentBlock(b, si);
                     trial.text = joinFn(segments.slice(si, si + mid));
                     var trialRow = buildFlowRow([trial], rowClass);
                     if (fitsOnPage(current, trialRow)) {
@@ -2144,11 +2182,14 @@
                 }
                 if (best < 1) {
                     if (current.body.childNodes.length) {
+                        // Nothing fits here: re-measure this fragment on a fresh page instead
+                        // of forcing a one-word fragment (which would drop a cap on one word).
                         current = startPage();
+                        continue;
                     }
                     best = 1;
                 }
-                var chunkBlock = cloneBlockShallow(b);
+                var chunkBlock = fragmentBlock(b, si);
                 chunkBlock.text = joinFn(segments.slice(si, si + best));
                 current.body.appendChild(buildFlowRow([chunkBlock], rowClass));
                 si += best;
@@ -3299,6 +3340,122 @@
         return section;
     }
 
+    /* -----------------------------------------------------------------------
+     * §6.23 Studio extension blocks (screenplay, stage, MathML).
+     * Text types render paragraph-like (spec: v1 readers may) with a per-type class;
+     * presentation comes from TSL_BLOCK_RULES flags and tsl.css. Type and all
+     * properties stay on the block, so .tsl round-trip is untouched.
+     * --------------------------------------------------------------------- */
+    var TSL_EXT_TEXT_TYPE_RE = /^(script-(scene|action|character|dialogue|parenthetical|transition|shot)|stage-(scene|action|direction|speech))$/;
+    var TSL_EXT_TYPE_RE = /^(script-(scene|action|character|dialogue|parenthetical|transition|shot)|stage-(scene|action|direction|speech)|mathml)$/;
+    var TSL_MATHML_NS = 'http://www.w3.org/1998/Math/MathML';
+    // Allow-lists mirror Studio block-editor-math.js (sanitizeMathmlSource); src/href/style/on* dropped.
+    var TSL_MATHML_TAGS = ('math mrow mi mn mo mtext mspace ms mfrac msqrt mroot mfenced mstyle merror '
+        + 'mpadded mphantom menclose msub msup msubsup munder mover munderover mmultiscripts mprescripts none '
+        + 'mtable mtr mtd mlabeledtr maligngroup malignmark mstack mlongdiv msgroup msrow mscarries mscarry '
+        + 'msline maction semantics annotation annotation-xml').split(' ');
+    var TSL_MATHML_ATTRS = ('xmlns display displaystyle mathvariant dir class rowalign columnalign columnspacing '
+        + 'rowspacing columnwidth width align lspace rspace stretchy symmetric maxsize minsize open close '
+        + 'separators subscriptshift superscriptshift accent accentunder linethickness numalign denomalign '
+        + 'bevelled notation selection actiontype encoding').split(' ');
+
+    function isTslExtTextType(type) {
+        return TSL_EXT_TEXT_TYPE_RE.test(String(type || ''));
+    }
+
+    /** Sanitised <math> markup for a mathml block's source, or '' when absent / invalid. */
+    function sanitizeMathmlSource(source, display) {
+        var raw = String(source == null ? '' : source).trim();
+        if (!raw || typeof DOMParser === 'undefined' || typeof document === 'undefined') {
+            return '';
+        }
+        if (!/<math\b/i.test(raw)) {
+            raw = '<math xmlns="' + TSL_MATHML_NS + '">' + raw + '</math>';
+        }
+        var doc;
+        try {
+            doc = new DOMParser().parseFromString(raw, 'application/xml');
+        } catch (e) {
+            return '';
+        }
+        if (!doc || doc.getElementsByTagName('parsererror').length) {
+            return '';
+        }
+        function clean(el) {
+            var local = String(el.localName || '').toLowerCase();
+            if (TSL_MATHML_TAGS.indexOf(local) < 0 || (el.namespaceURI && el.namespaceURI !== TSL_MATHML_NS)) {
+                return null;
+            }
+            var out = document.createElementNS(TSL_MATHML_NS, local);
+            Array.prototype.forEach.call(el.attributes || [], function (a) {
+                var n = String(a.name || '').toLowerCase();
+                if (TSL_MATHML_ATTRS.indexOf(n) >= 0 && n !== 'xmlns') {
+                    out.setAttribute(n, a.value);
+                }
+            });
+            if (local === 'annotation' || local === 'annotation-xml') {
+                out.textContent = el.textContent || '';
+                return out;
+            }
+            for (var c = el.firstChild; c; c = c.nextSibling) {
+                if (c.nodeType === 3) {
+                    out.appendChild(document.createTextNode(c.nodeValue));
+                } else if (c.nodeType === 1) {
+                    var k = clean(c);
+                    if (!k) {
+                        return null;
+                    }
+                    out.appendChild(k);
+                }
+            }
+            return out;
+        }
+        var root = doc.documentElement;
+        var safe = root && String(root.localName || '').toLowerCase() === 'math' ? clean(root) : null;
+        if (!safe) {
+            return '';
+        }
+        // §6.23 display (ruleset-validated by the caller) sets block vs inline math layout.
+        if (display) {
+            safe.setAttribute('display', 'block');
+        } else {
+            safe.removeAttribute('display');
+        }
+        var box = document.createElement('div');
+        box.appendChild(safe);
+        return box.innerHTML;
+    }
+
+    /** Inner HTML for a §6.23 block; inlineFn renders text fields (paged inlineHtml or lean). */
+    function extBlockInnerHtml(block, inlineFn) {
+        var type = block.type;
+        var props = resolveBlockRules(block).props;
+        if (type === 'mathml') {
+            var math = sanitizeMathmlSource(block.source, props.display);
+            // Unsupported / invalid source: show it as plain text (paragraph-like fallback).
+            return math || ('<code class="studio-lean-mathml-source">' + escapeHtml(String(block.source || '')) + '</code>');
+        }
+        if (type === 'stage-speech') {
+            return '<span class="studio-lean-stage-name">' + escapeHtml(String(block.character || '')) + '</span> '
+                + '<span class="studio-lean-stage-text">' + inlineFn(block.text || '') + '</span>';
+        }
+        if (type === 'script-scene' && props.showSceneNumbers) {
+            // Studio formatSceneHeadingPlain: the right number falls back to the left one.
+            var left = String(block.sceneNumberLeft == null ? '' : block.sceneNumberLeft).trim();
+            var right = String(block.sceneNumberRight == null ? '' : block.sceneNumberRight).trim() || left;
+            return '<span class="studio-lean-scene-num studio-lean-scene-num--left" data-scene-number="'
+                + escapeHtml(left) + '">' + escapeHtml(left) + '</span>'
+                + '<span class="studio-lean-scene-text">' + inlineFn(block.text || '') + '</span>'
+                + '<span class="studio-lean-scene-num studio-lean-scene-num--right" data-scene-number="'
+                + escapeHtml(right) + '">' + escapeHtml(right) + '</span>';
+        }
+        return inlineFn(block.text || '');
+    }
+
+    function extBlockTag(type) {
+        return type === 'mathml' ? 'div' : 'p';
+    }
+
     /**
      * Render one block: build its element, then let the spec ruleset map the block's
      * validated properties to CSS rule classes (TSL_BLOCK_RULES → tsl.css).
@@ -3427,6 +3584,14 @@
             el.appendChild(inner);
             return el;
         }
+        if (TSL_EXT_TYPE_RE.test(type)) {
+            // §6.23: per-type class (shared with lean) + ruleset flags via applyBlockRules.
+            el = document.createElement(extBlockTag(type));
+            el.className = 'tsl-block tsl-block--' + type + ' studio-lean-' + type;
+            el.innerHTML = extBlockInnerHtml(b, inlineHtml);
+            stampBlockMeta(el, b);
+            return el;
+        }
         var tag = type === 'title' ? 'h1' : (type === 'paragraph' ? 'p' : type);
         if (!/^(title|paragraph|h1|h2|h3|quote)$/.test(type)) {
             tag = 'div';
@@ -3437,6 +3602,17 @@
             el.setAttribute('role', 'doc-title');
         }
         var inner = inlineHtml(b.text);
+        if (type === 'paragraph') {
+            // Same cap builder as Scroll; null when dropCap is off / text is empty / pre-baked.
+            var dcInner = buildDropCapInner(inner, plainText(b.text), b,
+                ctx && ctx.header && ctx.header.typography && ctx.header.typography.lineHeight, inlineHtml);
+            if (dcInner) {
+                inner = dcInner;
+            }
+        }
+        if (b._tslContinued) {
+            el.classList.add('tsl-block--continued');
+        }
         if (/^h[1-3]$/.test(type)) {
             var hp = headingDisplayPrefix(b);
             if (hp) {
@@ -3755,6 +3931,16 @@
     }
 
     function buildDropCapLeanInner(restInlineHtml, plain, block, header) {
+        return buildDropCapInner(restInlineHtml, plain, block,
+            header && header.typography && header.typography.lineHeight,
+            function (rest) { return leanInlineHtml(rest, header, header.readMode !== false); });
+    }
+
+    /**
+     * Drop-cap inner HTML shared by Scroll (lean) and Pages: cap span + studio-dropcap-rest.
+     * restFromPlain renders the remaining plain text when the source has no inline markup.
+     */
+    function buildDropCapInner(restInlineHtml, plain, block, lineHeight, restFromPlain) {
         // paragraph.dropCap / dropCapMarkup come from the ruleset (normalised Studio object).
         var dcProps = resolveBlockRules(block).props;
         var spec = dcProps.dropCap || null;
@@ -3768,8 +3954,7 @@
         if (!parts.cap) {
             return null;
         }
-        var lh = (header && header.typography && header.typography.lineHeight) || 1.55;
-        var metrics = dcFloatMetrics(spec, lh);
+        var metrics = dcFloatMetrics(spec, lineHeight || 1.55);
         var style = dcInlineStyle(metrics);
         var capClass = 'dropcap studio-dropcap studio-dc-variant-' + spec.variant;
         if (spec.style === 'small-caps') {
@@ -3789,7 +3974,7 @@
         }
         var restHtml = restInlineHtml;
         if (!/<[a-z][\s\S]*>/i.test(String(block.text || ''))) {
-            restHtml = leanInlineHtml(parts.rest, header, header.readMode !== false);
+            restHtml = restFromPlain(parts.rest);
         }
         return capHtml + '<span class="studio-dropcap-rest">' + restHtml + '</span>';
     }
@@ -3931,6 +4116,15 @@
         }
         if (type === 'image-index') {
             return leanImageIndexBlockHtml(block, header._leanAllBlocks || [], header, readMode, null);
+        }
+        if (TSL_EXT_TYPE_RE.test(type)) {
+            // §6.23: was dropped (''); now paragraph-like with the per-type class + rule flags.
+            var extTag = extBlockTag(type);
+            var extAttrs = isTslExtTextType(type) ? leanTextRuleAttrs(block, 'studio-lean-' + type)
+                : leanRuleAttrs(block, 'studio-lean-' + type);
+            return '<' + extTag + extAttrs + '>' + extBlockInnerHtml(block, function (t) {
+                return leanInlineHtml(t, header, readMode);
+            }) + '</' + extTag + '>';
         }
         if (type === 'paywall') {
             return '<aside' + leanRuleAttrs(block, 'studio-lean-paywall') + ' role="note"><p class="studio-lean-paywall-message">'
@@ -4316,6 +4510,9 @@
             block.hAlign = fpProps.hAlign;
             block.vAlign = fpProps.vAlign;
         }
+        if (TSL_EXT_TYPE_RE.test(type) && typeof document !== 'undefined') {
+            recoverExtBlockFromLean(block, meta.el, innerHtml);
+        }
         if (meta.dropCap) {
             block.dropCap = parseDropCapComment(meta.dropCap);
         }
@@ -4323,6 +4520,51 @@
             block.number = String(meta.number).replace(/\.$/, '');
         }
         return block;
+    }
+
+    /** §6.23 lean → block: read content fields and rule flags back from the markup. */
+    function recoverExtBlockFromLean(block, el, innerHtml) {
+        var host = document.createElement('div');
+        host.innerHTML = innerHtml;
+        var root = host.querySelector('.studio-lean-' + block.type) || el || host;
+        var type = block.type;
+        var rules = ruleSetForType(type);
+        if (type === 'mathml') {
+            var m = root.querySelector('math');
+            var srcEl = root.querySelector('.studio-lean-mathml-source');
+            if (m) {
+                // display lives on the block (rule flag), not in the stored source.
+                m = m.cloneNode(true);
+                m.removeAttribute('display');
+                m.setAttribute('xmlns', TSL_MATHML_NS);
+            }
+            block.source = m ? m.outerHTML : (srcEl ? srcEl.textContent : '');
+            block.display = !!(rules.display && rules.display.flag && root.classList
+                && root.classList.contains(rules.display.flag));
+            delete block.text;
+            return;
+        }
+        if (type === 'stage-speech') {
+            var nm = root.querySelector('.studio-lean-stage-name');
+            var tx = root.querySelector('.studio-lean-stage-text');
+            block.character = nm ? nm.textContent : '';
+            block.text = tx ? tx.innerHTML : '';
+            return;
+        }
+        if (type === 'script-scene') {
+            var flag = rules.showSceneNumbers && rules.showSceneNumbers.flag;
+            block.showSceneNumbers = !!(flag && root.classList && root.classList.contains(flag));
+            if (block.showSceneNumbers) {
+                var nl = root.querySelector('.studio-lean-scene-num--left');
+                var nr = root.querySelector('.studio-lean-scene-num--right');
+                var st = root.querySelector('.studio-lean-scene-text');
+                block.sceneNumberLeft = nl ? nl.getAttribute('data-scene-number') || '' : '';
+                block.sceneNumberRight = nr ? nr.getAttribute('data-scene-number') || '' : '';
+                block.text = st ? st.innerHTML : '';
+                return;
+            }
+        }
+        block.text = root === host ? host.innerHTML : root.innerHTML;
     }
 
     function leanHtmlToEnvelope(html) {
@@ -4386,6 +4628,8 @@
                     type = 'full-page';
                 } else if (!type && cls.indexOf(' studio-lean-manuscript-title ') >= 0) {
                     type = 'manuscript-title';
+                } else if (!type && /\sstudio-lean-((script|stage)-[a-z]+|mathml)\s/.test(cls)) {
+                    type = cls.match(/\sstudio-lean-((script|stage)-[a-z]+|mathml)\s/)[1];
                 } else if (!type) {
                     type = 'paragraph';
                 }

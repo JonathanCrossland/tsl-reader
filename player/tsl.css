@@ -1414,3 +1414,130 @@
         break-after: auto;
     }
 }
+
+/* -------------------------------------------------------------------------
+   §6.23 Studio extension blocks — screenplay, stage, MathML.
+   Class hooks are per type (.studio-lean-<type>, shared by paged and lean);
+   values follow the Studio plugin print CSS (block-editor-script.css,
+   block-editor-stage.css, block-editor-math.css). Casing is display-only.
+   Intrinsic alignment (transition right, stage direction centred) matches
+   Studio, which ignores block align for these types; kept after the
+   align-* rule classes so it wins.
+   ------------------------------------------------------------------------- */
+.tsl-root .studio-lean-script-scene,
+.tsl-root .studio-lean-script-shot,
+.tsl-root .studio-lean-script-character,
+.tsl-root .studio-lean-script-transition,
+.tsl-root .studio-lean-stage-scene,
+.tsl-root .studio-lean-stage-action,
+.tsl-root .studio-lean-stage-direction,
+.studio-lean-tsl .studio-lean-script-scene,
+.studio-lean-tsl .studio-lean-script-shot,
+.studio-lean-tsl .studio-lean-script-character,
+.studio-lean-tsl .studio-lean-script-transition,
+.studio-lean-tsl .studio-lean-stage-scene,
+.studio-lean-tsl .studio-lean-stage-action,
+.studio-lean-tsl .studio-lean-stage-direction {
+    text-transform: uppercase;
+}
+
+.tsl-root .studio-lean-script-scene,
+.tsl-root .studio-lean-script-shot,
+.studio-lean-tsl .studio-lean-script-scene,
+.studio-lean-tsl .studio-lean-script-shot {
+    font-weight: 700;
+    margin-top: 1em;
+}
+
+/* Ruleset flag: script-scene showSceneNumbers → margin scene numbers. */
+.tsl-root .studio-lean-script-scene.tsl-scene-numbered,
+.studio-lean-tsl .studio-lean-script-scene.tsl-scene-numbered {
+    display: grid;
+    grid-template-columns: minmax(2rem, 2.75rem) minmax(0, 1fr) minmax(2rem, 2.75rem);
+    column-gap: 0.5rem;
+    align-items: start;
+}
+
+.studio-lean-scene-num {
+    font-size: 0.92em;
+    text-align: center;
+}
+
+.tsl-root .studio-lean-script-action,
+.studio-lean-tsl .studio-lean-script-action {
+    margin-top: 0.15em;
+}
+
+.tsl-root .studio-lean-script-character,
+.studio-lean-tsl .studio-lean-script-character {
+    margin-top: 1em;
+    margin-left: 37%;
+    max-width: 70%;
+}
+
+.tsl-root .studio-lean-script-dialogue,
+.studio-lean-tsl .studio-lean-script-dialogue {
+    margin-left: 17%;
+    margin-right: 15%;
+}
+
+.tsl-root .studio-lean-script-parenthetical,
+.studio-lean-tsl .studio-lean-script-parenthetical {
+    margin-left: 28%;
+    margin-right: 27%;
+}
+
+.tsl-root .studio-lean-script-transition,
+.studio-lean-tsl .studio-lean-script-transition {
+    margin-top: 1em;
+    text-align: right;
+}
+
+.tsl-root .studio-lean-stage-scene,
+.studio-lean-tsl .studio-lean-stage-scene {
+    font-weight: 700;
+    margin-top: 1.4em;
+}
+
+.tsl-root .studio-lean-stage-action,
+.studio-lean-tsl .studio-lean-stage-action {
+    margin-top: 1em;
+}
+
+.tsl-root .studio-lean-stage-direction,
+.studio-lean-tsl .studio-lean-stage-direction {
+    margin-top: 1.2em;
+    font-weight: 700;
+    text-align: center;
+}
+
+.tsl-root .studio-lean-stage-speech,
+.studio-lean-tsl .studio-lean-stage-speech {
+    display: grid;
+    grid-template-columns: 11.5em minmax(0, 1fr);
+    column-gap: 0.85em;
+    align-items: start;
+    margin-top: 0.35em;
+}
+
+.studio-lean-stage-name {
+    text-transform: uppercase;
+    font-weight: 700;
+}
+
+/* Ruleset flag: mathml display (block layout); without it the math sits inline. */
+.tsl-root .studio-lean-mathml.tsl-math-display,
+.studio-lean-tsl .studio-lean-mathml.tsl-math-display {
+    text-align: center;
+}
+
+/* Pages: a drop-cap paragraph contains its floated cap, so a short first fragment is
+   measured (and paginated) at the cap's full height instead of overflowing the page. */
+.tsl-root .tsl-block--paragraph.studio-has-dropcap {
+    display: flow-root;
+}
+
+/* Pages: continuation fragment of a split paragraph (no drop cap, no first-line indent). */
+.tsl-root .tsl-block--paragraph.tsl-block--continued {
+    text-indent: 0;
+}
