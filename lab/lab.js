@@ -77,17 +77,19 @@
             a.addEventListener('click', function (ev) {
                 ev.preventDefault();
                 var hash = a.getAttribute('href');
-                var root = mount && mount.querySelector('.tsl-root');
-                if (root && TalesmithTsl.navigateToInDocumentAnchor && TalesmithTsl.findInDocumentAnchorTarget) {
-                    var target = TalesmithTsl.findInDocumentAnchorTarget(hash, root)
-                        || TalesmithTsl.findInDocumentAnchorTarget(hash, mount.querySelector('.studio-lean-tsl') || mount);
-                    if (target && TalesmithTsl.navigateToInDocumentAnchor(target, root || mount)) {
+                var leanRoot = mount && mount.querySelector('.studio-lean-tsl');
+                var pagerRoot = mount && mount.querySelector('.tsl-root');
+                var navRoot = pagerRoot || leanRoot || mount;
+                if (navRoot && TalesmithTsl.navigateToInDocumentAnchor && TalesmithTsl.findInDocumentAnchorTarget) {
+                    var target = TalesmithTsl.findInDocumentAnchorTarget(hash, navRoot)
+                        || TalesmithTsl.findInDocumentAnchorTarget(hash, mount);
+                    if (target && TalesmithTsl.navigateToInDocumentAnchor(target, navRoot)) {
                         return;
                     }
                 }
                 var target = document.getElementById(TalesmithTsl.headingAnchorId({ id: e.id }));
-                if (root && target && typeof root._tslPagerGoToElement === 'function') {
-                    root._tslPagerGoToElement(target);
+                if (pagerRoot && target && typeof pagerRoot._tslPagerGoToElement === 'function') {
+                    pagerRoot._tslPagerGoToElement(target);
                 } else if (target) {
                     target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
@@ -178,6 +180,12 @@
         }
         lastParsed = parsed;
         TalesmithTsl.display(mount, parsed);
+        if (TalesmithTsl.syncMountHostLayout) {
+            TalesmithTsl.syncMountHostLayout(mount);
+            requestAnimationFrame(function () {
+                TalesmithTsl.syncMountHostLayout(mount);
+            });
+        }
         if (settings && TalesmithTsl.syncReadingPrefsUI) {
             TalesmithTsl.syncReadingPrefsUI(settings);
         }

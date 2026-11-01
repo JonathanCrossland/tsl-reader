@@ -1257,7 +1257,24 @@
         });
     }
 
+    function normalizeTslParsed(parsed) {
+        if (!parsed || !parsed.header) {
+            return null;
+        }
+        if (parsed.blocks) {
+            return parsed;
+        }
+        if (parsed.document && parsed.document.blocks) {
+            return { header: parsed.header, blocks: parsed.document.blocks };
+        }
+        return null;
+    }
+
     function render(mount, parsed) {
+        parsed = normalizeTslParsed(parsed);
+        if (!parsed) {
+            return null;
+        }
         var header = parsed.header;
         var blocks = parsed.blocks;
         ensureHeadingNumbers(blocks, header);
@@ -1902,6 +1919,7 @@
         bindInDocumentAnchorClicks(root);
         updateTslPrintPageRule(root);
         bindTslPrintLifecycle();
+        syncMountHostLayout(mount);
         return root;
     }
 
@@ -1909,6 +1927,11 @@
     var TSL_LAYOUT_KEY = 'tsl:layout';
     var READER_SIZES = [14, 16, 18, 20, 24];
     var READER_DEFAULT_PREFS = { font: 'serif', size: 18, theme: 'light', width: 'medium', pageFit: 'fit' };
+    var READER_FONT_STACK = {
+        serif: 'Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif',
+        sans: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+        mono: 'ui-monospace, "SF Mono", Menlo, Consolas, monospace'
+    };
     var tslPrintPageStyleEl = null;
     var tslPrintBound = false;
 
@@ -2030,32 +2053,19 @@
         return findTslLeanArticle(wrap);
     }
 
-    function blocksHaveRunningChrome(blocks) {
-        if (!blocks || !blocks.length) {
-            return false;
-        }
-        return blocks.some(function (b) {
-            return b && (b.type === 'pageheader' || b.type === 'pagefooter');
-        });
-    }
-
     function layoutModeForDocument(header, blocks) {
-        var layout = getTslLayout();
-        if (layout === 'scroll' && blocksHaveRunningChrome(blocks)
-            && header && header.page && header.page.kind === 'print') {
-            return 'pages';
-        }
-        return layout;
+        /* render() is only used for paginated output; measure/breaks must use page trim. */
+        return 'pages';
     }
 
     function remountTslMount(mount, parsed) {
+        parsed = normalizeTslParsed(parsed);
         if (!mount || !parsed) {
             return null;
         }
         mount._tslParsed = parsed;
         stampTslReadingCapabilities(parsed.header, mount);
-        var layout = getTslLayout();
-        if (layout === 'scroll' && !blocksHaveRunningChrome(parsed.blocks || [])) {
+        if (getTslLayout() === 'scroll') {
             return mountLeanHtml(mount, parsed);
         }
         return render(mount, parsed);
@@ -2150,6 +2160,29 @@
         return n / 18;
     }
 
+    function readerFontStack(fontId) {
+        if (fontId === 'sans') {
+            return READER_FONT_STACK.sans;
+        }
+        if (fontId === 'mono') {
+            return READER_FONT_STACK.mono;
+        }
+        return READER_FONT_STACK.serif;
+    }
+
+    /** Apply reader font + size scale; overrides document --tsl-doc-font on paginated roots. */
+    function stampReaderTypography(el, prefs, scale) {
+        if (!el || !el.style) {
+            return;
+        }
+        var p = prefs || getReadingPrefs();
+        var font = p.font || 'serif';
+        el.setAttribute('data-tsl-reader-font', font);
+        el.setAttribute('data-tsl-reader-size', String(p.size || 18));
+        el.style.setProperty('--tsl-font', readerFontStack(font));
+        el.style.setProperty('--tsl-reader-scale', String(scale));
+    }
+
     function tslAuthorPrintLayout() {
         return typeof document !== 'undefined'
             && document.documentElement
@@ -2180,13 +2213,11 @@
         }
         var p = getReadingPrefs();
         var layout = getTslLayout();
-        root.setAttribute('data-tsl-reader-font', p.font || 'serif');
-        root.setAttribute('data-tsl-reader-size', String(p.size || 18));
+        stampReaderTypography(root, p, paginationReaderScale());
         root.setAttribute('data-tsl-reader-theme', p.theme || 'light');
         root.setAttribute('data-tsl-reader-width', p.width || 'medium');
         root.setAttribute('data-tsl-layout', layout);
         root.setAttribute('data-tsl-page-fit', tslAuthorPrintLayout() ? 'native' : getPageFit());
-        root.style.setProperty('--tsl-reader-scale', String(paginationReaderScale()));
         if (layout === 'pages' && typeof root._tslPagerRefresh === 'function') {
             root._tslPagerRefresh();
         }
@@ -2202,7 +2233,7 @@
         } else {
             document.querySelectorAll('.tsl-root').forEach(applyReadingPrefs);
         }
-        document.querySelectorAll('.studio-lean-tsl').forEach(applyLeanReadingPrefs);
+        document.querySelectorAll('.studio-lean-tsl, article.studio-lean-article[data-tsl-w-mm]').forEach(applyLeanReadingPrefs);
     }
 
     function setReadingPref(key, value) {
@@ -2219,7 +2250,6 @@
             pf.pageFit = value === 'native' || value === 'scale' ? value : 'fit';
             saveStored(READER_PREFS_KEY, pf);
             refreshAllReadingPrefs(false);
-            applyLeanReadingPrefs(document.querySelector('.studio-lean-tsl'));
             return;
         }
         var p = getReadingPrefs();
@@ -2229,7 +2259,13 @@
             p[key] = value;
         }
         saveStored(READER_PREFS_KEY, p);
-        if (key === 'size' || key === 'font' || key === 'theme' || key === 'width') {
+        if (getTslLayout() === 'scroll') {
+            refreshAllReadingPrefs(false);
+            return;
+        }
+        if (key === 'theme') {
+            refreshAllReadingPrefs(false);
+        } else if (key === 'size' || key === 'font' || key === 'width') {
             refreshAllReadingPrefs(true);
         } else {
             refreshAllReadingPrefs(false);
@@ -3520,23 +3556,45 @@
         var layout = getTslLayout();
         if (readerArticle) {
             var owned = readerArticle.getAttribute('data-tsl-layout');
-            layout = owned === 'scroll' || owned === 'pages' ? owned : null;
+            layout = owned === 'scroll' || owned === 'pages' ? owned : layout;
         }
-        article.setAttribute('data-tsl-reader-font', p.font || 'serif');
-        article.setAttribute('data-tsl-reader-size', String(p.size || 18));
+        var scale = readerSizeScale(p.size);
+        stampReaderTypography(article, p, scale);
         article.setAttribute('data-tsl-reader-theme', p.theme || 'light');
         article.setAttribute('data-tsl-reader-width', p.width || 'medium');
-        article.style.setProperty('--tsl-reader-scale', String(readerSizeScale(p.size)));
         if (layout !== null) {
             article.setAttribute('data-tsl-layout', layout);
         }
         var shell = article.closest('.document-tsl');
         if (shell) {
+            stampReaderTypography(shell, p, scale);
             if (layout !== null) {
                 shell.setAttribute('data-tsl-layout', layout);
             }
             shell.setAttribute('data-tsl-reader-width', p.width || 'medium');
             shell.setAttribute('data-tsl-reader-theme', p.theme || 'light');
+        }
+        var labMount = article.closest('[data-tsl-mount]');
+        if (labMount) {
+            syncMountHostLayout(labMount);
+        }
+    }
+
+    /** Lab (and hosts): enable stage scrolling for lean scroll layout after mount or pref changes. */
+    function syncMountHostLayout(mount) {
+        if (!mount || !mount.setAttribute) {
+            return;
+        }
+        var layout = getTslLayout();
+        mount.setAttribute('data-tsl-layout', layout);
+        var scrollActive = layout === 'scroll' && !!mount.querySelector('.document-tsl');
+        var stage = mount.closest('.tsl-lab-stage');
+        if (stage) {
+            if (scrollActive) {
+                stage.setAttribute('data-tsl-lab-scroll', '1');
+            } else {
+                stage.removeAttribute('data-tsl-lab-scroll');
+            }
         }
     }
 
@@ -3769,6 +3827,10 @@
     }
 
     function mountLeanHtml(mount, parsed) {
+        parsed = normalizeTslParsed(parsed);
+        if (!mount || !parsed) {
+            return null;
+        }
         var lean = toLeanHtml(parsed);
         mount.innerHTML = '';
         var shell = document.createElement('div');
@@ -3788,6 +3850,7 @@
         shell.appendChild(wrap);
         mount.appendChild(shell);
         bindInDocumentAnchorClicks(article);
+        syncMountHostLayout(mount);
         return article;
     }
 
@@ -3822,7 +3885,9 @@
         if (mode === 'lean') {
             return mountLeanHtml(mount, parsed);
         }
-        return remountTslMount(mount, parsed);
+        var out = remountTslMount(mount, parsed);
+        syncMountHostLayout(mount);
+        return out;
     }
 
     function findTslLeanArticle(root) {
@@ -4084,6 +4149,7 @@
         applyReadingPrefs: applyReadingPrefs,
         applyTslLayoutVarsToArticle: applyTslLayoutVarsToArticle,
         applyLeanReadingPrefs: applyLeanReadingPrefs,
+        syncMountHostLayout: syncMountHostLayout,
         enhancePublishedLean: enhancePublishedLean,
         repaginateReaderArticle: repaginateReaderArticle,
         mountReaderEnvelope: mountReaderEnvelope,

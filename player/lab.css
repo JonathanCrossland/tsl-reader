@@ -673,6 +673,30 @@ body {
     min-height: 0;
 }
 
+/* Scroll layout: continuous lean HTML — stage scrolls, not the pages pager */
+.tsl-lab-stage[data-tsl-lab-scroll="1"],
+.tsl-lab-stage:has(.document-tsl[data-tsl-layout="scroll"]) {
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+.tsl-lab-mount:has(.document-tsl[data-tsl-layout="scroll"]),
+[data-tsl-mount][data-tsl-layout="scroll"] {
+    overflow: visible;
+    min-height: 0;
+    flex: 1 1 auto;
+}
+
+.tsl-lab-mount .document-tsl[data-tsl-layout="scroll"] {
+    flex: none;
+    width: 100%;
+    max-width: 100%;
+    padding: 1rem 1.25rem 2rem;
+    box-sizing: border-box;
+}
+
 /* Floating footer (GitHub + Liberapay) */
 
 .tsl-lab-float {

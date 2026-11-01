@@ -788,6 +788,19 @@
 .document-tsl {
     padding: 1.5rem 1rem 3rem;
     background: var(--tsl-bg, #e8e4dc);
+    --tsl-font-read: Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif;
+    --tsl-font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --tsl-font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    --tsl-font: var(--tsl-font-read);
+    --tsl-reader-scale: 1;
+}
+
+.document-tsl[data-tsl-reader-font="sans"] {
+    --tsl-font: var(--tsl-font-ui);
+}
+
+.document-tsl[data-tsl-reader-font="mono"] {
+    --tsl-font: var(--tsl-font-mono);
 }
 
 .document-tsl .post-lean-html-article-wrap {
@@ -801,7 +814,7 @@
     max-width: var(--tsl-page-w, 210mm);
     margin: 0 auto 1.25rem;
     padding: var(--tsl-pad-t, 12mm) var(--tsl-pad-o, 15mm) var(--tsl-pad-b, 12mm);
-    font-family: var(--tsl-font-read);
+    font-family: var(--tsl-font, var(--tsl-font-read));
     font-size: calc(var(--tsl-size-base, var(--tsl-size-pt, 11pt)) * var(--tsl-reader-scale, 1));
     line-height: var(--tsl-lh, 1.55);
     background: var(--tsl-paper, #fffef9);
@@ -874,13 +887,34 @@
     --tsl-rule: #34312c;
 }
 
-.document-tsl[data-tsl-reader-theme="light"] { --tsl-bg: #e8e4dc; }
-.document-tsl[data-tsl-reader-theme="sepia"] { --tsl-bg: #e8dfd0; }
-.document-tsl[data-tsl-reader-theme="dark"] { --tsl-bg: #121110; }
+.document-tsl[data-tsl-reader-theme="light"] {
+    --tsl-bg: #e8e4dc;
+    --tsl-ink: #1a1a1a;
+    --tsl-muted: #555;
+    --tsl-rule: #ccc;
+}
+
+.document-tsl[data-tsl-reader-theme="sepia"] {
+    --tsl-bg: #e8dfd0;
+    --tsl-ink: #433a2e;
+    --tsl-muted: #7a6552;
+    --tsl-rule: #e3d7c2;
+}
+
+.document-tsl[data-tsl-reader-theme="dark"] {
+    --tsl-bg: #121110;
+    --tsl-ink: #d2cdc4;
+    --tsl-muted: #aeaeb2;
+    --tsl-rule: #34312c;
+}
 
 .document-tsl[data-tsl-reader-width="narrow"] { --tsl-reader-measure: 58ch; }
 .document-tsl[data-tsl-reader-width="medium"] { --tsl-reader-measure: 66ch; }
 .document-tsl[data-tsl-reader-width="wide"] { --tsl-reader-measure: 76ch; }
+
+.document-tsl[data-tsl-layout="scroll"] {
+    color: var(--tsl-ink);
+}
 
 .document-tsl[data-tsl-layout="scroll"] .post-lean-html-article-wrap {
     max-width: var(--tsl-reader-measure, 66ch);
@@ -893,6 +927,7 @@
     box-shadow: none;
     border: 0;
     background: transparent;
+    color: inherit;
 }
 
 .document-tsl[data-tsl-layout="scroll"] .studio-lean-pagebreak {
