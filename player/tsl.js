@@ -1115,6 +1115,9 @@
     }
 
     function pageSideForLayout(header, physicalIndex, layoutMode) {
+        if (layoutMode === 'pages' && tslCompactPagerHost()) {
+            return 'any';
+        }
         if (layoutMode === 'pages') {
             return physicalSide(physicalIndex);
         }
@@ -1129,6 +1132,110 @@
     var TSL_MIN_FIT_SCREEN_SCALE = 0.42;
     /** Host width/height below this fraction of trim → treat as too small to shrink the page. */
     var TSL_HOST_CRAMPED_RATIO = 0.55;
+    /** Lab / phone: full-bleed pager (match Reader mqMobile at 899px). */
+    var TSL_COMPACT_PAGER_MAX_WIDTH_PX = 899;
+
+    function tslCompactPagerHost() {
+        if (typeof window === 'undefined' || !window.matchMedia) {
+            return false;
+        }
+        return window.matchMedia('(max-width: ' + TSL_COMPACT_PAGER_MAX_WIDTH_PX + 'px)').matches;
+    }
+
+    function compactPagerVisualBudget(reserveBottomPx) {
+        var w = 0;
+        var h = 0;
+        if (typeof window !== 'undefined' && window.visualViewport) {
+            w = window.visualViewport.width;
+            h = window.visualViewport.height;
+        } else if (typeof window !== 'undefined') {
+            w = window.innerWidth;
+            h = window.innerHeight;
+        }
+        var bottom = Number(reserveBottomPx) || 0;
+        return {
+            w: Math.max(0, Math.floor(w)),
+            h: Math.max(0, Math.floor(h - bottom))
+        };
+    }
+
+    /** Reader mobile bar (same reserve EPUB uses via rd-book padding-bottom). */
+    function compactPagerReaderBottomReservePx() {
+        if (typeof document === 'undefined' || !tslCompactPagerHost()) {
+            return 0;
+        }
+        if (!document.querySelector('[data-reader-page][data-reader-format="tsl"]')) {
+            return 0;
+        }
+        var mbar = document.querySelector('.rd-mbar');
+        if (!mbar) {
+            return 0;
+        }
+        var cs = getComputedStyle(mbar);
+        if (cs.display === 'none' || cs.visibility === 'hidden') {
+            return 0;
+        }
+        var h = mbar.getBoundingClientRect().height;
+        return h > 8 ? Math.ceil(h) : 0;
+    }
+
+    function compactPagerBottomReservePx(statusEl) {
+        var reader = compactPagerReaderBottomReservePx();
+        if (reader > 0) {
+            return reader;
+        }
+        var st = statusEl && statusEl.offsetHeight ? statusEl.offsetHeight : 0;
+        return Math.max(44, st);
+    }
+
+    /** Visible pager stage (prefer laid-out viewport over raw window size). */
+    function compactPagerStageBudget(statusEl) {
+        if (typeof document !== 'undefined') {
+            var vpEl = document.querySelector(
+                '.tsl-root[data-tsl-compact-pager="1"] .tsl-pager-viewport'
+            );
+            if (vpEl) {
+                var r = vpEl.getBoundingClientRect();
+                var w = Math.max(0, Math.floor(r.width));
+                var h = Math.max(0, Math.floor(r.height));
+                if (w >= 120 && h >= 160) {
+                    return { w: w, h: h };
+                }
+            }
+        }
+        return compactPagerVisualBudget(compactPagerBottomReservePx(statusEl));
+    }
+
+    /** Narrow viewports: paginate at the visible stage, not print trim (horizontal slides). */
+    function compactViewportPageFromPrintSpec(page) {
+        if (!page || !page.trimMM || !tslCompactPagerHost()) {
+            return page;
+        }
+        var budget = compactPagerVisualBudget(compactPagerReaderBottomReservePx() || 44);
+        if (budget.w < 120 || budget.h < 160) {
+            return page;
+        }
+        var mmPx = 96 / 25.4;
+        var inReader = typeof document !== 'undefined'
+            && !!document.querySelector('[data-reader-page][data-reader-format="tsl"]');
+        var edgePx = inReader ? 14 : 12;
+        var wPx = Math.max(120, budget.w - edgePx * 2);
+        var hPx = Math.max(160, budget.h - edgePx * 2);
+        var edgeMm = edgePx / mmPx;
+        var margins = page.marginsMM || {};
+        return Object.assign({}, page, {
+            trimMM: {
+                width: wPx / mmPx,
+                height: hPx / mmPx
+            },
+            marginsMM: {
+                top: Math.min(Number(margins.top) || 12, edgeMm),
+                bottom: Math.min(Number(margins.bottom) || 12, edgeMm),
+                outside: edgeMm,
+                gutter: edgeMm
+            }
+        });
+    }
 
     function pageFitsTwoUp(availW, pageW) {
         if (availW < 1) {
@@ -1248,6 +1355,12 @@
         }
 
         function fitStageWidthPx() {
+            if (tslCompactPagerHost()) {
+                var budget = compactPagerStageBudget(status);
+                if (budget.w > 0) {
+                    return budget.w;
+                }
+            }
             var box = fitContainerEl();
             var vpRect = viewport.getBoundingClientRect();
             var w = viewport.clientWidth;
@@ -1298,6 +1411,13 @@
         }
 
         function stepLayoutSize(step) {
+            if (tslCompactPagerHost()) {
+                var nom = nominalTrimPageSizePx();
+                if (nom.w >= 1 && nom.h >= 1) {
+                    return { w: nom.w, h: nom.h };
+                }
+                return stepLayoutSizeMeasured(step);
+            }
             var nom = nominalTrimPageSizePx();
             if (nom.w < 1 || nom.h < 1) {
                 return stepLayoutSizeMeasured(step);
@@ -1320,6 +1440,9 @@
             if (typeof window === 'undefined') {
                 return 0;
             }
+            if (tslCompactPagerHost()) {
+                return compactPagerStageBudget(status).h;
+            }
             var pagerTop = viewport.getBoundingClientRect().top;
             var viewBottom = window.innerHeight;
             if (window.visualViewport) {
@@ -1334,6 +1457,10 @@
 
         /** Vertical budget for fit/scale: stable flex column size (not the viewport element we resize). */
         function pagerStageHeightPx() {
+            var viewCap = readerBrowserViewportHeightPx();
+            if (tslCompactPagerHost() && viewCap > 0) {
+                return viewCap;
+            }
             var h = 0;
             var mount = root.closest('[data-tsl-mount]');
             var box = fitContainerEl();
@@ -1348,7 +1475,6 @@
             if (h < 32 && wrap && wrap.clientHeight > 0) {
                 h = wrap.clientHeight - (status.offsetHeight || 0);
             }
-            var viewCap = readerBrowserViewportHeightPx();
             if (viewCap > 0) {
                 h = h > 0 ? Math.min(h, viewCap) : viewCap;
             }
@@ -1357,9 +1483,18 @@
 
         /** Host-defined stage (data-tsl-fit-container): width from container; height from pager wrap. */
         function pagerStageSize() {
-            var inset = 8;
-            var w = fitStageWidthPx();
-            var h = pagerStageHeightPx();
+            var fit = getPageFit();
+            var inset = (tslCompactPagerHost() && (fit === 'scale' || fit === 'fit')) ? 0 : 8;
+            var w;
+            var h;
+            if (tslCompactPagerHost() && (fit === 'scale' || fit === 'fit')) {
+                var budget = compactPagerStageBudget(status);
+                w = budget.w;
+                h = budget.h;
+            } else {
+                w = fitStageWidthPx();
+                h = pagerStageHeightPx();
+            }
 
             return {
                 w: Math.max(0, Math.floor(w - inset)),
@@ -1368,12 +1503,86 @@
         }
 
         function pageViewMode() {
+            if (tslCompactPagerHost()) {
+                return 'single';
+            }
             var avail = containerWidthPx();
             var nom = nominalTrimPageSizePx();
             if (!pageFitsTwoUp(avail, nom.w)) {
                 return 'single';
             }
             return 'spread';
+        }
+
+        function syncCompactPagerChrome() {
+            var compact = tslCompactPagerHost();
+            prevBtn.hidden = compact;
+            nextBtn.hidden = compact;
+            prevBtn.tabIndex = compact ? -1 : 0;
+            nextBtn.tabIndex = compact ? -1 : 0;
+            prevBtn.setAttribute('aria-hidden', compact ? 'true' : 'false');
+            nextBtn.setAttribute('aria-hidden', compact ? 'true' : 'false');
+        }
+
+        function syncMobileCarousel(steps) {
+            if (!tslCompactPagerHost()) {
+                root.removeAttribute('data-tsl-pager-flow');
+                root.style.removeProperty('--tsl-pager-index');
+                root.style.removeProperty('--tsl-pager-steps');
+                Array.prototype.forEach.call(
+                    pagesEl.querySelectorAll('.tsl-page'),
+                    function (p) {
+                        p.style.removeProperty('--tsl-pager-slide-i');
+                    }
+                );
+                return;
+            }
+            root.setAttribute('data-tsl-pager-flow', 'horizontal');
+            var n = steps && steps.length ? steps.length : 1;
+            root.style.setProperty('--tsl-pager-steps', String(n));
+            root.style.setProperty('--tsl-pager-index', String(state.index));
+            Array.prototype.forEach.call(steps, function (step, i) {
+                step.style.setProperty('--tsl-pager-slide-i', String(i));
+                var off = Math.abs(i - state.index);
+                step.style.setProperty('--tsl-pager-slide-off', String(Math.min(off, 1)));
+            });
+        }
+
+        function applyMobileHorizontalFit() {
+            var steps = visiblePages();
+            if (!steps.length) {
+                return;
+            }
+            clearPagerZoomShells();
+            var avail = pagerStageSize();
+            root.removeAttribute('data-tsl-scale-unreasonable');
+            root.removeAttribute('data-tsl-stage-cramped');
+            steps.forEach(function (step) {
+                step.style.width = '100%';
+                step.style.height = '100%';
+                step.style.maxWidth = 'none';
+                step.style.maxHeight = 'none';
+                step.style.marginLeft = '';
+                step.style.marginRight = '';
+                step.style.marginBottom = '';
+            });
+            var stepsForCarousel = stepsForView(pageViewMode());
+            syncMobileCarousel(stepsForCarousel);
+            pagesEl.style.width = '';
+            pagesEl.style.height = '100%';
+            root.style.setProperty('--tsl-viewport-scale', '1');
+            viewport.style.overflowX = 'hidden';
+            viewport.style.overflowY = 'hidden';
+            viewport.style.alignItems = 'stretch';
+            viewport.style.justifyContent = 'stretch';
+            viewport.style.flex = '1 1 0';
+            viewport.style.minHeight = '0';
+            viewport.style.maxHeight = '100%';
+            if (avail.h > 0) {
+                viewport.style.height = Math.ceil(avail.h) + 'px';
+            } else {
+                viewport.style.height = '';
+            }
         }
 
         /** Fit width: honor host box unless unreasonably small. */
@@ -1484,6 +1693,8 @@
             nextBtn.disabled = state.index >= steps.length - 1;
             status.textContent = (view === 'spread' ? 'Spread ' : 'Page ')
                 + (state.index + 1) + ' of ' + steps.length;
+            syncMobileCarousel(steps);
+            syncCompactPagerChrome();
             if (!state.scaleRaf) {
                 state.scaleRaf = requestAnimationFrame(function () {
                     state.scaleRaf = 0;
@@ -1495,12 +1706,34 @@
             }
         }
 
+        function clearPagerZoomShells() {
+            Array.prototype.forEach.call(
+                pagesEl.querySelectorAll('.tsl-pager-zoom-shell'),
+                function (shell) {
+                    var inner = shell.firstElementChild;
+                    if (inner && shell.parentNode) {
+                        shell.parentNode.insertBefore(inner, shell);
+                    }
+                    if (shell.parentNode) {
+                        shell.parentNode.removeChild(shell);
+                    }
+                }
+            );
+        }
+
         function clearStepStageStyles() {
+            clearPagerZoomShells();
+            var keepCarousel = tslCompactPagerHost()
+                && root.getAttribute('data-tsl-pager-flow') === 'horizontal';
             Array.prototype.forEach.call(
                 pagesEl.querySelectorAll('.tsl-spread, .tsl-page'),
                 function (el) {
-                    el.style.transform = '';
-                    el.style.transformOrigin = '';
+                    if (!keepCarousel) {
+                        el.style.transform = '';
+                        el.style.transformOrigin = '';
+                        el.style.removeProperty('--tsl-pager-slide-i');
+                        el.style.removeProperty('--tsl-pager-slide-off');
+                    }
                     el.style.width = '';
                     el.style.height = '';
                     el.style.marginLeft = '';
@@ -1557,9 +1790,51 @@
         }
 
         function applyStepTransform(step, layout, scale, opts) {
+            opts = opts || {};
             var contentW = layout.w;
             var pageH = layout.h;
+            var scaledW = contentW * scale;
             var scaledH = pageH * scale;
+
+            if (opts.compactFit) {
+                var shell = document.createElement('div');
+                shell.className = 'tsl-pager-zoom-shell';
+                if (step.parentNode) {
+                    step.parentNode.insertBefore(shell, step);
+                    shell.appendChild(step);
+                }
+                step.style.width = contentW + 'px';
+                step.style.height = pageH + 'px';
+                step.style.transform = 'scale(' + scale + ')';
+                step.style.transformOrigin = 'top left';
+                step.style.marginLeft = '';
+                step.style.marginRight = '';
+                step.style.marginBottom = '';
+                shell.style.width = Math.ceil(scaledW) + 'px';
+                shell.style.height = Math.ceil(scaledH) + 'px';
+                shell.style.maxWidth = '100%';
+                shell.style.boxSizing = 'border-box';
+                shell.style.marginLeft = 'auto';
+                shell.style.marginRight = 'auto';
+                shell.style.overflow = 'hidden';
+                pagesEl.style.width = '';
+                pagesEl.style.height = '100%';
+                root.style.setProperty('--tsl-viewport-scale', String(scale));
+                viewport.style.overflowX = 'hidden';
+                viewport.style.overflowY = 'hidden';
+                viewport.style.alignItems = 'center';
+                viewport.style.justifyContent = 'center';
+                viewport.style.flex = '1 1 0';
+                viewport.style.minHeight = '0';
+                viewport.style.maxHeight = '100%';
+                if (opts.stageHeight > 0) {
+                    viewport.style.height = Math.ceil(opts.stageHeight) + 'px';
+                } else {
+                    viewport.style.height = '';
+                }
+                return;
+            }
+
             step.style.width = contentW + 'px';
             step.style.height = pageH + 'px';
             step.style.transform = 'scale(' + scale + ')';
@@ -1602,10 +1877,24 @@
                 return;
             }
             var fit = getPageFit();
+            var compact = tslCompactPagerHost();
+            if (compact) {
+                root.setAttribute('data-tsl-compact-pager', '1');
+            } else {
+                root.removeAttribute('data-tsl-compact-pager');
+                root.removeAttribute('data-tsl-pager-flow');
+                root.removeAttribute('data-tsl-pager-anim');
+            }
+            syncCompactPagerChrome();
             root.setAttribute('data-tsl-page-fit', fit);
             state.scaling = true;
             try {
                 clearPagerStageStyles();
+
+                if (compact) {
+                    applyMobileHorizontalFit();
+                    return;
+                }
 
                 var view = root.getAttribute('data-tsl-page-view') || 'single';
                 var steps = stepsForView(view);
@@ -1623,36 +1912,43 @@
                     applyNativePrintSizePolicy();
                     return;
                 }
+
+                function applyFitScreenScale() {
+                    var layout = stepLayoutSize(current);
+                    var avail = pagerStageSize();
+                    if (layout.w < 1 || layout.h < 1) {
+                        bailFitScreenToScroll(layout, avail);
+                        return;
+                    }
+                    if (hostStageCramped(avail, layout)) {
+                        bailFitScreenToScroll(layout, avail);
+                        return;
+                    }
+                    var margin = 0.985;
+                    var s = Math.min(avail.w / layout.w, avail.h / layout.h) * margin;
+                    if (s < TSL_MIN_FIT_SCREEN_SCALE) {
+                        bailFitScreenToScroll(layout, avail);
+                        return;
+                    }
+                    s = Math.min(Math.max(s, 0.05), 1);
+                    var scaledH = layout.h * s;
+                    var viewCap = readerBrowserViewportHeightPx();
+                    if (viewCap > 0 && scaledH > viewCap + 1) {
+                        s = Math.min(s, viewCap / layout.h);
+                    }
+                    root.removeAttribute('data-tsl-scale-unreasonable');
+                    root.removeAttribute('data-tsl-stage-cramped');
+                    applyStepTransform(current, layout, s, { lockHeight: true, stageHeight: avail.h });
+                }
+
                 if (fit === 'fit') {
                     applyFitWidthPolicy();
                     return;
                 }
-
-                var layout = stepLayoutSize(current);
-                var avail = pagerStageSize();
-                if (layout.w < 1 || layout.h < 1) {
-                    bailFitScreenToScroll(layout, avail);
+                if (fit === 'scale') {
+                    applyFitScreenScale();
                     return;
                 }
-                if (hostStageCramped(avail, layout)) {
-                    bailFitScreenToScroll(layout, avail);
-                    return;
-                }
-
-            var s = Math.min(avail.w / layout.w, avail.h / layout.h) * 0.985;
-            if (s < TSL_MIN_FIT_SCREEN_SCALE) {
-                bailFitScreenToScroll(layout, avail);
-                return;
-            }
-            s = Math.min(s, 1);
-            var scaledH = layout.h * s;
-            var viewCap = readerBrowserViewportHeightPx();
-            if (viewCap > 0 && scaledH > viewCap + 1) {
-                s = Math.min(s, viewCap / layout.h);
-            }
-            root.removeAttribute('data-tsl-scale-unreasonable');
-                root.removeAttribute('data-tsl-stage-cramped');
-                applyStepTransform(current, layout, s, { lockHeight: true, stageHeight: avail.h });
             } finally {
                 state.scaling = false;
                 var sz = pagerStageSize();
@@ -1670,6 +1966,13 @@
             var i = Math.max(0, Math.min(steps.length - 1, idx));
             if (i === state.index) {
                 return true;
+            }
+            if (tslCompactPagerHost()) {
+                root.setAttribute('data-tsl-pager-anim', '1');
+                window.clearTimeout(root._tslPagerAnimTimer);
+                root._tslPagerAnimTimer = window.setTimeout(function () {
+                    root.removeAttribute('data-tsl-pager-anim');
+                }, 450);
             }
             state.index = i;
             rememberActiveFromStep(steps[state.index]);
@@ -1733,6 +2036,64 @@
         prevBtn.addEventListener('click', function () { go(-1); });
         nextBtn.addEventListener('click', function () { go(1); });
 
+        (function attachMobileSwipe() {
+            var touchStartX = 0;
+            var touchStartY = 0;
+            var lastTouchTurnAt = 0;
+            viewport.addEventListener('touchstart', function (e) {
+                if (!tslCompactPagerHost() || !e.touches || !e.touches.length) {
+                    return;
+                }
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }, { passive: true });
+            viewport.addEventListener('touchend', function (e) {
+                if (!tslCompactPagerHost() || !e.changedTouches || !e.changedTouches.length) {
+                    return;
+                }
+                var dx = e.changedTouches[0].clientX - touchStartX;
+                var dy = e.changedTouches[0].clientY - touchStartY;
+                if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                    lastTouchTurnAt = Date.now();
+                    if (dx < 0) {
+                        go(1);
+                    } else {
+                        go(-1);
+                    }
+                    return;
+                }
+                if (e.target.closest && e.target.closest('a, button, input, textarea, select, [contenteditable="true"]')) {
+                    return;
+                }
+                var rect = viewport.getBoundingClientRect();
+                var w = rect.width || viewport.clientWidth;
+                if (w < 1) {
+                    return;
+                }
+                var rel = (e.changedTouches[0].clientX - rect.left) / w;
+                lastTouchTurnAt = Date.now();
+                go(rel < 0.5 ? -1 : 1);
+            }, { passive: true });
+            viewport.addEventListener('click', function (e) {
+                if (!tslCompactPagerHost()) {
+                    return;
+                }
+                if (Date.now() - lastTouchTurnAt < 450) {
+                    return;
+                }
+                if (e.target.closest && e.target.closest('a, button, input, textarea, select, [contenteditable="true"]')) {
+                    return;
+                }
+                var rect = viewport.getBoundingClientRect();
+                var w = rect.width || viewport.clientWidth;
+                if (w < 1) {
+                    return;
+                }
+                var rel = (e.clientX - rect.left) / w;
+                go(rel < 0.5 ? -1 : 1);
+            });
+        }());
+
         var resizeTimer;
         function schedulePagerRefresh() {
             if (state.scaling) {
@@ -1744,6 +2105,15 @@
                     return;
                 }
                 var sz = pagerStageSize();
+                var mountEl = root.closest('[data-tsl-mount]');
+                if (tslCompactPagerHost()
+                    && mountEl
+                    && typeof mountEl._tslCompactRepaginate === 'function'
+                    && state.stageW >= 0
+                    && (Math.abs(sz.w - state.stageW) >= 24 || Math.abs(sz.h - state.stageH) >= 24)) {
+                    mountEl._tslCompactRepaginate();
+                    return;
+                }
                 if (state.stageW >= 0
                     && Math.abs(sz.w - state.stageW) < 3
                     && Math.abs(sz.h - state.stageH) < 3) {
@@ -1754,6 +2124,10 @@
         }
         window.addEventListener('resize', schedulePagerRefresh);
         window.addEventListener('orientationchange', schedulePagerRefresh);
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', schedulePagerRefresh);
+            window.visualViewport.addEventListener('scroll', schedulePagerRefresh);
+        }
 
         if (typeof ResizeObserver !== 'undefined') {
             var pagerResizeObs = new ResizeObserver(schedulePagerRefresh);
@@ -1836,6 +2210,9 @@
         var page = header.page;
         var ty = header.typography;
         var layoutMode = layoutModeForDocument(header, blocks);
+        if (layoutMode === 'pages' && tslCompactPagerHost()) {
+            page = compactViewportPageFromPrintSpec(page);
+        }
         var root = document.createElement('div');
         root.className = 'tsl-root';
         root.setAttribute('data-tsl-layout', layoutMode);
@@ -5025,6 +5402,20 @@
         wrap.classList.add('tsl-reader-player-mount');
         wrap.setAttribute('data-tsl-mount', 'reader');
         var root = render(wrap, parsed);
+        wrap._tslCompactRepaginate = function () {
+            if (!tslCompactPagerHost()) {
+                return;
+            }
+            var idx = 0;
+            if (readerArticle._tslPlayer && typeof readerArticle._tslPlayer.progress === 'function') {
+                idx = readerArticle._tslPlayer.progress().index;
+            }
+            readerArticle._tslPlayer = null;
+            var next = enhancePublishedLean(readerArticle);
+            if (next && next.mode === 'pages' && typeof next.goToIndex === 'function' && idx > 0) {
+                next.goToIndex(idx);
+            }
+        };
         var player = {
             mode: 'pages',
             root: root,

@@ -6,7 +6,7 @@ We want a single format to exist, capable of rendering in browser and elsewhere 
 
 ## Quick start
 
-Serve this folder statically (e.g. XAMPP) and open **`lab/index.html`**. The lab loads **`spec/tsl-spec.tsl`** by default and includes sample documents.
+Serve this folder statically (e.g. XAMPP) and open **`lab/index.html`**. The lab loads a default document from **`lab/lab-documents.js`** (edit the `documents` list for your site). **`?tsl=`** in the URL still overrides the default.
 
 **Talesmith Reader:** after lab looks correct, sync `player/` into the ientra repo with `php tooling/sync_tsl_reader_player.php` (from ientra root; requires this repo as `../tsl-reader`), rebuild the node, and test a published TSL reading copy in the Reader plugin.
 

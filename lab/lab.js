@@ -6,8 +6,12 @@
     var fileInput = document.querySelector('[data-tsl-file]');
     var downloadBtn = document.querySelector('[data-tsl-download]');
     var sampleSelect = document.querySelector('[data-tsl-sample-select]');
-    var readToggle = document.querySelector('[data-tsl-read-toggle]');
-    var readMenu = document.querySelector('[data-tsl-read-menu]');
+    var fabRoot = document.querySelector('[data-tsl-lab-fab]');
+    var fabToggle = document.querySelector('[data-tsl-lab-fab-toggle]');
+    var fabPanel = document.querySelector('[data-tsl-lab-panel]');
+    var fabBackdrop = document.querySelector('[data-tsl-lab-fab-backdrop]');
+    var labScrollStage = null;
+    var labScrollHandler = null;
     var settings = document.querySelector('[data-tsl-settings]');
     var lastUrl = '';
     var lastParsed = null;
@@ -23,19 +27,90 @@
     var contentsToggle = document.querySelector('[data-tsl-contents-toggle]');
     var contentsClose = document.querySelector('[data-tsl-contents-close]');
 
-    function syncLabHeaderOffset() {
-        var header = document.querySelector('.tsl-lab-header');
-        if (!header) {
-            return;
+    document.documentElement.style.setProperty('--tsl-lab-header-block', '0px');
+
+    function readProgressFromPager(root) {
+        if (!root || typeof root._tslPagerInfo !== 'function') {
+            return 0;
         }
-        document.documentElement.style.setProperty(
-            '--tsl-lab-header-block',
-            Math.ceil(header.getBoundingClientRect().height) + 'px'
-        );
+        var info = root._tslPagerInfo();
+        if (!info.total) {
+            return 0;
+        }
+        if (info.total < 2) {
+            return 1;
+        }
+        return info.index / (info.total - 1);
     }
 
-    syncLabHeaderOffset();
-    window.addEventListener('resize', syncLabHeaderOffset);
+    function readProgressFromScroll(stage) {
+        if (!stage) {
+            return 0;
+        }
+        var range = stage.scrollHeight - stage.clientHeight;
+        if (range < 1) {
+            return 1;
+        }
+        return Math.min(1, Math.max(0, stage.scrollTop / range));
+    }
+
+    function updateFabReadProgress(frac) {
+        if (!fabToggle) {
+            return;
+        }
+        frac = Math.min(1, Math.max(0, Number(frac) || 0));
+        fabToggle.style.setProperty('--tsl-lab-read-progress', String(frac));
+        var pct = Math.round(frac * 100);
+        if (pct > 0 && pct < 100) {
+            fabToggle.title = 'Lab & reading settings · ' + pct + '% read';
+        } else if (pct >= 100) {
+            fabToggle.title = 'Lab & reading settings · finished';
+        } else {
+            fabToggle.title = 'Lab & reading settings';
+        }
+    }
+
+    function detachScrollProgress() {
+        if (labScrollStage && labScrollHandler) {
+            labScrollStage.removeEventListener('scroll', labScrollHandler);
+        }
+        labScrollStage = null;
+        labScrollHandler = null;
+    }
+
+    function wireLabReadProgress() {
+        detachScrollProgress();
+        if (!mount) {
+            updateFabReadProgress(0);
+            return;
+        }
+        var root = mount.querySelector('.tsl-root');
+        if (root && typeof root._tslPagerSetOnChange === 'function') {
+            root._tslPagerSetOnChange(null);
+        }
+        var layout = TalesmithTsl.getTslLayout ? TalesmithTsl.getTslLayout() : 'pages';
+        if (layout === 'pages' && root && typeof root._tslPagerSetOnChange === 'function') {
+            root._tslPagerSetOnChange(function () {
+                updateFabReadProgress(readProgressFromPager(root));
+            });
+            return;
+        }
+        if (layout === 'scroll') {
+            var stage = mount.closest('.tsl-lab-stage') || document.querySelector('.tsl-lab-stage');
+            if (stage) {
+                labScrollHandler = function () {
+                    updateFabReadProgress(readProgressFromScroll(stage));
+                };
+                labScrollStage = stage;
+                stage.addEventListener('scroll', labScrollHandler, { passive: true });
+                requestAnimationFrame(function () {
+                    updateFabReadProgress(readProgressFromScroll(stage));
+                });
+                return;
+            }
+        }
+        updateFabReadProgress(0);
+    }
 
     function setContentsOpen(open) {
         if (!contentsPanel) {
@@ -100,6 +175,7 @@
 
     if (contentsToggle) {
         contentsToggle.addEventListener('click', function () {
+            setLabPanelOpen(false);
             setContentsOpen(contentsPanel && contentsPanel.hidden);
         });
     }
@@ -115,8 +191,6 @@
         });
     }
 
-    /* Reader theme drives the lab chrome too (player/lab.css html[data-tsl-reader-theme]).
-       index.html stamps it before first paint; keep it in sync with the T menu. */
     function syncChromeTheme() {
         var prefs = TalesmithTsl.getReadingPrefs ? TalesmithTsl.getReadingPrefs() : null;
         var theme = prefs && (prefs.theme === 'sepia' || prefs.theme === 'dark') ? prefs.theme : 'light';
@@ -128,6 +202,7 @@
         if (settings && TalesmithTsl.syncReadingPrefsUI) {
             TalesmithTsl.syncReadingPrefsUI(settings);
         }
+        requestAnimationFrame(wireLabReadProgress);
     });
     syncChromeTheme();
 
@@ -139,14 +214,87 @@
         status.classList.toggle('is-error', !!isError);
     }
 
+    function resolveTslUrl(url) {
+        if (!url || /^(\.\.|\/|https?:)/i.test(url)) {
+            return url;
+        }
+        return '../' + url.replace(/^\//, '');
+    }
+
+    function labDocumentsConfig() {
+        var raw = typeof window !== 'undefined' ? window.__TslLabDocuments : null;
+        var cfg = raw && typeof raw === 'object' ? raw : {};
+        var docs = Array.isArray(cfg.documents) ? cfg.documents : [];
+        var list = [];
+        docs.forEach(function (entry) {
+            if (!entry || typeof entry !== 'object') {
+                return;
+            }
+            var label = entry.label != null ? String(entry.label).trim() : '';
+            var url = entry.url != null ? String(entry.url).trim() : '';
+            if (!label || !url) {
+                return;
+            }
+            list.push({
+                label: label,
+                url: url,
+                selected: !!entry.selected
+            });
+        });
+        var defaultUrl = cfg.defaultUrl != null ? String(cfg.defaultUrl).trim() : '';
+        if (!defaultUrl) {
+            list.some(function (d) {
+                if (d.selected) {
+                    defaultUrl = d.url;
+                    return true;
+                }
+                return false;
+            });
+        }
+        if (!defaultUrl && list.length) {
+            defaultUrl = list[0].url;
+        }
+        return {
+            placeholder: cfg.placeholder != null ? String(cfg.placeholder) : 'Choose…',
+            defaultUrl: defaultUrl,
+            documents: list
+        };
+    }
+
+    function populateSampleSelect() {
+        if (!sampleSelect) {
+            return labDocumentsConfig();
+        }
+        var cfg = labDocumentsConfig();
+        sampleSelect.textContent = '';
+        var blank = document.createElement('option');
+        blank.value = '';
+        blank.textContent = cfg.placeholder;
+        sampleSelect.appendChild(blank);
+        cfg.documents.forEach(function (doc) {
+            var opt = document.createElement('option');
+            opt.value = doc.url;
+            opt.textContent = doc.label;
+            if (doc.selected) {
+                opt.selected = true;
+            }
+            sampleSelect.appendChild(opt);
+        });
+        return cfg;
+    }
+
     function syncSampleSelect(url) {
         if (!sampleSelect || !url) {
             return;
         }
+        var resolved = resolveTslUrl(url);
         var found = false;
         Array.prototype.forEach.call(sampleSelect.options, function (opt) {
-            if (opt.value === url) {
-                sampleSelect.value = url;
+            if (!opt.value) {
+                return;
+            }
+            if (opt.value === url || resolveTslUrl(opt.value) === resolved) {
+                sampleSelect.value = opt.value;
                 found = true;
             }
         });
@@ -192,13 +340,9 @@
         }
         rebuildLabContents(parsed);
         setStatus('');
-    }
-
-    function resolveTslUrl(url) {
-        if (!url || /^(\.\.|\/|https?:)/i.test(url)) {
-            return url;
-        }
-        return '../' + url.replace(/^\//, '');
+        requestAnimationFrame(function () {
+            wireLabReadProgress();
+        });
     }
 
     function openUrl(url) {
@@ -218,44 +362,20 @@
         });
     }
 
-    function syncReadMenuPosition() {
-        if (!readToggle || !readMenu || readMenu.hidden) {
+    function setLabPanelOpen(open) {
+        if (!fabRoot || !fabToggle || !fabPanel) {
             return;
         }
-        readMenu.style.marginLeft = '';
-        readMenu.style.removeProperty('--tsl-lab-read-menu-top');
-
-        if (window.matchMedia('(max-width: 720px)').matches) {
-            var toggleRect = readToggle.getBoundingClientRect();
-            readMenu.style.setProperty('--tsl-lab-read-menu-top', Math.round(toggleRect.bottom + 8) + 'px');
-        }
-
-        var margin = 16;
-        var menuRect = readMenu.getBoundingClientRect();
-        var shift = 0;
-        if (menuRect.left < margin) {
-            shift = margin - menuRect.left;
-        } else if (menuRect.right > window.innerWidth - margin) {
-            shift = window.innerWidth - margin - menuRect.right;
-        }
-        if (shift !== 0) {
-            readMenu.style.marginLeft = shift + 'px';
+        fabRoot.classList.toggle('is-open', open);
+        fabToggle.classList.toggle('is-open', open);
+        fabToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (fabBackdrop) {
+            fabBackdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
         }
     }
 
-    function setReadMenuOpen(open) {
-        if (!readToggle || !readMenu) {
-            return;
-        }
-        readToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        readMenu.hidden = !open;
-        readToggle.classList.toggle('is-open', open);
-        if (open) {
-            requestAnimationFrame(syncReadMenuPosition);
-        } else {
-            readMenu.style.marginLeft = '';
-            readMenu.style.removeProperty('--tsl-lab-read-menu-top');
-        }
+    function isLabPanelOpen() {
+        return fabRoot && fabRoot.classList.contains('is-open');
     }
 
     if (sampleSelect) {
@@ -303,39 +423,46 @@
         });
     }
 
-    if (readToggle && readMenu) {
-        readToggle.addEventListener('click', function (e) {
+    if (fabToggle && fabPanel) {
+        fabToggle.addEventListener('click', function (e) {
             e.stopPropagation();
-            setReadMenuOpen(readMenu.hidden);
+            setLabPanelOpen(!isLabPanelOpen());
         });
 
-        readMenu.addEventListener('click', function (e) {
+        fabPanel.addEventListener('click', function (e) {
             e.stopPropagation();
         });
 
-        document.addEventListener('click', function () {
-            if (!readMenu.hidden) {
-                setReadMenuOpen(false);
+        if (fabBackdrop) {
+            fabBackdrop.addEventListener('click', function () {
+                setLabPanelOpen(false);
+            });
+        }
+
+        document.addEventListener('click', function (e) {
+            if (!isLabPanelOpen()) {
+                return;
             }
+            if (fabRoot && fabRoot.contains(e.target)) {
+                return;
+            }
+            setLabPanelOpen(false);
         });
 
         document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && !readMenu.hidden) {
-                setReadMenuOpen(false);
-                readToggle.focus();
+            if (e.key === 'Escape' && isLabPanelOpen()) {
+                setLabPanelOpen(false);
+                fabToggle.focus();
             }
-        });
-
-        window.addEventListener('resize', function () {
-            syncReadMenuPosition();
         });
     }
 
+    var docCfg = populateSampleSelect();
     var params = new URLSearchParams(window.location.search);
     var q = params.get('tsl');
     if (q) {
         openUrl(q);
-    } else {
-        openUrl('../spec/tsl-spec.tsl');
+    } else if (docCfg.defaultUrl) {
+        openUrl(docCfg.defaultUrl);
     }
 }());
