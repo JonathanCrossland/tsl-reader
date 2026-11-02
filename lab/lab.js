@@ -12,6 +12,10 @@
     var fabBackdrop = document.querySelector('[data-tsl-lab-fab-backdrop]');
     var labScrollStage = null;
     var labScrollHandler = null;
+    var scrollSaveTimer = null;
+    var activeDocumentKey = '';
+    var labRestoringProgress = false;
+    var LAB_PROGRESS_PREFIX = 'tsl:lab-progress:';
     var settings = document.querySelector('[data-tsl-settings]');
     var lastUrl = '';
     var lastParsed = null;
@@ -28,6 +32,192 @@
     var contentsClose = document.querySelector('[data-tsl-contents-close]');
 
     document.documentElement.style.setProperty('--tsl-lab-header-block', '0px');
+
+    function labProgressStorage() {
+        if (typeof window !== 'undefined' && window.__TalesmithTslStorage) {
+            return window.__TalesmithTslStorage;
+        }
+        return null;
+    }
+
+    function storageGetItem(key) {
+        var store = labProgressStorage();
+        if (store && store.getItem) {
+            return store.getItem(key);
+        }
+        try {
+            return localStorage.getItem(key);
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function storageSetItem(key, value) {
+        var store = labProgressStorage();
+        if (store && store.setItem) {
+            store.setItem(key, value);
+            return;
+        }
+        try {
+            localStorage.setItem(key, value);
+        } catch (e) { /* private mode */ }
+    }
+
+    function documentProgressStorageKey(urlOrFileId) {
+        if (!urlOrFileId) {
+            return '';
+        }
+        if (String(urlOrFileId).indexOf('file:') === 0) {
+            return LAB_PROGRESS_PREFIX + urlOrFileId;
+        }
+        try {
+            return LAB_PROGRESS_PREFIX + new URL(urlOrFileId, window.location.href).href;
+        } catch (e) {
+            return LAB_PROGRESS_PREFIX + String(urlOrFileId);
+        }
+    }
+
+    function setActiveDocumentKey(resolvedUrl, fileName) {
+        if (resolvedUrl) {
+            activeDocumentKey = documentProgressStorageKey(resolvedUrl);
+        } else if (fileName) {
+            activeDocumentKey = documentProgressStorageKey('file:' + fileName);
+        } else {
+            activeDocumentKey = '';
+        }
+    }
+
+    function loadDocumentProgress(key) {
+        if (!key) {
+            return null;
+        }
+        var raw = storageGetItem(key);
+        if (!raw) {
+            return null;
+        }
+        try {
+            var data = JSON.parse(raw);
+            if (!data || typeof data !== 'object') {
+                return null;
+            }
+            return data;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function saveDocumentProgress(key, data) {
+        if (!key || !data) {
+            return;
+        }
+        storageSetItem(key, JSON.stringify(data));
+    }
+
+    function persistReadingProgress() {
+        if (labRestoringProgress || !activeDocumentKey || !mount) {
+            return;
+        }
+        var layout = TalesmithTsl.getTslLayout ? TalesmithTsl.getTslLayout() : 'pages';
+        var payload = { layout: layout, updated: Date.now() };
+        if (layout === 'pages') {
+            var root = mount.querySelector('.tsl-root');
+            if (!root || typeof root._tslPagerInfo !== 'function') {
+                return;
+            }
+            var info = root._tslPagerInfo();
+            payload.pageIndex = info.index;
+            payload.scrollFrac = readProgressFromPager(root);
+        } else if (layout === 'scroll') {
+            var stage = mount.closest('.tsl-lab-stage') || document.querySelector('.tsl-lab-stage');
+            if (!stage) {
+                return;
+            }
+            payload.scrollFrac = readProgressFromScroll(stage);
+        } else {
+            return;
+        }
+        saveDocumentProgress(activeDocumentKey, payload);
+    }
+
+    function saveCurrentReadingProgress() {
+        persistReadingProgress();
+    }
+
+    function restoreLabReadingPosition() {
+        if (!activeDocumentKey || !mount) {
+            updateFabReadProgress(0);
+            return;
+        }
+        var saved = loadDocumentProgress(activeDocumentKey);
+        if (!saved) {
+            updateFabReadProgress(0);
+            return;
+        }
+        if (typeof saved.scrollFrac === 'number') {
+            updateFabReadProgress(saved.scrollFrac);
+        }
+        labRestoringProgress = true;
+        var layout = TalesmithTsl.getTslLayout ? TalesmithTsl.getTslLayout() : 'pages';
+        if (saved.layout === 'pages' && layout === 'pages' && typeof saved.pageIndex === 'number') {
+            var root = mount.querySelector('.tsl-root');
+            var targetIdx = Math.max(0, saved.pageIndex);
+            var tries = 0;
+            function finishRestore() {
+                labRestoringProgress = false;
+                persistReadingProgress();
+            }
+            function tryPageRestore() {
+                if (!root || typeof root._tslPagerGoToIndex !== 'function') {
+                    if (tries < 24) {
+                        tries += 1;
+                        requestAnimationFrame(tryPageRestore);
+                    } else {
+                        finishRestore();
+                    }
+                    return;
+                }
+                root._tslPagerGoToIndex(targetIdx);
+                updateFabReadProgress(readProgressFromPager(root));
+                finishRestore();
+            }
+            requestAnimationFrame(tryPageRestore);
+            return;
+        }
+        if (saved.layout === 'scroll' && layout === 'scroll' && typeof saved.scrollFrac === 'number') {
+            var stage = mount.closest('.tsl-lab-stage') || document.querySelector('.tsl-lab-stage');
+            if (!stage) {
+                labRestoringProgress = false;
+                return;
+            }
+            var frac = Math.min(1, Math.max(0, saved.scrollFrac));
+            var scrollTries = 0;
+            function finishRestore() {
+                labRestoringProgress = false;
+                persistReadingProgress();
+            }
+            function tryScrollRestore() {
+                var range = stage.scrollHeight - stage.clientHeight;
+                if (range < 1) {
+                    if (scrollTries < 24) {
+                        scrollTries += 1;
+                        requestAnimationFrame(tryScrollRestore);
+                        return;
+                    }
+                    updateFabReadProgress(frac);
+                    finishRestore();
+                    return;
+                }
+                stage.scrollTop = frac * range;
+                updateFabReadProgress(readProgressFromScroll(stage));
+                finishRestore();
+            }
+            requestAnimationFrame(function () {
+                requestAnimationFrame(tryScrollRestore);
+            });
+            return;
+        }
+        labRestoringProgress = false;
+    }
 
     function readProgressFromPager(root) {
         if (!root || typeof root._tslPagerInfo !== 'function') {
@@ -92,6 +282,7 @@
         if (layout === 'pages' && root && typeof root._tslPagerSetOnChange === 'function') {
             root._tslPagerSetOnChange(function () {
                 updateFabReadProgress(readProgressFromPager(root));
+                persistReadingProgress();
             });
             return;
         }
@@ -100,6 +291,10 @@
             if (stage) {
                 labScrollHandler = function () {
                     updateFabReadProgress(readProgressFromScroll(stage));
+                    clearTimeout(scrollSaveTimer);
+                    scrollSaveTimer = setTimeout(function () {
+                        persistReadingProgress();
+                    }, 280);
                 };
                 labScrollStage = stage;
                 stage.addEventListener('scroll', labScrollHandler, { passive: true });
@@ -198,6 +393,7 @@
     }
 
     document.addEventListener('tsl:readingprefs', function () {
+        saveCurrentReadingProgress();
         syncChromeTheme();
         if (settings && TalesmithTsl.syncReadingPrefsUI) {
             TalesmithTsl.syncReadingPrefsUI(settings);
@@ -340,14 +536,26 @@
         }
         rebuildLabContents(parsed);
         setStatus('');
+        if (loadDocumentProgress(activeDocumentKey)) {
+            labRestoringProgress = true;
+        }
         requestAnimationFrame(function () {
             wireLabReadProgress();
+            requestAnimationFrame(function () {
+                restoreLabReadingPosition();
+            });
         });
     }
 
     function openUrl(url) {
+        saveCurrentReadingProgress();
         url = resolveTslUrl(url);
         lastUrl = url;
+        setActiveDocumentKey(url, '');
+        var savedEarly = loadDocumentProgress(activeDocumentKey);
+        if (savedEarly && typeof savedEarly.scrollFrac === 'number') {
+            updateFabReadProgress(savedEarly.scrollFrac);
+        }
         syncSampleSelect(url);
         setStatus('');
         fetch(url).then(function (res) {
@@ -393,7 +601,9 @@
             if (!file) {
                 return;
             }
+            saveCurrentReadingProgress();
             lastUrl = '';
+            setActiveDocumentKey('', file.name);
             if (sampleSelect) {
                 sampleSelect.value = '';
             }
@@ -456,6 +666,13 @@
             }
         });
     }
+
+    window.addEventListener('pagehide', saveCurrentReadingProgress);
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') {
+            saveCurrentReadingProgress();
+        }
+    });
 
     var docCfg = populateSampleSelect();
     var params = new URLSearchParams(window.location.search);
