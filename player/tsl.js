@@ -1128,6 +1128,8 @@
     }
 
     var TSL_SPREAD_GAP_PX = 12;
+    /** Extra budget subtracted from stage (shadows, viewport padding, subpixel flex). */
+    var TSL_PAGER_STAGE_SLACK_PX = 3;
     /** Smallest scale applied in “fit screen”; below this we show trim size + scroll. */
     var TSL_MIN_FIT_SCREEN_SCALE = 0.42;
     /** Host width/height below this fraction of trim → treat as too small to shrink the page. */
@@ -1247,6 +1249,30 @@
         return availW >= pageW * 2 + TSL_SPREAD_GAP_PX;
     }
 
+    /** Width of one column in spread view (matches --tsl-page-fit-w in tsl.css). */
+    function spreadColumnWidthPx(availW, pageW) {
+        if (availW < 1) {
+            return 0;
+        }
+        if (pageW < 1) {
+            pageW = 280;
+        }
+        var gutter = TSL_SPREAD_GAP_PX;
+        return Math.min(pageW, Math.max(0, (availW - gutter) / 2));
+    }
+
+    /** Fit-width spread: two scaled columns, not two full trim widths (Reader column vs lab full width). */
+    function spreadFitsStage(availW, pageW) {
+        var colW = spreadColumnWidthPx(availW, pageW);
+        if (colW < 1) {
+            return false;
+        }
+        if (pageW > 1 && colW < pageW * TSL_HOST_CRAMPED_RATIO) {
+            return false;
+        }
+        return (2 * colW + TSL_SPREAD_GAP_PX) <= availW + 1;
+    }
+
     function hostStageCramped(avail, layout) {
         if (!layout || layout.w < 1 || layout.h < 1) {
             return false;
@@ -1362,16 +1388,16 @@
                 }
             }
             var box = fitContainerEl();
+            if (box) {
+                var boxRect = box.getBoundingClientRect();
+                if (boxRect.width > 0) {
+                    return Math.max(0, Math.floor(boxRect.width));
+                }
+            }
             var vpRect = viewport.getBoundingClientRect();
             var w = viewport.clientWidth;
             if (w < 1) {
                 w = vpRect.width;
-            }
-            if (box) {
-                var boxRect = box.getBoundingClientRect();
-                if (boxRect.width > 0) {
-                    w = Math.min(w > 0 ? w : boxRect.width, boxRect.width);
-                }
             }
             return Math.max(0, w);
         }
@@ -1484,7 +1510,9 @@
         /** Host-defined stage (data-tsl-fit-container): width from container; height from pager wrap. */
         function pagerStageSize() {
             var fit = getPageFit();
-            var inset = (tslCompactPagerHost() && (fit === 'scale' || fit === 'fit')) ? 0 : 8;
+            var inset = (tslCompactPagerHost() && (fit === 'scale' || fit === 'fit'))
+                ? 0
+                : (8 + TSL_PAGER_STAGE_SLACK_PX);
             var w;
             var h;
             if (tslCompactPagerHost() && (fit === 'scale' || fit === 'fit')) {
@@ -1508,7 +1536,14 @@
             }
             var avail = containerWidthPx();
             var nom = nominalTrimPageSizePx();
-            if (!pageFitsTwoUp(avail, nom.w)) {
+            var fit = getPageFit();
+            if (fit === 'native') {
+                if (!pageFitsTwoUp(avail, nom.w)) {
+                    return 'single';
+                }
+                return 'spread';
+            }
+            if (!spreadFitsStage(avail, nom.w)) {
                 return 'single';
             }
             return 'spread';
@@ -1578,11 +1613,31 @@
             viewport.style.flex = '1 1 0';
             viewport.style.minHeight = '0';
             viewport.style.maxHeight = '100%';
-            if (avail.h > 0) {
-                viewport.style.height = Math.ceil(avail.h) + 'px';
-            } else {
+            viewport.style.height = '';
+        }
+
+        /** Fit-width pages: clip micro overflow (shadows/subpx); cramped paths keep scroll. */
+        function syncFitPagerOverflow() {
+            if (root.hasAttribute('data-tsl-stage-cramped')
+                || root.hasAttribute('data-tsl-scale-unreasonable')) {
+                viewport.style.overflowX = 'auto';
+                viewport.style.overflowY = 'auto';
+                viewport.style.alignItems = 'flex-start';
+                viewport.style.justifyContent = 'center';
+                viewport.style.flex = '';
+                viewport.style.minHeight = '';
+                viewport.style.maxHeight = '';
                 viewport.style.height = '';
+                return;
             }
+            viewport.style.overflowX = 'hidden';
+            viewport.style.overflowY = 'hidden';
+            viewport.style.alignItems = 'center';
+            viewport.style.justifyContent = 'center';
+            viewport.style.flex = '1 1 0';
+            viewport.style.minHeight = '0';
+            viewport.style.maxHeight = '100%';
+            viewport.style.height = '';
         }
 
         /** Fit width: honor host box unless unreasonably small. */
@@ -1845,8 +1900,8 @@
             root.style.setProperty('--tsl-viewport-scale', String(scale));
             if (opts.lockHeight) {
                 viewport.style.overflowX = 'hidden';
-                viewport.style.overflowY = 'auto';
-                viewport.style.alignItems = 'flex-start';
+                viewport.style.overflowY = 'hidden';
+                viewport.style.alignItems = 'center';
                 viewport.style.justifyContent = 'center';
                 viewport.style.flex = '1 1 0';
                 viewport.style.minHeight = '0';
@@ -1903,12 +1958,11 @@
                     return;
                 }
 
-                viewport.style.alignItems = 'flex-start';
-                viewport.style.justifyContent = 'center';
-                viewport.style.overflowX = 'auto';
-                viewport.style.overflowY = 'auto';
-
                 if (fit === 'native') {
+                    viewport.style.alignItems = 'flex-start';
+                    viewport.style.justifyContent = 'center';
+                    viewport.style.overflowX = 'auto';
+                    viewport.style.overflowY = 'auto';
                     applyNativePrintSizePolicy();
                     return;
                 }
@@ -1925,7 +1979,11 @@
                         return;
                     }
                     var margin = 0.985;
-                    var s = Math.min(avail.w / layout.w, avail.h / layout.h) * margin;
+                    var slack = TSL_PAGER_STAGE_SLACK_PX;
+                    var s = Math.min(
+                        Math.max(0, avail.w - slack) / layout.w,
+                        Math.max(0, avail.h - slack) / layout.h
+                    ) * margin;
                     if (s < TSL_MIN_FIT_SCREEN_SCALE) {
                         bailFitScreenToScroll(layout, avail);
                         return;
@@ -1943,10 +2001,12 @@
 
                 if (fit === 'fit') {
                     applyFitWidthPolicy();
+                    syncFitPagerOverflow();
                     return;
                 }
                 if (fit === 'scale') {
                     applyFitScreenScale();
+                    syncFitPagerOverflow();
                     return;
                 }
             } finally {
