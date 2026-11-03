@@ -56,9 +56,9 @@
       }
     },
     "typography": {
-      "presetId": "custom",
-      "fontId": "garamond",
-      "fontFamily": "Garamond, \"EB Garamond\", \"Adobe Garamond Pro\", \"Times New Roman\", serif",
+      "presetId": "academic",
+      "fontId": "times",
+      "fontFamily": "\"Times New Roman\", Times, serif",
       "sizePt": 12,
       "lineHeight": 1.5,
       "paragraphAlign": "left",
@@ -579,12 +579,28 @@
         "theme": null,
         "cells": [
           [
-            "Format",
-            "\"talesmith-lang\""
+            "format",
+            "\"talesmith-lang\" — envelope discriminator"
           ],
           [
-            "Version",
-            "1"
+            "version",
+            "integer 1 — format version (draft)"
+          ],
+          [
+            "header.theme",
+            "default | serif | dark | compact — reader CSS theme id"
+          ],
+          [
+            "header.readMode",
+            "true | false — replace [Field] tokens in block text when true"
+          ],
+          [
+            "header.allowScrollMode",
+            "true | false — allow continuous scroll layout (default true)"
+          ],
+          [
+            "header.numheadings",
+            "numerals | roman — optional outline style for h1–h3 labels"
           ]
         ],
         "header": false,
@@ -595,8 +611,17 @@
         "type": "code",
         "align": "left",
         "theme": null,
-        "text": "{  \n\"format\": \"talesmith-lang\",  \n\"version\": 1,  \n\"header\": {    \n  \"page\": {},    \n  \"typography\": {},   \n  \"numbering\": {},\n  \"metadata\" : {},\n  \"mergeFields\" : {}\n  }, \n  \"document\": {\n    \"blocks\": []\n  }\n}",
+        "text": "{  \n\"format\": \"talesmith-lang\",  \n\"version\": 1,\n\"theme\": \"default\",\n\"readMode\": false,\n\"allowScrollMode\": true,\n\"header\": {    \n  \"page\": {},    \n  \"typography\": {},   \n  \"numbering\": {},\n  \"metadata\" : {},\n  \"mergeFields\" : {}\n  }, \n  \"document\": {\n    \"blocks\": []\n  }\n}",
         "caption": "Top Level TSL Structure",
+        "cols": 2
+      },
+      {
+        "id": "b25855",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "",
+        "dropCap": null,
         "cols": 2
       },
       {
@@ -613,7 +638,16 @@
         "type": "paragraph",
         "align": "left",
         "theme": null,
-        "text": "The header is mandatory for reader applications, but not for importing or opening a document in an editor. ",
+        "text": "The header is mandatory for reader applications, but not for importing or opening a document in an editor as the header can be reconstructed. The document content must always be extractable, even if headers are missing, as the content is always worth recovery.",
+        "dropCap": null,
+        "cols": 2
+      },
+      {
+        "id": "b25854",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "The header elements are discussed below.",
         "dropCap": null,
         "cols": 2
       },
@@ -627,6 +661,85 @@
         "number": "2.1.1"
       },
       {
+        "id": "b25860",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "Outlines the page requirements. Pages are set for exact print size, and a target for screen. ",
+        "dropCap": null,
+        "cols": 2
+      },
+      {
+        "id": "b25858",
+        "type": "table",
+        "align": "left",
+        "theme": null,
+        "cells": [
+          [
+            "formatId",
+            "web | custom | us-novel | us-mass-market | us-business | us-reference | uk-novel | uk-business | uk-reference — preset chosen in Studio"
+          ],
+          [
+            "kind",
+            "web | print — layout mode after resolve"
+          ],
+          [
+            "trimMM",
+            "{ width, height } number (mm) — resolved page size"
+          ],
+          [
+            "trimIn",
+            "{ width, height } number (in) — print/custom only"
+          ],
+          [
+            "marginsMM",
+            "{ top, bottom, outside, gutter } number (mm)"
+          ],
+          [
+            "marginsIn",
+            "same keys (in) — print/custom only"
+          ],
+          [
+            "headerTopMM",
+            "number (mm) — distance from trim to header text"
+          ],
+          [
+            "footerBottomMM",
+            "number (mm) — distance from trim to footer text"
+          ],
+          [
+            "rowGapMM",
+            "number (mm) — gap between header/footer rule and body"
+          ],
+          [
+            "headerRule",
+            "true | false — line above running header"
+          ],
+          [
+            "footerRule",
+            "true | false — line above running footer"
+          ],
+          [
+            "usePrintGutters",
+            "true | false — mirror inside/outside margins on left/right pages"
+          ],
+          [
+            "sidesMM",
+            "{ left, right } each { left, right } (mm) — effective side padding per page side"
+          ],
+          [
+            "bleed",
+            "null — no bleed value in export today"
+          ],
+          [
+            "unusedCustomFormat",
+            "object — saved custom trim/margins when formatId is not custom"
+          ]
+        ],
+        "header": false,
+        "cols": 2
+      },
+      {
         "id": "b25844",
         "type": "h3",
         "align": "left",
@@ -634,6 +747,61 @@
         "text": "Typography",
         "cols": 2,
         "number": "2.1.2"
+      },
+      {
+        "id": "b25861",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "Resolved defaults for body text; fontFamily is the CSS stack applied at render time.",
+        "dropCap": null,
+        "cols": 2
+      },
+      {
+        "id": "b25862",
+        "type": "table",
+        "align": "left",
+        "theme": null,
+        "cells": [
+          [
+            "presetId",
+            "string — style preset id or custom (provenance only)"
+          ],
+          [
+            "fontId",
+            "book-serif | georgia | times | palatino | garamond | baskerville | sans | courier"
+          ],
+          [
+            "fontFamily",
+            "string — resolved CSS font stack for fontId"
+          ],
+          [
+            "sizePt",
+            "number 6–36 — body size in points"
+          ],
+          [
+            "lineHeight",
+            "number 1–3 — unitless line height"
+          ],
+          [
+            "paragraphAlign",
+            "left | center | right | justify — default paragraph alignment"
+          ],
+          [
+            "paragraphIndentIn",
+            "number 0–2 — first-line indent (inches)"
+          ],
+          [
+            "paragraphSpacingPt",
+            "number 0–36 — space after paragraph (points)"
+          ],
+          [
+            "hyphenation",
+            "true | false — CSS hyphenation on body text"
+          ]
+        ],
+        "header": false,
+        "cols": 2
       },
       {
         "id": "b25846",
@@ -645,6 +813,37 @@
         "number": "2.1.3"
       },
       {
+        "id": "b25863",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "Controls printed page numbers and which physical sheet counts as page one.",
+        "dropCap": null,
+        "cols": 2
+      },
+      {
+        "id": "b25864",
+        "type": "table",
+        "align": "left",
+        "theme": null,
+        "cells": [
+          [
+            "startPage",
+            "integer ≥ 1 — number shown on the first numbered sheet"
+          ],
+          [
+            "pageOffsetStart",
+            "integer ≥ 0 — unnumbered front-matter sheets before numbering"
+          ],
+          [
+            "firstPhysicalPageSide",
+            "left — first physical page is a left (verso) page"
+          ]
+        ],
+        "header": false,
+        "cols": 2
+      },
+      {
         "id": "b25848",
         "type": "h3",
         "align": "left",
@@ -652,6 +851,37 @@
         "text": "Metadata",
         "cols": 2,
         "number": "2.1.4"
+      },
+      {
+        "id": "b25865",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "Document fields and publish context; fields round-trip with the editor customFields list.",
+        "dropCap": null,
+        "cols": 2
+      },
+      {
+        "id": "b25866",
+        "type": "table",
+        "align": "left",
+        "theme": null,
+        "cells": [
+          [
+            "fields",
+            "array of { name, value } string — author-defined merge fields"
+          ],
+          [
+            "title",
+            "string — optional publish title"
+          ],
+          [
+            "category",
+            "{ id, name } — optional publish category"
+          ]
+        ],
+        "header": false,
+        "cols": 2
       },
       {
         "id": "b25850",
@@ -667,8 +897,46 @@
         "type": "paragraph",
         "align": "left",
         "theme": null,
-        "text": "",
+        "text": "Resolved map for [Field] substitution when readMode is true; computed page tokens are filled at render time and are not stored in fields.",
         "dropCap": null,
+        "cols": 2
+      },
+      {
+        "id": "b25867",
+        "type": "table",
+        "align": "left",
+        "theme": null,
+        "cells": [
+          [
+            "version",
+            "number — merge map version (1 in Studio export; 0.1 when synthesised by the player)"
+          ],
+          [
+            "fields",
+            "array of { name, value, used } — declared and discovered tokens"
+          ],
+          [
+            "fields[].name",
+            "string matching [A-Za-z][A-Za-z0-9 _.-]* — display name without brackets"
+          ],
+          [
+            "fields[].value",
+            "string — substituted text (may be empty)"
+          ],
+          [
+            "fields[].used",
+            "true | false — token appears somewhere in document.blocks"
+          ],
+          [
+            "values",
+            "object — keys are normalised lowercase names; values are strings for substitution"
+          ],
+          [
+            "computed tokens",
+            "[PageNo] [PageCount] [RunningHeader] [Title] [WordCount] [Lines] [Date] [Time] [AuthorLastName] … — filled at render; aliases like [Page] and [RunningHead] map to the same keys"
+          ]
+        ],
+        "header": false,
         "cols": 2
       },
       {
