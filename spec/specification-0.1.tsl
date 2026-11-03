@@ -56,9 +56,9 @@
       }
     },
     "typography": {
-      "presetId": "academic",
-      "fontId": "times",
-      "fontFamily": "\"Times New Roman\", Times, serif",
+      "presetId": "custom",
+      "fontId": "garamond",
+      "fontFamily": "Garamond, \"EB Garamond\", \"Adobe Garamond Pro\", \"Times New Roman\", serif",
       "sizePt": 12,
       "lineHeight": 1.5,
       "paragraphAlign": "left",
@@ -541,21 +541,30 @@
         "type": "h1",
         "align": "left",
         "theme": null,
-        "text": "Layers",
+        "text": "Document Model",
         "cols": 2,
         "number": "2"
       },
       {
-        "id": "b15",
-        "type": "h2",
+        "id": "b25840",
+        "type": "paragraph",
         "align": "left",
         "theme": null,
-        "text": "Document model",
-        "cols": 2,
-        "number": "2.1"
+        "text": "The first object requires format and version properties. ",
+        "dropCap": null,
+        "cols": 2
       },
       {
-        "id": "b16",
+        "id": "b25841",
+        "type": "aside",
+        "align": "left",
+        "theme": null,
+        "text": "All versions 0.1-0.9 are technically version 1 in development. ",
+        "icon": "✅",
+        "cols": 2
+      },
+      {
+        "id": "b25853",
         "type": "paragraph",
         "align": "left",
         "theme": null,
@@ -564,489 +573,30 @@
         "cols": 2
       },
       {
-        "id": "b17",
-        "type": "h2",
+        "id": "b25833",
+        "type": "table",
         "align": "left",
         "theme": null,
-        "text": "Layout intent",
-        "cols": 2,
-        "number": "2.2"
-      },
-      {
-        "id": "b18",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
+        "cells": [
+          [
+            "Format",
+            "\"talesmith-lang\""
+          ],
+          [
+            "Version",
+            "1"
+          ]
+        ],
+        "header": false,
         "cols": 2
       },
       {
-        "id": "b19",
-        "type": "h2",
+        "id": "b25839",
+        "type": "code",
         "align": "left",
         "theme": null,
-        "text": "Rendering targets",
-        "cols": 2,
-        "number": "2.3"
-      },
-      {
-        "id": "b20",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b21",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Fidelity policy",
-        "cols": 2,
-        "number": "2.4"
-      },
-      {
-        "id": "b22",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b23",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Reader overrides",
-        "cols": 2,
-        "number": "2.5"
-      },
-      {
-        "id": "b24",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b25",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "File envelope",
-        "cols": 2,
-        "number": "3"
-      },
-      {
-        "id": "b26",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Top-level keys",
-        "cols": 2,
-        "number": "3.1"
-      },
-      {
-        "id": "b27",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b28",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Canonical serialization",
-        "cols": 2,
-        "number": "3.2"
-      },
-      {
-        "id": "b29",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b30",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Legacy editor JSON and detection",
-        "cols": 2,
-        "number": "3.3"
-      },
-      {
-        "id": "b31",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b32",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Unknown keys, unknown blocks, future versions",
-        "cols": 2,
-        "number": "3.4"
-      },
-      {
-        "id": "b33",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b34",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Header",
-        "cols": 2,
-        "number": "4"
-      },
-      {
-        "id": "b35",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Page geometry",
-        "cols": 2,
-        "number": "4.1"
-      },
-      {
-        "id": "b36",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b37",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Trim, bleed, safe area",
-        "cols": 2,
-        "number": "4.2"
-      },
-      {
-        "id": "b38",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b39",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Margins and gutters",
-        "cols": 2,
-        "number": "4.3"
-      },
-      {
-        "id": "b40",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b41",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Typography",
-        "cols": 2,
-        "number": "4.4"
-      },
-      {
-        "id": "b42",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b43",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Numbering",
-        "cols": 2,
-        "number": "4.5"
-      },
-      {
-        "id": "b44",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b45",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Metadata and fields",
-        "cols": 2,
-        "number": "4.6"
-      },
-      {
-        "id": "b46",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b47",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Author-fixed versus reader-overridable settings",
-        "cols": 2,
-        "number": "4.7"
-      },
-      {
-        "id": "b48",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b49",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Defaults",
-        "cols": 2,
-        "number": "4.8"
-      },
-      {
-        "id": "b50",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b51",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Header resolution",
-        "cols": 2,
-        "number": "4.9"
-      },
-      {
-        "id": "b52",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b53",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Document model",
-        "cols": 2,
-        "number": "5"
-      },
-      {
-        "id": "b54",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Block array and ordering",
-        "cols": 2,
-        "number": "5.1"
-      },
-      {
-        "id": "b55",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b56",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Properties common to all blocks",
-        "cols": 2,
-        "number": "5.2"
-      },
-      {
-        "id": "b57",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b58",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Text content and inline markup",
-        "cols": 2,
-        "number": "5.3"
-      },
-      {
-        "id": "b59",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b60",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Character attributes and inline runs",
-        "cols": 2,
-        "number": "5.4"
-      },
-      {
-        "id": "b61",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b62",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Links and autolinking",
-        "cols": 2,
-        "number": "5.5"
-      },
-      {
-        "id": "b63",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b64",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Inline sanitization",
-        "cols": 2,
-        "number": "5.6"
-      },
-      {
-        "id": "b65",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b66",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Block identifiers",
-        "cols": 2,
-        "number": "5.7"
-      },
-      {
-        "id": "b67",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b68",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Block reference",
-        "cols": 2,
-        "number": "6"
-      },
-      {
-        "id": "b69",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Content blocks",
-        "cols": 2,
-        "number": "6.1"
-      },
-      {
-        "id": "b70",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
+        "text": "{  \n\"format\": \"talesmith-lang\",  \n\"version\": 1,  \n\"header\": {    \n  \"page\": {},    \n  \"typography\": {},   \n  \"numbering\": {},\n  \"metadata\" : {},\n  \"mergeFields\" : {}\n  }, \n  \"document\": {\n    \"blocks\": []\n  }\n}",
+        "caption": "Top Level TSL Structure",
         "cols": 2
       },
       {
@@ -1054,12 +604,84 @@
         "type": "h2",
         "align": "left",
         "theme": null,
-        "text": "Layout-intent blocks",
+        "text": "Header",
         "cols": 2,
-        "number": "6.2"
+        "number": "2.1"
+      },
+      {
+        "id": "b25834",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "The header is mandatory for reader applications, but not for importing or opening a document in an editor. ",
+        "dropCap": null,
+        "cols": 2
+      },
+      {
+        "id": "b25842",
+        "type": "h3",
+        "align": "left",
+        "theme": null,
+        "text": "Page",
+        "cols": 2,
+        "number": "2.1.1"
+      },
+      {
+        "id": "b25844",
+        "type": "h3",
+        "align": "left",
+        "theme": null,
+        "text": "Typography",
+        "cols": 2,
+        "number": "2.1.2"
+      },
+      {
+        "id": "b25846",
+        "type": "h3",
+        "align": "left",
+        "theme": null,
+        "text": "Numbering",
+        "cols": 2,
+        "number": "2.1.3"
+      },
+      {
+        "id": "b25848",
+        "type": "h3",
+        "align": "left",
+        "theme": null,
+        "text": "Metadata",
+        "cols": 2,
+        "number": "2.1.4"
+      },
+      {
+        "id": "b25850",
+        "type": "h3",
+        "align": "left",
+        "theme": null,
+        "text": "MergeFields",
+        "cols": 2,
+        "number": "2.1.5"
+      },
+      {
+        "id": "b25852",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "text": "",
+        "dropCap": null,
+        "cols": 2
       },
       {
         "id": "b72",
+        "type": "h2",
+        "align": "left",
+        "theme": null,
+        "text": "Document",
+        "cols": 2,
+        "number": "2.2"
+      },
+      {
+        "id": "b25837",
         "type": "paragraph",
         "align": "left",
         "theme": null,
@@ -1068,94 +690,13 @@
         "cols": 2
       },
       {
-        "id": "b73",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Reference blocks",
-        "cols": 2,
-        "number": "6.3"
-      },
-      {
-        "id": "b74",
+        "id": "b25836",
         "type": "paragraph",
         "align": "left",
         "theme": null,
         "text": "",
         "dropCap": null,
         "cols": 2
-      },
-      {
-        "id": "b75",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Screenplay and script blocks",
-        "cols": 2,
-        "number": "6.4"
-      },
-      {
-        "id": "b76",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b77",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Layout intent and fidelity",
-        "cols": 2,
-        "number": "7"
-      },
-      {
-        "id": "b78",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Page and slot model",
-        "cols": 2,
-        "number": "7.1"
-      },
-      {
-        "id": "b79",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b80",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Columns and pairing",
-        "cols": 2,
-        "number": "7.2"
-      },
-      {
-        "id": "b81",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b82",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Page breaks and full-page blocks",
-        "cols": 2,
-        "number": "7.3"
       },
       {
         "id": "b83",
@@ -1165,672 +706,6 @@
         "text": "",
         "dropCap": null,
         "cols": 2
-      },
-      {
-        "id": "b84",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Running headers and footers",
-        "cols": 2,
-        "number": "7.4"
-      },
-      {
-        "id": "b85",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b86",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Fidelity table by target",
-        "cols": 2,
-        "number": "7.5"
-      },
-      {
-        "id": "b87",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b88",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Rendering targets",
-        "cols": 2,
-        "number": "8"
-      },
-      {
-        "id": "b89",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Web document",
-        "cols": 2,
-        "number": "8.1"
-      },
-      {
-        "id": "b90",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b91",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Paged on screen",
-        "cols": 2,
-        "number": "8.2"
-      },
-      {
-        "id": "b92",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b93",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Print and PDF",
-        "cols": 2,
-        "number": "8.3"
-      },
-      {
-        "id": "b94",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b95",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Lean HTML",
-        "cols": 2,
-        "number": "8.4"
-      },
-      {
-        "id": "b96",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b97",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Lab reference renderer",
-        "cols": 2,
-        "number": "8.5"
-      },
-      {
-        "id": "b98",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b99",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Field tokens",
-        "cols": 2,
-        "number": "9"
-      },
-      {
-        "id": "b100",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Token grammar",
-        "cols": 2,
-        "number": "9.1"
-      },
-      {
-        "id": "b101",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b102",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Source-time tokens",
-        "cols": 2,
-        "number": "9.2"
-      },
-      {
-        "id": "b103",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b104",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Render-time tokens",
-        "cols": 2,
-        "number": "9.3"
-      },
-      {
-        "id": "b105",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b106",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Escaping and unknown tokens",
-        "cols": 2,
-        "number": "9.4"
-      },
-      {
-        "id": "b107",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b108",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Serialization and distribution",
-        "cols": 2,
-        "number": "10"
-      },
-      {
-        "id": "b109",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Encoding and canonical form",
-        "cols": 2,
-        "number": "10.1"
-      },
-      {
-        "id": "b110",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b111",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Compression and transfer",
-        "cols": 2,
-        "number": "10.2"
-      },
-      {
-        "id": "b112",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b113",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Integrity and verification",
-        "cols": 2,
-        "number": "10.3"
-      },
-      {
-        "id": "b114",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b115",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Media and external references",
-        "cols": 2,
-        "number": "10.4"
-      },
-      {
-        "id": "b116",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b117",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Accessibility",
-        "cols": 2,
-        "number": "11"
-      },
-      {
-        "id": "b118",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Structure and semantics",
-        "cols": 2,
-        "number": "11.1"
-      },
-      {
-        "id": "b119",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b120",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Alternative text and decorative content",
-        "cols": 2,
-        "number": "11.2"
-      },
-      {
-        "id": "b121",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b122",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Language and internationalization",
-        "cols": 2,
-        "number": "11.3"
-      },
-      {
-        "id": "b123",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b124",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Reader preferences",
-        "cols": 2,
-        "number": "11.4"
-      },
-      {
-        "id": "b125",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b126",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Security considerations",
-        "cols": 2,
-        "number": "12"
-      },
-      {
-        "id": "b127",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Inline content",
-        "cols": 2,
-        "number": "12.1"
-      },
-      {
-        "id": "b128",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b129",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "External references",
-        "cols": 2,
-        "number": "12.2"
-      },
-      {
-        "id": "b130",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b131",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Embedded documents and paywalls",
-        "cols": 2,
-        "number": "12.3"
-      },
-      {
-        "id": "b132",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b133",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Conformance",
-        "cols": 2,
-        "number": "13"
-      },
-      {
-        "id": "b134",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Reader conformance",
-        "cols": 2,
-        "number": "13.1"
-      },
-      {
-        "id": "b135",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b136",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Editor conformance",
-        "cols": 2,
-        "number": "13.2"
-      },
-      {
-        "id": "b137",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b138",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Validation and test vectors",
-        "cols": 2,
-        "number": "13.3"
-      },
-      {
-        "id": "b139",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b140",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Versioning",
-        "cols": 2,
-        "number": "14"
-      },
-      {
-        "id": "b141",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Format version versus release version",
-        "cols": 2,
-        "number": "14.1"
-      },
-      {
-        "id": "b142",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b143",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Additive change policy",
-        "cols": 2,
-        "number": "14.2"
-      },
-      {
-        "id": "b144",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b145",
-        "type": "h2",
-        "align": "left",
-        "theme": null,
-        "text": "Changelog",
-        "cols": 2,
-        "number": "14.3"
-      },
-      {
-        "id": "b146",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b147",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Appendix A. Block editor field inventory",
-        "cols": 2,
-        "number": "15"
-      },
-      {
-        "id": "b148",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b149",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Appendix B. Legacy editor mapping",
-        "cols": 2,
-        "number": "16"
-      },
-      {
-        "id": "b150",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b151",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Appendix C. Page format presets",
-        "cols": 2,
-        "number": "17"
-      },
-      {
-        "id": "b152",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b153",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Appendix D. Typography presets",
-        "cols": 2,
-        "number": "18"
-      },
-      {
-        "id": "b154",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b155",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Appendix E. Defaults table",
-        "cols": 2,
-        "number": "19"
-      },
-      {
-        "id": "b156",
-        "type": "paragraph",
-        "align": "left",
-        "theme": null,
-        "text": "",
-        "dropCap": null,
-        "cols": 2
-      },
-      {
-        "id": "b157",
-        "type": "h1",
-        "align": "left",
-        "theme": null,
-        "text": "Appendix F. JSON Schema",
-        "cols": 2,
-        "number": "20"
       }
     ]
   }

@@ -1449,7 +1449,12 @@
                 return stepLayoutSizeMeasured(step);
             }
             if (step.classList.contains('tsl-spread')) {
-                var n = step.querySelectorAll('.tsl-page').length;
+                var spreadPages = step.querySelectorAll('.tsl-page:not([aria-hidden="true"])');
+                var n = spreadPages.length;
+                if (n < 1) {
+                    spreadPages = step.querySelectorAll('.tsl-page');
+                    n = spreadPages.length;
+                }
                 if (n < 1) {
                     n = 1;
                 }
@@ -1618,6 +1623,9 @@
 
         /** Fit-width pages: clip micro overflow (shadows/subpx); cramped paths keep scroll. */
         function syncFitPagerOverflow() {
+            if (getPageFit() === 'fit') {
+                syncSpreadPagerLayoutForFitWidth();
+            }
             if (root.hasAttribute('data-tsl-stage-cramped')
                 || root.hasAttribute('data-tsl-scale-unreasonable')) {
                 viewport.style.overflowX = 'auto';
@@ -1674,6 +1682,7 @@
         function bailFitScreenToScroll(layout, avail) {
             root.setAttribute('data-tsl-scale-unreasonable', '1');
             applyFitWidthPolicy();
+            syncSpreadPagerLayoutForFitWidth();
             viewport.style.alignItems = 'flex-start';
             viewport.style.justifyContent = 'center';
             viewport.style.overflowX = 'auto';
@@ -1776,6 +1785,33 @@
             );
         }
 
+        function clearSpreadStageBox(step, opts) {
+            opts = opts || {};
+            if (!step || !step.classList || !step.classList.contains('tsl-spread')) {
+                return;
+            }
+            step.style.removeProperty('width');
+            step.style.removeProperty('height');
+            step.style.removeProperty('max-width');
+            if (!opts.keepTransform) {
+                step.style.removeProperty('transform');
+                step.style.removeProperty('transform-origin');
+                step.style.removeProperty('margin-left');
+                step.style.removeProperty('margin-right');
+                step.style.removeProperty('margin-bottom');
+            }
+        }
+
+        /** Fit width: spreads stay width:100% in CSS — no inline trim box (breaks column %). */
+        function syncSpreadPagerLayoutForFitWidth() {
+            Array.prototype.forEach.call(
+                pagesEl.querySelectorAll('.tsl-spread'),
+                function (el) {
+                    clearSpreadStageBox(el);
+                }
+            );
+        }
+
         function clearStepStageStyles() {
             clearPagerZoomShells();
             var keepCarousel = tslCompactPagerHost()
@@ -1783,6 +1819,14 @@
             Array.prototype.forEach.call(
                 pagesEl.querySelectorAll('.tsl-spread, .tsl-page'),
                 function (el) {
+                    if (el.classList.contains('tsl-spread')) {
+                        clearSpreadStageBox(el);
+                        if (!keepCarousel) {
+                            el.style.removeProperty('--tsl-pager-slide-i');
+                            el.style.removeProperty('--tsl-pager-slide-off');
+                        }
+                        return;
+                    }
                     if (!keepCarousel) {
                         el.style.transform = '';
                         el.style.transformOrigin = '';
@@ -1886,6 +1930,37 @@
                     viewport.style.height = Math.ceil(opts.stageHeight) + 'px';
                 } else {
                     viewport.style.height = '';
+                }
+                return;
+            }
+
+            if (step.classList.contains('tsl-spread')) {
+                step.style.width = contentW + 'px';
+                step.style.height = pageH + 'px';
+                step.style.transform = 'scale(' + scale + ')';
+                step.style.transformOrigin = 'top center';
+                step.style.marginLeft = 'auto';
+                step.style.marginRight = 'auto';
+                step.style.marginBottom = (scaledH - pageH) + 'px';
+                root.style.setProperty('--tsl-viewport-scale', String(scale));
+                if (opts.lockHeight) {
+                    viewport.style.overflowX = 'hidden';
+                    viewport.style.overflowY = 'hidden';
+                    viewport.style.alignItems = 'center';
+                    viewport.style.justifyContent = 'center';
+                    viewport.style.flex = '1 1 0';
+                    viewport.style.minHeight = '0';
+                    viewport.style.maxHeight = '100%';
+                    viewport.style.height = '';
+                } else {
+                    var availSpread = pagerStageSize();
+                    viewport.style.overflowX = 'auto';
+                    viewport.style.overflowY = 'auto';
+                    viewport.style.alignItems = 'flex-start';
+                    viewport.style.justifyContent = 'center';
+                    viewport.style.height = '';
+                    viewport.style.maxHeight = '';
+                    viewport.style.minHeight = Math.ceil(Math.min(scaledH, availSpread.h)) + 'px';
                 }
                 return;
             }
@@ -3518,6 +3593,14 @@
         return (d.textContent || '').trim();
     }
 
+    /** Code block source: preserve line breaks; do not run markdown/HTML (plainText turns \\n into &lt;br&gt; then textContent drops them). */
+    function codePlainText(raw) {
+        if (raw == null) {
+            return '';
+        }
+        return String(raw).replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    }
+
     /**
      * Sanitised inline HTML for a block's text. Page fragments of a split block carry
      * already-converted inline HTML (_tslInlineHtml), so they are sanitised, not re-parsed
@@ -4099,8 +4182,21 @@
         }
         if (type === 'code') {
             el = document.createElement('pre');
-            el.className = 'tsl-block tsl-block--code';
-            el.textContent = plainText(b.text);
+            el.className = 'tsl-block tsl-block--code studio-lean-code';
+            var codeEl = document.createElement('code');
+            codeEl.textContent = codePlainText(b.text);
+            el.appendChild(codeEl);
+            if (b.caption) {
+                var codeFig = document.createElement('figure');
+                codeFig.className = 'tsl-block tsl-block--code-wrap studio-lean-code-wrap';
+                codeFig.appendChild(el);
+                var codeCap = document.createElement('figcaption');
+                codeCap.className = 'tsl-code-caption';
+                codeCap.textContent = codePlainText(b.caption);
+                codeFig.appendChild(codeCap);
+                stampBlockMeta(codeFig, b);
+                return codeFig;
+            }
             return el;
         }
         if (type === 'table' && Array.isArray(b.cells)) {
@@ -4620,7 +4716,14 @@
                 + leanInlineHtml(block.text, header, readMode) + '</p>';
         }
         if (type === 'code') {
-            return '<pre' + leanRuleAttrs(block, 'studio-lean-code') + '><code>' + escapeHtml(plainText(block.text)) + '</code></pre>';
+            var preHtml = '<pre' + leanRuleAttrs(block, 'studio-lean-code tsl-block--code') + '><code>'
+                + escapeHtml(codePlainText(block.text)) + '</code></pre>';
+            if (block.caption) {
+                return '<figure class="studio-lean-code-wrap tsl-block--code-wrap">' + preHtml
+                    + '<figcaption class="tsl-code-caption">'
+                    + leanInlineHtml(block.caption, header, readMode) + '</figcaption></figure>';
+            }
+            return preHtml;
         }
         if (type === 'table' && Array.isArray(block.cells)) {
             var rows = block.cells;
@@ -5022,7 +5125,10 @@
             text: innerHtml
         };
         if (type === 'code') {
-            block.text = plainText(innerHtml);
+            var codeHost = document.createElement('div');
+            codeHost.innerHTML = innerHtml;
+            var codeNode = codeHost.querySelector('code') || codeHost.querySelector('pre');
+            block.text = codePlainText(codeNode ? codeNode.textContent : codeHost.textContent);
         }
         if (type === 'todo') {
             block.checked = /checked/i.test(innerHtml);
@@ -5203,7 +5309,7 @@
                     cols: 2,
                     el: el
                 };
-                var piece = type === 'code' ? plainText(el.textContent) : el.innerHTML;
+                var piece = type === 'code' ? codePlainText(el.textContent) : el.innerHTML;
                 var blk = leanRegionToBlock(meta, piece);
                 if (blk) {
                     var hn = el.getAttribute('data-heading-number');
