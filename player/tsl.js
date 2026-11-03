@@ -4728,7 +4728,7 @@
         if (type === 'table' && Array.isArray(block.cells)) {
             var rows = block.cells;
             var leanTableHeader = resolveBlockRules(block).props.header;
-            var tbl = '<table' + leanRuleAttrs(block, 'studio-lean-table') + '>';
+            var tbl = '<table' + leanRuleAttrs(block, 'studio-lean-table tsl-block--table') + '>';
             rows.forEach(function (row, ri) {
                 if (!Array.isArray(row)) {
                     return;
