@@ -283,6 +283,7 @@
             root._tslPagerSetOnChange(function () {
                 updateFabReadProgress(readProgressFromPager(root));
                 persistReadingProgress();
+                showLabFabTransient();
             });
             return;
         }
@@ -570,6 +571,51 @@
         });
     }
 
+    var fabAutoHideTimer = null;
+    var FAB_AUTO_HIDE_MS = 3200;
+
+    function showLabFabTransient() {
+        if (!fabRoot || typeof window === 'undefined' || !window.matchMedia) {
+            return;
+        }
+        if (!window.matchMedia('(max-width: 899px)').matches) {
+            fabRoot.classList.remove('is-collapsed');
+            return;
+        }
+        if (isLabPanelOpen()) {
+            fabRoot.classList.remove('is-collapsed');
+            return;
+        }
+        fabRoot.classList.remove('is-collapsed');
+        clearTimeout(fabAutoHideTimer);
+        fabAutoHideTimer = setTimeout(function () {
+            if (fabRoot && !isLabPanelOpen()) {
+                fabRoot.classList.add('is-collapsed');
+            }
+        }, FAB_AUTO_HIDE_MS);
+    }
+
+    function wireLabFabAutoHide() {
+        if (!fabRoot) {
+            return;
+        }
+        showLabFabTransient();
+        var stage = document.querySelector('.tsl-lab-stage');
+        var onActivity = function () {
+            showLabFabTransient();
+        };
+        ['scroll', 'touchstart', 'pointerdown'].forEach(function (ev) {
+            if (stage) {
+                stage.addEventListener(ev, onActivity, { passive: true });
+            }
+            document.addEventListener(ev, onActivity, { passive: true, capture: true });
+        });
+        if (mount) {
+            mount.addEventListener('click', onActivity);
+        }
+        document.addEventListener('keydown', onActivity);
+    }
+
     function setLabPanelOpen(open) {
         if (!fabRoot || !fabToggle || !fabPanel) {
             return;
@@ -579,6 +625,12 @@
         fabToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
         if (fabBackdrop) {
             fabBackdrop.setAttribute('aria-hidden', open ? 'false' : 'true');
+        }
+        if (open) {
+            fabRoot.classList.remove('is-collapsed');
+            clearTimeout(fabAutoHideTimer);
+        } else {
+            showLabFabTransient();
         }
     }
 
@@ -673,6 +725,8 @@
             saveCurrentReadingProgress();
         }
     });
+
+    wireLabFabAutoHide();
 
     var docCfg = populateSampleSelect();
     var params = new URLSearchParams(window.location.search);

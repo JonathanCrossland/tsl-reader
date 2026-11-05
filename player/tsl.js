@@ -1186,8 +1186,29 @@
         if (reader > 0) {
             return reader;
         }
+        var root = statusEl && statusEl.closest ? statusEl.closest('.tsl-root') : null;
+        if (!root && typeof document !== 'undefined') {
+            root = document.querySelector(
+                '.tsl-root[data-tsl-compact-pager="1"][data-tsl-page-chrome-footer="1"]'
+            );
+        }
+        if (root && root.getAttribute('data-tsl-page-chrome-footer') === '1' && tslCompactPagerHost()) {
+            return 0;
+        }
         var st = statusEl && statusEl.offsetHeight ? statusEl.offsetHeight : 0;
         return Math.max(44, st);
+    }
+
+    function documentHasPageFooterBlocks(blocks) {
+        if (!blocks || !blocks.length) {
+            return false;
+        }
+        for (var i = 0; i < blocks.length; i += 1) {
+            if (blocks[i] && blocks[i].type === 'pagefooter') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Visible pager stage (prefer laid-out viewport over raw window size). */
@@ -1208,12 +1229,32 @@
         return compactPagerVisualBudget(compactPagerBottomReservePx(statusEl));
     }
 
+    /** Lab stage or visual viewport — used before the pager viewport exists. */
+    function compactHostVisualBudget(reserveBottomPx) {
+        var bottom = Number(reserveBottomPx) || 0;
+        if (typeof document !== 'undefined') {
+            var stage = document.querySelector('.tsl-lab-stage');
+            if (stage) {
+                var sr = stage.getBoundingClientRect();
+                var sw = Math.max(0, Math.floor(sr.width));
+                var sh = Math.max(0, Math.floor(sr.height - bottom));
+                if (sw >= 120 && sh >= 160) {
+                    return { w: sw, h: sh };
+                }
+            }
+        }
+        return compactPagerVisualBudget(bottom);
+    }
+
     /** Narrow viewports: paginate at the visible stage, not print trim (horizontal slides). */
-    function compactViewportPageFromPrintSpec(page) {
+    function compactViewportPageFromPrintSpec(page, hasPageFooter) {
         if (!page || !page.trimMM || !tslCompactPagerHost()) {
             return page;
         }
-        var budget = compactPagerVisualBudget(compactPagerReaderBottomReservePx() || 44);
+        var statusReserve = hasPageFooter
+            ? 0
+            : (compactPagerReaderBottomReservePx() || compactPagerBottomReservePx(null));
+        var budget = compactHostVisualBudget(statusReserve);
         if (budget.w < 120 || budget.h < 160) {
             return page;
         }
@@ -1554,6 +1595,53 @@
             return 'spread';
         }
 
+        function syncPagerStatusVisibility() {
+            var hide = tslCompactPagerHost()
+                && root.getAttribute('data-tsl-page-chrome-footer') === '1';
+            status.hidden = hide;
+            status.setAttribute('aria-hidden', hide ? 'true' : 'false');
+        }
+
+        function compactPagerMarginFraction() {
+            return getReadingPrefs().readingRuler ? 0.12 : 0.5;
+        }
+
+        function relXInViewport(clientX) {
+            var rect = viewport.getBoundingClientRect();
+            var w = rect.width || viewport.clientWidth;
+            if (w < 1) {
+                return 0.5;
+            }
+            return (clientX - rect.left) / w;
+        }
+
+        function compactPagerTurnFromPointer(clientX) {
+            var rel = relXInViewport(clientX);
+            var margin = compactPagerMarginFraction();
+            if (getReadingPrefs().readingRuler) {
+                if (rel < margin) {
+                    go(-1);
+                    return true;
+                }
+                if (rel > 1 - margin) {
+                    go(1);
+                    return true;
+                }
+                return false;
+            }
+            go(rel < 0.5 ? -1 : 1);
+            return true;
+        }
+
+        function swipeAllowedFromCenter(startClientX) {
+            if (!getReadingPrefs().readingRuler) {
+                return true;
+            }
+            var rel = relXInViewport(startClientX);
+            var margin = compactPagerMarginFraction();
+            return rel < margin || rel > 1 - margin;
+        }
+
         function syncCompactPagerChrome() {
             var compact = tslCompactPagerHost();
             prevBtn.hidden = compact;
@@ -1757,6 +1845,7 @@
             nextBtn.disabled = state.index >= steps.length - 1;
             status.textContent = (view === 'spread' ? 'Spread ' : 'Page ')
                 + (state.index + 1) + ' of ' + steps.length;
+            syncPagerStatusVisibility();
             syncMobileCarousel(steps);
             syncCompactPagerChrome();
             if (!state.scaleRaf) {
@@ -2189,6 +2278,9 @@
                 var dx = e.changedTouches[0].clientX - touchStartX;
                 var dy = e.changedTouches[0].clientY - touchStartY;
                 if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+                    if (!swipeAllowedFromCenter(touchStartX)) {
+                        return;
+                    }
                     lastTouchTurnAt = Date.now();
                     if (dx < 0) {
                         go(1);
@@ -2205,9 +2297,10 @@
                 if (w < 1) {
                     return;
                 }
-                var rel = (e.changedTouches[0].clientX - rect.left) / w;
                 lastTouchTurnAt = Date.now();
-                go(rel < 0.5 ? -1 : 1);
+                if (!compactPagerTurnFromPointer(e.changedTouches[0].clientX)) {
+                    return;
+                }
             }, { passive: true });
             viewport.addEventListener('click', function (e) {
                 if (!tslCompactPagerHost()) {
@@ -2219,13 +2312,7 @@
                 if (e.target.closest && e.target.closest('a, button, input, textarea, select, [contenteditable="true"]')) {
                     return;
                 }
-                var rect = viewport.getBoundingClientRect();
-                var w = rect.width || viewport.clientWidth;
-                if (w < 1) {
-                    return;
-                }
-                var rel = (e.clientX - rect.left) / w;
-                go(rel < 0.5 ? -1 : 1);
+                compactPagerTurnFromPointer(e.clientX);
             });
         }());
 
@@ -2318,6 +2405,19 @@
         refresh();
         window.requestAnimationFrame(function () {
             applyViewportScale();
+            if (tslCompactPagerHost()) {
+                var mountEl = root.closest('[data-tsl-mount]');
+                if (mountEl
+                    && typeof mountEl._tslCompactRepaginate === 'function'
+                    && !mountEl._tslCompactDidInitialRepaginate) {
+                    mountEl._tslCompactDidInitialRepaginate = true;
+                    var trim = nominalTrimPageSizePx();
+                    var stage = compactPagerStageBudget(status);
+                    if (Math.abs(stage.w - trim.w) >= 20 || Math.abs(stage.h - trim.h) >= 20) {
+                        mountEl._tslCompactRepaginate();
+                    }
+                }
+            }
         });
     }
 
@@ -2346,12 +2446,15 @@
         var ty = header.typography;
         var layoutMode = layoutModeForDocument(header, blocks);
         if (layoutMode === 'pages' && tslCompactPagerHost()) {
-            page = compactViewportPageFromPrintSpec(page);
+            page = compactViewportPageFromPrintSpec(page, documentHasPageFooterBlocks(blocks));
         }
         var root = document.createElement('div');
         root.className = 'tsl-root';
         root.setAttribute('data-tsl-layout', layoutMode);
         root.setAttribute('data-tsl-theme', header.theme || 'default');
+        if (documentHasPageFooterBlocks(blocks)) {
+            root.setAttribute('data-tsl-page-chrome-footer', '1');
+        }
         if (ty.hyphenation) {
             root.setAttribute('data-tsl-hyphenate', '1');
         }
@@ -2368,6 +2471,10 @@
         root.style.setProperty('--tsl-indent', ty.paragraphIndentIn > 0 ? ty.paragraphIndentIn + 'in' : '0');
         root.style.setProperty('--tsl-para-space', ty.paragraphSpacingPt > 0 ? ty.paragraphSpacingPt + 'pt' : '0.85em');
         root.style.setProperty('--tsl-row-gap', (page.rowGapMM != null ? page.rowGapMM : 2) + 'mm');
+
+        if (tslCompactPagerHost()) {
+            root.setAttribute('data-tsl-compact-pager', '1');
+        }
 
         var pagesEl = document.createElement('div');
         pagesEl.className = 'tsl-pages';
@@ -2388,6 +2495,9 @@
         measurePage.appendChild(measureHeaderSlot);
         measurePage.appendChild(measureBody);
         measurePage.appendChild(measureFooterSlot);
+        if (tslCompactPagerHost()) {
+            measurePage.classList.add('tsl-measure-page--compact');
+        }
         root.appendChild(measurePage);
         mount.innerHTML = '';
         mount.appendChild(root);
@@ -2568,6 +2678,9 @@
             var innerW = pageBodyInnerWidthPx(s);
             measureBody.style.width = innerW + 'px';
             measureBody.style.maxWidth = innerW + 'px';
+            if (tslCompactPagerHost()) {
+                measureBody.style.overflow = 'hidden';
+            }
         }
 
         function measureBodyBudgetPx(side, pg) {
@@ -2765,6 +2878,113 @@
             }, true);
         }
 
+        function flowColInnerWidthPx(rowClass, side) {
+            var full = pageBodyInnerWidthPx(side);
+            if (rowClass === 'full') {
+                return full;
+            }
+            var gapRaw = getComputedStyle(root).getPropertyValue('--tsl-col-gap').trim();
+            if (!gapRaw) {
+                gapRaw = getComputedStyle(root).getPropertyValue('--tsl-row-gap').trim();
+            }
+            var gap = gapRaw ? parseCssLengthToPx(root, gapRaw) : 24;
+            if (gap < 1) {
+                gap = 24;
+            }
+            return Math.max(80, (full - gap) / 2);
+        }
+
+        function measureTableCellWidthPx(text, colInnerW, side, pg) {
+            var shell = prepareMeasureBodyStack(side, pg);
+            var col = document.createElement('div');
+            col.className = 'tsl-col';
+            col.style.width = colInnerW + 'px';
+            col.style.maxWidth = colInnerW + 'px';
+            var table = document.createElement('table');
+            table.className = 'tsl-block tsl-block--table';
+            table.style.tableLayout = 'auto';
+            table.style.width = 'auto';
+            var tr = document.createElement('tr');
+            var td = document.createElement('td');
+            td.style.whiteSpace = 'nowrap';
+            td.textContent = text || '\u00a0';
+            tr.appendChild(td);
+            table.appendChild(tr);
+            col.appendChild(table);
+            shell.stack.appendChild(col);
+            return table.offsetWidth + 2;
+        }
+
+        function planTableColWidthsMeasured(cells, headerRow, colInnerW, side, pg) {
+            return planTableColWidthsMeasuredWith(cells, headerRow, colInnerW, function (text) {
+                return measureTableCellWidthPx(text, colInnerW, side, pg);
+            });
+        }
+
+        function buildTableFlowRow(block, rowClass, slice, plan) {
+            var chunk = cloneBlockShallow(block);
+            chunk._tslTableSlice = slice;
+            chunk._tslTableColPlan = plan;
+            if (slice.start > (resolveBlockRules(block).props.header ? 1 : 0)) {
+                chunk._tslContinued = true;
+            }
+            return buildFlowRow([chunk], rowClass);
+        }
+
+        function appendPaginatedTableBlock(b, rowClass) {
+            var cells = tableNormalizedCells(b.cells);
+            if (!cells.length) {
+                ensurePage();
+                current.body.appendChild(buildFlowRow([b], rowClass));
+                if (current) {
+                    current.endBlockIndex = bi;
+                }
+                return;
+            }
+            var headerRow = resolveBlockRules(b).props.header;
+            var dataStart = headerRow ? 1 : 0;
+            if (cells.length <= dataStart) {
+                ensurePage();
+                current.body.appendChild(buildFlowRow([b], rowClass));
+                if (current) {
+                    current.endBlockIndex = bi;
+                }
+                return;
+            }
+            var rowIdx = dataStart;
+            while (rowIdx < cells.length) {
+                ensurePage();
+                while (current.body.childNodes.length && !fitsOnPage(current, null)) {
+                    current = startPage();
+                }
+                var colW = flowColInnerWidthPx(rowClass, current.side);
+                var plan = planTableColWidthsMeasured(cells, headerRow, colW, current.side, current);
+                var remain = cells.length - rowIdx;
+                var bestEnd = rowIdx;
+                var n;
+                for (n = 1; n <= remain; n += 1) {
+                    var slice = { start: rowIdx, end: rowIdx + n };
+                    var trial = buildTableFlowRow(b, rowClass, slice, plan);
+                    if (!fitsOnPage(current, trial)) {
+                        break;
+                    }
+                    bestEnd = rowIdx + n;
+                }
+                if (bestEnd <= rowIdx) {
+                    if (current.body.childNodes.length) {
+                        current = startPage();
+                        continue;
+                    }
+                    bestEnd = rowIdx + 1;
+                }
+                current.body.appendChild(buildTableFlowRow(b, rowClass, { start: rowIdx, end: bestEnd }, plan));
+                rowIdx = bestEnd;
+            }
+            if (current) {
+                current.endBlockIndex = bi;
+            }
+        }
+
         function buildFlowRow(blocksInRow, rowClass) {
             var row = document.createElement('div');
             row.className = 'tsl-row tsl-row--' + rowClass;
@@ -2778,6 +2998,10 @@
         }
 
         function appendFlowRow(blocksInRow, rowClass) {
+            if (blocksInRow.length === 1 && blocksInRow[0].type === 'table') {
+                appendPaginatedTableBlock(blocksInRow[0], rowClass);
+                return;
+            }
             if (blocksInRow.length === 1 && blockTypeIsSplittable(blocksInRow[0])) {
                 appendSplittableTextBlock(blocksInRow[0], rowClass);
                 if (current) {
@@ -3006,6 +3230,9 @@
         applyReadingPrefs(root);
         if (layoutMode === 'pages') {
             attachPagePager(root, pagesEl);
+            if (tslCompactPagerHost()) {
+                attachCompactRepaginateHook(mount, root);
+            }
         }
         bindInDocumentAnchorClicks(root);
         updateTslPrintPageRule(root);
@@ -3017,7 +3244,16 @@
     var READER_PREFS_KEY = 'reader:prefs';
     var TSL_LAYOUT_KEY = 'tsl:layout';
     var READER_SIZES = [14, 16, 18, 20, 24];
-    var READER_DEFAULT_PREFS = { font: 'serif', size: 18, theme: 'light', width: 'medium', pageFit: 'fit' };
+    var READER_DEFAULT_PREFS = {
+        font: 'serif',
+        size: 18,
+        theme: 'light',
+        width: 'medium',
+        pageFit: 'fit',
+        dyslexiaFont: false,
+        highContrast: false,
+        readingRuler: false
+    };
     var READER_FONT_STACK = {
         serif: 'Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif',
         sans: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
@@ -3066,6 +3302,9 @@
         if (READER_SIZES.indexOf(p.size) < 0) {
             p.size = 18;
         }
+        p.dyslexiaFont = !!p.dyslexiaFont;
+        p.highContrast = !!p.highContrast;
+        p.readingRuler = !!p.readingRuler;
         return p;
     }
 
@@ -3159,7 +3398,33 @@
         if (getTslLayout() === 'scroll') {
             return mountLeanHtml(mount, parsed);
         }
-        return render(mount, parsed);
+        var root = render(mount, parsed);
+        if (root && tslCompactPagerHost()) {
+            attachCompactRepaginateHook(mount, root);
+        }
+        return root;
+    }
+
+    function attachCompactRepaginateHook(mount, root) {
+        if (!mount || !root) {
+            return;
+        }
+        mount._tslCompactRepaginate = function () {
+            if (!tslCompactPagerHost() || !mount._tslParsed || mount._tslCompactRepaginating) {
+                return;
+            }
+            mount._tslCompactRepaginating = true;
+            var liveRoot = mount.querySelector('.tsl-root');
+            var idx = 0;
+            if (liveRoot && liveRoot._tslPagerInfo && typeof liveRoot._tslPagerInfo === 'function') {
+                idx = liveRoot._tslPagerInfo().index;
+            }
+            var nextRoot = remountTslMount(mount, mount._tslParsed);
+            mount._tslCompactRepaginating = false;
+            if (nextRoot && idx > 0 && typeof nextRoot._tslPagerGoToIndex === 'function') {
+                nextRoot._tslPagerGoToIndex(idx);
+            }
+        };
     }
 
     function tslHeaderAllowsScroll(header) {
@@ -3262,6 +3527,15 @@
     }
 
     /** Apply reader font + size scale; overrides document --tsl-doc-font on paginated roots. */
+    function readerTypographyFontStack(p) {
+        var font = (p && p.font) || 'serif';
+        var stack = readerFontStack(font);
+        if (p && p.dyslexiaFont) {
+            return '"OpenDyslexic", ' + stack;
+        }
+        return stack;
+    }
+
     function stampReaderTypography(el, prefs, scale) {
         if (!el || !el.style) {
             return;
@@ -3270,8 +3544,124 @@
         var font = p.font || 'serif';
         el.setAttribute('data-tsl-reader-font', font);
         el.setAttribute('data-tsl-reader-size', String(p.size || 18));
-        el.style.setProperty('--tsl-font', readerFontStack(font));
+        el.setAttribute('data-tsl-reader-dyslexia', p.dyslexiaFont ? '1' : '0');
+        el.setAttribute('data-tsl-reader-contrast', p.highContrast ? 'high' : 'normal');
+        el.style.setProperty('--tsl-font', readerTypographyFontStack(p));
         el.style.setProperty('--tsl-reader-scale', String(scale));
+    }
+
+    function caretRangeFromClient(x, y) {
+        if (typeof document === 'undefined') {
+            return null;
+        }
+        if (document.caretRangeFromPoint) {
+            return document.caretRangeFromPoint(x, y);
+        }
+        if (document.caretPositionFromPoint) {
+            var pos = document.caretPositionFromPoint(x, y);
+            if (!pos) {
+                return null;
+            }
+            var range = document.createRange();
+            range.setStart(pos.offsetNode, pos.offset);
+            range.collapse(true);
+            return range;
+        }
+        return null;
+    }
+
+    function readingRulerTarget(root) {
+        if (!root) {
+            return null;
+        }
+        var page = root.querySelector('.tsl-page.is-active:not([aria-hidden="true"])');
+        if (page) {
+            return page.querySelector('.tsl-body') || page;
+        }
+        return root.querySelector('.document-tsl')
+            || root.querySelector('.tsl-body')
+            || root;
+    }
+
+    function lineBandRectAtClient(root, clientX, clientY) {
+        var target = readingRulerTarget(root);
+        if (!target) {
+            return null;
+        }
+        var box = target.getBoundingClientRect();
+        if (clientY < box.top - 2 || clientY > box.bottom + 2) {
+            return null;
+        }
+        var x = Math.min(Math.max(clientX, box.left + 6), box.right - 6);
+        var y = Math.min(Math.max(clientY, box.top + 6), box.bottom - 6);
+        var range = caretRangeFromClient(x, y);
+        if (!range || !target.contains(range.startContainer)) {
+            return null;
+        }
+        var lineRect = range.getBoundingClientRect();
+        if (!lineRect.height) {
+            lineRect = range.getClientRects()[0] || lineRect;
+        }
+        if (!lineRect || !lineRect.height) {
+            return null;
+        }
+        return {
+            top: lineRect.top,
+            left: box.left,
+            width: box.width,
+            height: Math.max(lineRect.height, 20)
+        };
+    }
+
+    function syncReadingRuler(root) {
+        if (!root) {
+            return;
+        }
+        if (root._tslRulerCleanup) {
+            root._tslRulerCleanup();
+            root._tslRulerCleanup = null;
+        }
+        var active = !!getReadingPrefs().readingRuler;
+        if (!active) {
+            root.removeAttribute('data-tsl-reading-ruler');
+            return;
+        }
+        root.setAttribute('data-tsl-reading-ruler', '1');
+        var host = root.querySelector('.tsl-pager-viewport') || root;
+        var band = document.createElement('div');
+        band.className = 'tsl-reading-ruler-band';
+        band.hidden = true;
+        band.setAttribute('aria-hidden', 'true');
+        host.appendChild(band);
+
+        function placeBand(rect) {
+            if (!rect || rect.width < 8) {
+                band.hidden = true;
+                return;
+            }
+            band.hidden = false;
+            band.style.top = Math.round(rect.top) + 'px';
+            band.style.left = Math.round(rect.left) + 'px';
+            band.style.width = Math.round(rect.width) + 'px';
+            band.style.height = Math.round(rect.height) + 'px';
+        }
+
+        function onPointer(ev) {
+            if (!getReadingPrefs().readingRuler) {
+                return;
+            }
+            placeBand(lineBandRectAtClient(root, ev.clientX, ev.clientY));
+        }
+
+        host.addEventListener('pointermove', onPointer, { passive: true });
+        host.addEventListener('pointerdown', onPointer, { passive: true });
+        root._tslRulerCleanup = function () {
+            host.removeEventListener('pointermove', onPointer);
+            host.removeEventListener('pointerdown', onPointer);
+            if (band.parentNode) {
+                band.parentNode.removeChild(band);
+            }
+        };
     }
 
     function tslAuthorPrintLayout() {
@@ -3309,6 +3699,7 @@
         root.setAttribute('data-tsl-reader-width', p.width || 'medium');
         root.setAttribute('data-tsl-layout', layout);
         root.setAttribute('data-tsl-page-fit', tslAuthorPrintLayout() ? 'native' : getPageFit());
+        syncReadingRuler(root);
         if (layout === 'pages' && typeof root._tslPagerRefresh === 'function') {
             root._tslPagerRefresh();
         }
@@ -3380,6 +3771,8 @@
         var p = getReadingPrefs();
         if (key === 'size') {
             p.size = parseInt(value, 10);
+        } else if (key === 'dyslexiaFont' || key === 'highContrast' || key === 'readingRuler') {
+            p[key] = !!value;
         } else {
             p[key] = value;
         }
@@ -3388,13 +3781,15 @@
             refreshAllReadingPrefs(false);
             return;
         }
-        if (key === 'theme') {
+        if (key === 'theme' || key === 'highContrast') {
             refreshAllReadingPrefs(false);
         } else if (key === 'width') {
             // Line width does not apply to fixed-trim pages (readingPrefApplies); no relayout.
             refreshAllReadingPrefs(false);
-        } else if (key === 'size' || key === 'font') {
+        } else if (key === 'size' || key === 'font' || key === 'dyslexiaFont') {
             refreshAllReadingPrefs(true);
+        } else if (key === 'readingRuler') {
+            refreshAllReadingPrefs(false);
         } else {
             refreshAllReadingPrefs(false);
         }
@@ -3440,6 +3835,13 @@
             row.querySelectorAll('[data-tsl-pref-note]').forEach(function (note) {
                 note.hidden = applies;
             });
+        });
+        container.querySelectorAll('[data-tsl-pref-toggle]').forEach(function (btn) {
+            var tKey = btn.getAttribute('data-tsl-pref-toggle');
+            var on = !!p[tKey];
+            btn.classList.toggle('is-on', on);
+            btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+            btn.textContent = on ? 'On' : 'Off';
         });
     }
 
@@ -3537,6 +3939,14 @@
         }
         syncReadingPrefsUI(container);
         container.addEventListener('click', function (e) {
+            var toggle = e.target.closest('[data-tsl-pref-toggle]');
+            if (toggle) {
+                var tKey = toggle.getAttribute('data-tsl-pref-toggle');
+                var cur = getReadingPrefs();
+                setReadingPref(tKey, !cur[tKey]);
+                syncReadingPrefsUI(container);
+                return;
+            }
             var b = e.target.closest('[data-tsl-pref]');
             if (b) {
                 setReadingPref(b.getAttribute('data-tsl-pref'), b.getAttribute('data-value'));
@@ -4096,6 +4506,428 @@
         return type === 'mathml' ? 'div' : 'p';
     }
 
+    function tablePlainCellText(cell) {
+        return plainText(String(cell != null ? cell : ''));
+    }
+
+    function tableNormalizedCells(cells) {
+        if (!Array.isArray(cells) || !cells.length) {
+            return [];
+        }
+        var colN = 0;
+        cells.forEach(function (row) {
+            if (Array.isArray(row)) {
+                colN = Math.max(colN, row.length);
+            }
+        });
+        if (colN < 1) {
+            return [];
+        }
+        return cells.map(function (row) {
+            var r = Array.isArray(row) ? row.slice() : [];
+            while (r.length < colN) {
+                r.push('');
+            }
+            return r;
+        });
+    }
+
+    /** Column is “key width” when every cell (incl. header) has fewer than 5 words. */
+    function tableAnalyzeTightColumns(cells, headerRow) {
+        var rows = tableNormalizedCells(cells);
+        if (!rows.length || !rows[0].length) {
+            return [];
+        }
+        var colN = rows[0].length;
+        var tight = [];
+        var ci;
+        for (ci = 0; ci < colN; ci += 1) {
+            if (colN < 2) {
+                tight.push(false);
+                continue;
+            }
+            var allShort = true;
+            var ri;
+            for (ri = 0; ri < rows.length; ri += 1) {
+                if (!headerRow && ri === 0) {
+                    /* body row */
+                }
+                var words = tablePlainCellText(rows[ri][ci]).trim().split(/\s+/).filter(Boolean);
+                if (words.length >= 5) {
+                    allShort = false;
+                    break;
+                }
+            }
+            tight.push(allShort);
+        }
+        return tight;
+    }
+
+    function tableLongestPlainInColumn(cells, colIndex) {
+        var longest = '';
+        tableNormalizedCells(cells).forEach(function (row) {
+            var t = tablePlainCellText(row[colIndex]).trim();
+            if (t.length > longest.length) {
+                longest = t;
+            }
+        });
+        return longest;
+    }
+
+    function planTableColWidthsEstimate(cells, headerRow, innerW) {
+        var rows = tableNormalizedCells(cells);
+        if (!rows.length) {
+            return { widthsPx: [], tight: [] };
+        }
+        innerW = Math.max(120, innerW || 600);
+        var tight = tableAnalyzeTightColumns(rows, headerRow);
+        var colN = rows[0].length;
+        var tightPx = [];
+        var totalTight = 0;
+        var ci;
+        for (ci = 0; ci < colN; ci += 1) {
+            if (!tight[ci]) {
+                tightPx.push(0);
+                continue;
+            }
+            var longest = tableLongestPlainInColumn(rows, ci);
+            var est = Math.min(innerW * 0.42, Math.max(44, longest.length * 7.5 + 26));
+            tightPx.push(est);
+            totalTight += est;
+        }
+        var flexN = 0;
+        for (ci = 0; ci < colN; ci += 1) {
+            if (!tight[ci]) {
+                flexN += 1;
+            }
+        }
+        var flexW = Math.max(56, innerW - totalTight);
+        var perFlex = flexN > 0 ? flexW / flexN : innerW / colN;
+        var widths = [];
+        for (ci = 0; ci < colN; ci += 1) {
+            widths.push(tight[ci] ? tightPx[ci] : perFlex);
+        }
+        return normalizeTableColPlan({ widthsPx: widths, tight: tight }, innerW);
+    }
+
+    /** Scale column plan so sum(widths) matches the flow column (tables cannot force page wider). */
+    function normalizeTableColPlan(plan, colInnerW) {
+        if (!plan || !plan.widthsPx || !plan.widthsPx.length) {
+            return plan;
+        }
+        colInnerW = Math.max(80, colInnerW || 0);
+        var sum = 0;
+        plan.widthsPx.forEach(function (w) {
+            sum += w;
+        });
+        if (sum < 1 || sum <= colInnerW + 1) {
+            return plan;
+        }
+        var scale = colInnerW / sum;
+        var widths = plan.widthsPx.map(function (w) {
+            return Math.max(24, Math.floor(w * scale));
+        });
+        var newSum = widths.reduce(function (a, b) { return a + b; }, 0);
+        if (newSum > colInnerW && widths.length) {
+            widths[widths.length - 1] = Math.max(24, widths[widths.length - 1] - (newSum - colInnerW));
+        }
+        return { widthsPx: widths, tight: plan.tight ? plan.tight.slice() : [] };
+    }
+
+    function planTableColWidthsMeasuredWith(cells, headerRow, colInnerW, measureCellFn) {
+        var rows = tableNormalizedCells(cells);
+        if (!rows.length) {
+            return { widthsPx: [], tight: [] };
+        }
+        colInnerW = Math.max(80, colInnerW);
+        var tight = tableAnalyzeTightColumns(rows, headerRow);
+        var colN = rows[0].length;
+        var tightPx = [];
+        var totalTight = 0;
+        var ci;
+        for (ci = 0; ci < colN; ci += 1) {
+            if (!tight[ci]) {
+                tightPx.push(0);
+                continue;
+            }
+            var longest = tableLongestPlainInColumn(rows, ci);
+            var w = measureCellFn(longest, colInnerW);
+            w = Math.min(colInnerW * 0.45, Math.max(40, w));
+            tightPx.push(w);
+            totalTight += w;
+        }
+        var flexN = 0;
+        for (ci = 0; ci < colN; ci += 1) {
+            if (!tight[ci]) {
+                flexN += 1;
+            }
+        }
+        var flexW = Math.max(48, colInnerW - totalTight);
+        var perFlex = flexN > 0 ? flexW / flexN : colInnerW / colN;
+        var widths = [];
+        for (ci = 0; ci < colN; ci += 1) {
+            widths.push(tight[ci] ? tightPx[ci] : perFlex);
+        }
+        return normalizeTableColPlan({ widthsPx: widths, tight: tight }, colInnerW);
+    }
+
+    function readerMeasureChCount(widthId) {
+        if (widthId === 'narrow') {
+            return 58;
+        }
+        if (widthId === 'wide') {
+            return 76;
+        }
+        return 66;
+    }
+
+    /** Scroll / flow: same half-row rule as pages (cols=1 → half line measure). */
+    function scrollTableColFraction(block) {
+        if (blockLayoutCols(block) !== 1) {
+            return 1;
+        }
+        return 0.5;
+    }
+
+    function measureCssWidthOnElement(el, cssWidth) {
+        if (!el || typeof document === 'undefined') {
+            return 0;
+        }
+        var probe = document.createElement('div');
+        probe.style.cssText = 'position:absolute;left:-9999px;top:0;height:0;visibility:hidden;width:' + cssWidth + ';';
+        el.appendChild(probe);
+        var w = probe.offsetWidth;
+        el.removeChild(probe);
+        return w;
+    }
+
+    /** Reader line width (--tsl-reader-measure) in px; optional half-column (cols=1). */
+    function scrollTableInnerWidthPx(opts) {
+        opts = opts || {};
+        var colFraction = opts.colFraction == null ? 1 : opts.colFraction;
+        var host = opts.hostEl;
+        var prefs = getReadingPrefs();
+        var ch = readerMeasureChCount(prefs.width);
+        var baseW = 0;
+        if (typeof document !== 'undefined') {
+            var typographyEl = host && host.nodeType === 1 ? host : null;
+            if (!typographyEl) {
+                typographyEl = document.querySelector('.document-tsl[data-tsl-layout="scroll"] .post-lean-html-article-wrap')
+                    || document.querySelector('.document-tsl[data-tsl-layout="scroll"] .studio-lean-tsl')
+                    || document.querySelector('.document-tsl[data-tsl-layout="scroll"]');
+            }
+            if (typographyEl) {
+                var wrap = typographyEl.closest('.post-lean-html-article-wrap') || typographyEl;
+                if (wrap.clientWidth > 0) {
+                    baseW = wrap.clientWidth;
+                } else if (typographyEl.isConnected) {
+                    baseW = measureCssWidthOnElement(typographyEl, ch + 'ch');
+                }
+            }
+        }
+        if (baseW < 1) {
+            var fontPx = (parseInt(prefs.size, 10) || 18) * readerSizeScale(prefs.size);
+            baseW = ch * fontPx * 0.5;
+        }
+        if (colFraction < 0.99) {
+            var gap = 24;
+            return Math.max(80, Math.round((baseW - gap) * colFraction));
+        }
+        return Math.max(120, Math.round(baseW));
+    }
+
+    function scrollTableInnerWidthForElement(table, scope) {
+        if (table && table.closest) {
+            var col = table.closest('.studio-lean-col');
+            if (col && col.clientWidth > 0) {
+                return col.clientWidth;
+            }
+        }
+        var frac = 1;
+        if (table && table.getAttribute('data-tsl-layout-cols') === '1') {
+            frac = 0.5;
+        }
+        return scrollTableInnerWidthPx({ hostEl: scope, colFraction: frac });
+    }
+
+    function measureTableCellInColumnPx(text, colInnerW, typographyHost) {
+        if (typeof document === 'undefined' || !typographyHost) {
+            return Math.max(40, String(text || '').length * 7.5 + 26);
+        }
+        var holder = document.createElement('div');
+        holder.style.cssText = 'position:absolute;left:-9999px;top:0;visibility:hidden;pointer-events:none;';
+        typographyHost.appendChild(holder);
+        var col = document.createElement('div');
+        col.className = 'tsl-col studio-lean-col';
+        col.style.width = colInnerW + 'px';
+        col.style.maxWidth = colInnerW + 'px';
+        var table = document.createElement('table');
+        table.className = 'tsl-block tsl-block--table studio-lean-table';
+        table.style.tableLayout = 'auto';
+        table.style.width = 'auto';
+        var tr = document.createElement('tr');
+        var td = document.createElement('td');
+        td.style.whiteSpace = 'nowrap';
+        td.textContent = text || '\u00a0';
+        tr.appendChild(td);
+        table.appendChild(tr);
+        col.appendChild(table);
+        holder.appendChild(col);
+        var w = table.offsetWidth + 2;
+        typographyHost.removeChild(holder);
+        return w;
+    }
+
+    function tableCellsFromDom(table) {
+        var cells = [];
+        if (!table || !table.querySelectorAll) {
+            return cells;
+        }
+        table.querySelectorAll('tr').forEach(function (tr) {
+            var row = [];
+            tr.querySelectorAll('th, td').forEach(function (cell) {
+                row.push(cell.innerHTML || '');
+            });
+            if (row.length) {
+                cells.push(row);
+            }
+        });
+        return cells;
+    }
+
+    function replaceTableColgroup(table, plan) {
+        if (!table) {
+            return;
+        }
+        var old = table.querySelector('colgroup');
+        if (old && old.parentNode) {
+            old.parentNode.removeChild(old);
+        }
+        applyTableColgroup(table, plan);
+    }
+
+    /** Scroll layout: recompute col widths from reader measure (no row splitting). */
+    function syncScrollTableColumnWidths(scope) {
+        if (typeof document === 'undefined' || getTslLayout() !== 'scroll') {
+            return;
+        }
+        var root = scope && scope.nodeType === 1 ? scope : document.querySelector('.document-tsl[data-tsl-layout="scroll"]');
+        if (!root) {
+            return;
+        }
+        var typographyHost = root.querySelector('.studio-lean-tsl') || root;
+        root.querySelectorAll('table.tsl-block--table, table.studio-lean-table').forEach(function (table) {
+            var innerW = scrollTableInnerWidthForElement(table, root);
+            if (innerW < 1) {
+                return;
+            }
+            var cells = tableCellsFromDom(table);
+            if (!cells.length) {
+                return;
+            }
+            var headerRow = table.getAttribute('data-tsl-table-header') === '1';
+            var plan = planTableColWidthsMeasuredWith(cells, headerRow, innerW, function (text) {
+                return measureTableCellInColumnPx(text, innerW, typographyHost);
+            });
+            replaceTableColgroup(table, plan);
+        });
+    }
+
+    function applyTableColgroup(table, plan) {
+        if (!table || !plan || !plan.widthsPx || !plan.widthsPx.length) {
+            return;
+        }
+        var sum = 0;
+        plan.widthsPx.forEach(function (w) {
+            sum += w;
+        });
+        if (sum < 1) {
+            return;
+        }
+        var cg = document.createElement('colgroup');
+        plan.widthsPx.forEach(function (w, i) {
+            var col = document.createElement('col');
+            var pct = Math.max(1, (w / sum) * 100);
+            col.style.width = pct + '%';
+            if (plan.tight && plan.tight[i]) {
+                col.setAttribute('data-tsl-col-tight', '1');
+            }
+            cg.appendChild(col);
+        });
+        table.insertBefore(cg, table.firstChild);
+    }
+
+    function tableColgroupHtml(plan) {
+        if (!plan || !plan.widthsPx || !plan.widthsPx.length) {
+            return '';
+        }
+        var sum = 0;
+        plan.widthsPx.forEach(function (w) {
+            sum += w;
+        });
+        if (sum < 1) {
+            return '';
+        }
+        var html = '<colgroup>';
+        plan.widthsPx.forEach(function (w, i) {
+            var pct = Math.max(1, (w / sum) * 100);
+            html += '<col style="width:' + pct + '%"';
+            if (plan.tight && plan.tight[i]) {
+                html += ' data-tsl-col-tight="1"';
+            }
+            html += '>';
+        });
+        return html + '</colgroup>';
+    }
+
+    function buildTableElement(block, opts) {
+        opts = opts || {};
+        var cells = tableNormalizedCells(block.cells);
+        var table = document.createElement('table');
+        table.className = 'tsl-block tsl-block--table';
+        if (!cells.length) {
+            return table;
+        }
+        var headerRow = resolveBlockRules(block).props.header;
+        if (headerRow) {
+            table.setAttribute('data-tsl-table-header', '1');
+        }
+        table.setAttribute('data-tsl-layout-cols', String(blockLayoutCols(block)));
+        if (block._tslContinued) {
+            table.classList.add('tsl-block--continued');
+            table.classList.add('tsl-block--table-part');
+        }
+        var plan = block._tslTableColPlan;
+        if (!plan) {
+            plan = planTableColWidthsEstimate(cells, headerRow, opts.innerWidthPx);
+        }
+        applyTableColgroup(table, plan);
+        var rowStart = block._tslTableSlice ? block._tslTableSlice.start : (headerRow ? 1 : 0);
+        var rowEnd = block._tslTableSlice ? block._tslTableSlice.end : cells.length;
+        if (headerRow && cells[0]) {
+            table.appendChild(buildTableTr(cells[0], true));
+        }
+        var ri;
+        for (ri = rowStart; ri < rowEnd; ri += 1) {
+            if (headerRow && ri === 0) {
+                continue;
+            }
+            table.appendChild(buildTableTr(cells[ri], false));
+        }
+        stampBlockMeta(table, block);
+        return table;
+    }
+
+    function buildTableTr(row, isHeader) {
+        var tr = document.createElement('tr');
+        row.forEach(function (cell) {
+            var cellEl = document.createElement(isHeader ? 'th' : 'td');
+            cellEl.innerHTML = inlineHtml(cell != null ? String(cell) : '');
+            tr.appendChild(cellEl);
+        });
+        return tr;
+    }
+
     /**
      * Render one block: build its element, then let the spec ruleset map the block's
      * validated properties to CSS rule classes (TSL_BLOCK_RULES → tsl.css).
@@ -4200,25 +5032,7 @@
             return el;
         }
         if (type === 'table' && Array.isArray(b.cells)) {
-            var table = document.createElement('table');
-            table.className = 'tsl-block tsl-block--table';
-            var tableHeader = resolveBlockRules(b).props.header;
-            if (tableHeader) {
-                table.setAttribute('data-tsl-table-header', '1');
-            }
-            b.cells.forEach(function (row, ri) {
-                if (!Array.isArray(row)) {
-                    return;
-                }
-                var tr = document.createElement('tr');
-                row.forEach(function (cell) {
-                    var cellEl = document.createElement(tableHeader && ri === 0 ? 'th' : 'td');
-                    cellEl.innerHTML = inlineHtml(cell != null ? String(cell) : '');
-                    tr.appendChild(cellEl);
-                });
-                table.appendChild(tr);
-            });
-            return table;
+            return buildTableElement(b, ctx);
         }
         if (type === 'aside') {
             el = document.createElement('aside');
@@ -4670,7 +5484,8 @@
         return inlineHtml(resolveFields(raw, leanFieldCtx(header)));
     }
 
-    function leanBlockHtml(block, header, readMode) {
+    function leanBlockHtml(block, header, readMode, leanOpts) {
+        leanOpts = leanOpts || {};
         var type = block.type || 'paragraph';
         if (type === 'title') {
             var t = leanInlineHtml(block.text, header, readMode);
@@ -4726,13 +5541,18 @@
             return preHtml;
         }
         if (type === 'table' && Array.isArray(block.cells)) {
-            var rows = block.cells;
+            var rows = tableNormalizedCells(block.cells);
             var leanTableHeader = resolveBlockRules(block).props.header;
-            var tbl = '<table' + leanRuleAttrs(block, 'studio-lean-table tsl-block--table') + '>';
+            var tableFrac = leanOpts.tableColFraction != null
+                ? leanOpts.tableColFraction
+                : scrollTableColFraction(block);
+            var innerW = scrollTableInnerWidthPx({ colFraction: tableFrac });
+            var plan = planTableColWidthsEstimate(rows, leanTableHeader, innerW);
+            var tbl = '<table' + leanRuleAttrs(block, 'studio-lean-table tsl-block--table')
+                + ' data-tsl-layout-cols="' + String(blockLayoutCols(block)) + '"'
+                + '>'
+                + tableColgroupHtml(plan);
             rows.forEach(function (row, ri) {
-                if (!Array.isArray(row)) {
-                    return;
-                }
                 tbl += '<tr>';
                 row.forEach(function (cell) {
                     var tag = leanTableHeader && ri === 0 ? 'th' : 'td';
@@ -4883,7 +5703,9 @@
             function emitLeanPieces(rowBlocks) {
                 var inner = '';
                 rowBlocks.forEach(function (rb) {
-                    var piece = leanBlockHtml(rb, header, readMode);
+                    var piece = leanBlockHtml(rb, header, readMode, {
+                        tableColFraction: scrollTableColFraction(rb)
+                    });
                     if (!piece) {
                         return;
                     }
@@ -4989,10 +5811,22 @@
             }
             shell.setAttribute('data-tsl-reader-width', p.width || 'medium');
             shell.setAttribute('data-tsl-reader-theme', p.theme || 'light');
+            shell.setAttribute('data-tsl-reader-dyslexia', p.dyslexiaFont ? '1' : '0');
+            shell.setAttribute('data-tsl-reader-contrast', p.highContrast ? 'high' : 'normal');
         }
         var labMount = article.closest('[data-tsl-mount]');
         if (labMount) {
             syncMountHostLayout(labMount);
+        }
+        if (layout === 'scroll' && shell) {
+            syncReadingRuler(shell);
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(function () {
+                    syncScrollTableColumnWidths(shell);
+                });
+            } else {
+                syncScrollTableColumnWidths(shell);
+            }
         }
     }
 
@@ -5389,6 +6223,8 @@
     function display(mount, parsed, mode) {
         if (mount) {
             mount._tslParsed = parsed;
+            mount._tslCompactDidInitialRepaginate = false;
+            mount._tslCompactRepaginating = false;
             stampTslReadingCapabilities(parsed && parsed.header, mount);
         }
         if (mode === 'lean') {

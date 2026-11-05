@@ -1,5 +1,13 @@
 /* Talesmith Lang (.tsl) — universal reader namespace (node, reader, standalone) */
 
+@font-face {
+    font-family: "OpenDyslexic";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("fonts/OpenDyslexic-Regular.woff") format("woff");
+}
+
 .tsl-root {
     --tsl-page-w: 210mm;
     --tsl-page-h: 297mm;
@@ -127,6 +135,78 @@
 .tsl-root[data-tsl-reader-font="serif"] { --tsl-font: var(--tsl-font-read); }
 .tsl-root[data-tsl-reader-font="sans"] { --tsl-font: var(--tsl-font-ui); }
 .tsl-root[data-tsl-reader-font="mono"] { --tsl-font: var(--tsl-font-mono); }
+.tsl-root[data-tsl-reader-dyslexia="1"] {
+    --tsl-font: "OpenDyslexic", var(--tsl-font-read);
+}
+
+.tsl-root[data-tsl-reader-dyslexia="1"] .tsl-body,
+.tsl-root[data-tsl-reader-dyslexia="1"] .tsl-region,
+.tsl-root[data-tsl-reader-dyslexia="1"] .tsl-block {
+    font-family: var(--tsl-font);
+}
+
+.tsl-root[data-tsl-reader-contrast="high"] {
+    --tsl-bg: #000;
+    --tsl-paper: #000;
+    --tsl-ink: #fff;
+    --tsl-muted: #f0f0f0;
+    --tsl-rule: #fff;
+}
+
+.tsl-root[data-tsl-reader-contrast="high"][data-tsl-reader-theme="sepia"] {
+    --tsl-bg: #1a1408;
+    --tsl-paper: #1a1408;
+    --tsl-ink: #ffe066;
+    --tsl-muted: #e6c200;
+    --tsl-rule: #ffe066;
+}
+
+.tsl-reading-ruler-band {
+    position: fixed;
+    z-index: 6;
+    pointer-events: none;
+    box-sizing: border-box;
+    border-radius: 2px;
+    background: rgba(255, 236, 61, 0.72);
+    outline: 2px solid rgba(255, 200, 0, 0.95);
+    box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.12),
+        0 2px 10px rgba(255, 220, 0, 0.45);
+    transition: top 0.06s ease, height 0.06s ease, left 0.06s ease, width 0.06s ease;
+}
+
+.tsl-root[data-tsl-reader-contrast="high"] .tsl-reading-ruler-band {
+    background: rgba(255, 255, 102, 0.88);
+    outline: 3px solid #fff;
+    box-shadow:
+        0 0 0 2px #000,
+        0 0 14px rgba(255, 255, 255, 0.85);
+}
+
+.tsl-root[data-tsl-reading-ruler="1"][data-tsl-compact-pager="1"] .tsl-pager-viewport::before,
+.tsl-root[data-tsl-reading-ruler="1"][data-tsl-compact-pager="1"] .tsl-pager-viewport::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 12%;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.tsl-root[data-tsl-reading-ruler="1"][data-tsl-compact-pager="1"] .tsl-pager-viewport::before {
+    left: 0;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--tsl-ink) 6%, transparent), transparent);
+}
+
+.tsl-root[data-tsl-reading-ruler="1"][data-tsl-compact-pager="1"] .tsl-pager-viewport::after {
+    right: 0;
+    background: linear-gradient(270deg, color-mix(in srgb, var(--tsl-ink) 6%, transparent), transparent);
+}
+
+.tsl-root[data-tsl-compact-pager="1"][data-tsl-page-chrome-footer="1"] .tsl-pager-status {
+    display: none !important;
+}
 
 .tsl-root[data-tsl-hyphenate="1"] .tsl-body {
     hyphens: auto;
@@ -364,6 +444,8 @@
     left: 0;
     width: 100%;
     height: 100%;
+    min-width: 0;
+    max-width: 100%;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr) auto;
     align-content: stretch;
@@ -399,6 +481,15 @@
     grid-row: 1;
 }
 
+.tsl-root[data-tsl-compact-pager="1"] .tsl-page:not([data-tsl-full-bleed="1"]) .tsl-region--header,
+.tsl-root[data-tsl-compact-pager="1"] .tsl-page:not([data-tsl-full-bleed="1"]) .tsl-body,
+.tsl-root[data-tsl-compact-pager="1"] .tsl-page:not([data-tsl-full-bleed="1"]) .tsl-region--footer {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+}
+
 .tsl-root[data-tsl-compact-pager="1"] .tsl-page:not([data-tsl-full-bleed="1"]) .tsl-body {
     grid-row: 2;
     min-height: 0;
@@ -408,6 +499,41 @@
 .tsl-root[data-tsl-compact-pager="1"] .tsl-page:not([data-tsl-full-bleed="1"]) .tsl-region--footer {
     grid-row: 3;
     align-self: end;
+}
+
+.tsl-root[data-tsl-compact-pager="1"] .tsl-block--table {
+    width: 100%;
+    max-width: 100%;
+    table-layout: fixed;
+}
+
+.tsl-root[data-tsl-compact-pager="1"] .tsl-block--table th,
+.tsl-root[data-tsl-compact-pager="1"] .tsl-block--table td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    hyphens: auto;
+}
+
+.tsl-page.tsl-measure-page--compact {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    align-content: stretch !important;
+    flex-direction: unset !important;
+}
+
+.tsl-measure-page--compact .tsl-measure-chrome:first-child {
+    grid-row: 1;
+}
+
+.tsl-measure-page--compact .tsl-body {
+    grid-row: 2;
+    min-height: 0 !important;
+    overflow: hidden;
+    flex: none !important;
+}
+
+.tsl-measure-page--compact .tsl-measure-chrome:last-child {
+    grid-row: 3;
 }
 
 .tsl-root[data-tsl-compact-pager="1"] .tsl-pager-zoom-shell {
@@ -923,9 +1049,20 @@
 .tsl-block--table,
 .studio-lean-table {
     width: 100%;
+    max-width: 100%;
     border-collapse: collapse;
+    table-layout: fixed;
     font-size: 0.92em;
     margin: 0.75em 0;
+    box-sizing: border-box;
+}
+
+.tsl-block--table-part {
+    margin-top: 0;
+}
+
+.tsl-block--table-part + .tsl-block--table-part {
+    margin-top: 0;
 }
 
 .tsl-root[data-tsl-layout="pages"] .tsl-block--table th,
@@ -1252,6 +1389,56 @@
 .document-tsl .studio-lean-tsl[data-tsl-reader-font="serif"] { font-family: var(--tsl-font-read); }
 .document-tsl .studio-lean-tsl[data-tsl-reader-font="sans"] { font-family: var(--tsl-font-ui); }
 .document-tsl .studio-lean-tsl[data-tsl-reader-font="mono"] { font-family: var(--tsl-font-mono); }
+
+.document-tsl[data-tsl-reader-dyslexia="1"] .studio-lean-tsl,
+.studio-lean-tsl[data-tsl-reader-dyslexia="1"] {
+    font-family: "OpenDyslexic", var(--tsl-font-read);
+}
+
+.document-tsl[data-tsl-reader-dyslexia="1"] {
+    --tsl-font: "OpenDyslexic", var(--tsl-font-read);
+}
+
+.document-tsl[data-tsl-reader-contrast="high"] {
+    --tsl-bg: #000;
+    --tsl-paper: #000;
+    --tsl-ink: #fff;
+    --tsl-muted: #f0f0f0;
+    --tsl-rule: #fff;
+    background: var(--tsl-bg);
+    color: var(--tsl-ink);
+}
+
+.document-tsl[data-tsl-reader-contrast="high"] .studio-lean-tsl,
+.studio-lean-tsl[data-tsl-reader-contrast="high"] {
+    --tsl-bg: #000;
+    --tsl-paper: #000;
+    --tsl-ink: #fff;
+    --tsl-muted: #f0f0f0;
+    --tsl-rule: #fff;
+    background: var(--tsl-paper);
+    color: var(--tsl-ink);
+    border-color: var(--tsl-rule);
+    box-shadow: 0 2px 12px rgba(255, 255, 255, 0.08);
+}
+
+.document-tsl[data-tsl-reader-contrast="high"] .studio-lean-tsl[data-tsl-reader-theme="light"],
+.document-tsl[data-tsl-reader-contrast="high"] .studio-lean-tsl[data-tsl-reader-theme="sepia"],
+.document-tsl[data-tsl-reader-contrast="high"] .studio-lean-tsl[data-tsl-reader-theme="dark"] {
+    --tsl-bg: #000;
+    --tsl-paper: #000;
+    --tsl-ink: #fff;
+    --tsl-muted: #f0f0f0;
+    --tsl-rule: #fff;
+    background: var(--tsl-paper);
+    color: var(--tsl-ink);
+}
+
+.document-tsl[data-tsl-reader-contrast="high"][data-tsl-reader-theme="sepia"] .studio-lean-tsl {
+    --tsl-ink: #ffe066;
+    --tsl-muted: #e6c200;
+    --tsl-rule: #ffe066;
+}
 
 .document-tsl .studio-lean-tsl[data-tsl-reader-theme="light"] {
     --tsl-bg: #e8e4dc;
