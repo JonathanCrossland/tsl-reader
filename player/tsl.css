@@ -163,24 +163,103 @@
 
 .tsl-reading-ruler-band {
     position: fixed;
-    z-index: 6;
+    z-index: 120;
     pointer-events: none;
     box-sizing: border-box;
-    border-radius: 2px;
-    background: rgba(255, 236, 61, 0.72);
-    outline: 2px solid rgba(255, 200, 0, 0.95);
-    box-shadow:
-        0 0 0 1px rgba(0, 0, 0, 0.12),
-        0 2px 10px rgba(255, 220, 0, 0.45);
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    overflow: hidden;
+    max-height: calc(var(--tsl-ruler-line-h, 1.45em) * 3);
     transition: top 0.06s ease, height 0.06s ease, left 0.06s ease, width 0.06s ease;
 }
 
-.tsl-root[data-tsl-reader-contrast="high"] .tsl-reading-ruler-band {
-    background: rgba(255, 255, 102, 0.88);
-    outline: 3px solid #fff;
-    box-shadow:
-        0 0 0 2px #000,
-        0 0 14px rgba(255, 255, 255, 0.85);
+/* Top and bottom thirds: soft shade; centre third stays clear for the focus line. */
+.tsl-reading-ruler-band::before,
+.tsl-reading-ruler-band::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 33.333%;
+    pointer-events: none;
+}
+
+.tsl-reading-ruler-band::before {
+    top: 0;
+    background: linear-gradient(
+        to bottom,
+        color-mix(in srgb, var(--tsl-ink) 14%, transparent),
+        transparent
+    );
+}
+
+.tsl-reading-ruler-band::after {
+    bottom: 0;
+    background: linear-gradient(
+        to top,
+        color-mix(in srgb, var(--tsl-ink) 14%, transparent),
+        transparent
+    );
+}
+
+.tsl-reading-ruler-line {
+    position: static;
+    z-index: auto;
+    display: inline;
+    font: inherit !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    letter-spacing: inherit !important;
+    font-weight: inherit !important;
+    vertical-align: baseline;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent !important;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
+
+.tsl-root[data-tsl-layout="pages"] .tsl-body .tsl-reading-ruler-line,
+.tsl-root .tsl-body .tsl-reading-ruler-line,
+.document-tsl .tsl-reading-ruler-line {
+    font: inherit !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+}
+
+.tsl-root[data-tsl-reader-theme="light"] .tsl-body .tsl-reading-ruler-line,
+.tsl-root[data-tsl-reader-theme="sepia"] .tsl-body .tsl-reading-ruler-line,
+.document-tsl[data-tsl-reader-theme="light"] .tsl-reading-ruler-line,
+.document-tsl[data-tsl-reader-theme="sepia"] .tsl-reading-ruler-line {
+    color: #000 !important;
+    text-shadow:
+        0 0 1px #fff,
+        0 0 10px rgba(255, 255, 255, 0.95),
+        0 1px 2px rgba(255, 255, 255, 0.85);
+}
+
+.tsl-root[data-tsl-reader-theme="dark"] .tsl-body .tsl-reading-ruler-line,
+.document-tsl[data-tsl-reader-theme="dark"] .tsl-reading-ruler-line {
+    color: #fff !important;
+    text-shadow:
+        0 0 2px #000,
+        0 0 12px rgba(255, 255, 255, 0.65),
+        0 1px 3px #000;
+}
+
+.tsl-root[data-tsl-reader-contrast="high"] .tsl-reading-ruler-line,
+.document-tsl[data-tsl-reader-contrast="high"] .tsl-reading-ruler-line {
+    color: #fff;
+    text-shadow:
+        0 0 2px #000,
+        0 0 14px #fff,
+        0 0 3px #000;
+}
+
+.tsl-root[data-tsl-reader-contrast="high"][data-tsl-reader-theme="sepia"] .tsl-reading-ruler-line {
+    color: #fff;
 }
 
 .tsl-root[data-tsl-reading-ruler="1"][data-tsl-compact-pager="1"] .tsl-pager-viewport::before,
@@ -512,28 +591,6 @@
     overflow-wrap: anywhere;
     word-break: break-word;
     hyphens: auto;
-}
-
-.tsl-page.tsl-measure-page--compact {
-    display: grid !important;
-    grid-template-rows: auto minmax(0, 1fr) auto !important;
-    align-content: stretch !important;
-    flex-direction: unset !important;
-}
-
-.tsl-measure-page--compact .tsl-measure-chrome:first-child {
-    grid-row: 1;
-}
-
-.tsl-measure-page--compact .tsl-body {
-    grid-row: 2;
-    min-height: 0 !important;
-    overflow: hidden;
-    flex: none !important;
-}
-
-.tsl-measure-page--compact .tsl-measure-chrome:last-child {
-    grid-row: 3;
 }
 
 .tsl-root[data-tsl-compact-pager="1"] .tsl-pager-zoom-shell {
@@ -881,7 +938,45 @@
 .tsl-root[data-tsl-layout="pages"] .tsl-page:not([data-tsl-full-bleed="1"]) .tsl-body {
     flex: none;
     min-height: 0;
-    overflow: visible;
+    overflow: hidden;
+}
+
+.tsl-page.tsl-measure-page {
+    position: absolute;
+    left: -10000px;
+    top: 0;
+    visibility: hidden;
+    pointer-events: none;
+    box-sizing: border-box;
+    overflow: hidden;
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    align-content: stretch !important;
+    height: var(--tsl-page-h) !important;
+    min-height: var(--tsl-page-h) !important;
+    max-height: var(--tsl-page-h) !important;
+    width: var(--tsl-page-w) !important;
+}
+
+.tsl-measure-page .tsl-measure-chrome:first-child {
+    grid-row: 1;
+}
+
+.tsl-measure-page .tsl-body {
+    grid-row: 2;
+    min-height: 0 !important;
+    overflow: hidden;
+    flex: none !important;
+}
+
+.tsl-measure-page .tsl-measure-chrome:last-child {
+    grid-row: 3;
+}
+
+.tsl-measure-page .tsl-measure-stack {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .tsl-measure-chrome {
@@ -1531,16 +1626,22 @@
 .document-tsl[data-tsl-layout="scroll"] .studio-lean-code,
 .tsl-root[data-tsl-layout="scroll"] .tsl-block--code {
     max-width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    min-width: 0;
+    overflow-x: visible;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: pre-wrap;
     box-sizing: border-box;
 }
 
 .document-tsl[data-tsl-layout="scroll"] pre code,
-.tsl-root[data-tsl-layout="scroll"] .tsl-block--code {
+.document-tsl[data-tsl-layout="scroll"] .studio-lean-code code,
+.tsl-root[data-tsl-layout="scroll"] .tsl-block--code code {
     display: block;
-    white-space: pre;
-    overflow-x: auto;
+    max-width: 100%;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
 }
 
 /* Drop caps (lean HTML + paginated .tsl-root) */

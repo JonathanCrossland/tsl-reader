@@ -1136,6 +1136,41 @@
     var TSL_HOST_CRAMPED_RATIO = 0.55;
     /** Lab / phone: full-bleed pager (match Reader mqMobile at 899px). */
     var TSL_COMPACT_PAGER_MAX_WIDTH_PX = 899;
+    /** Subtracted from measured body budget so pagination stays inside the footer (subpixel/fonts). */
+    var TSL_PAGE_FLOW_SLACK_PX = 3;
+
+    /**
+     * Inner width of the body column from trim and margin spec (px). Pure geometry.
+     */
+    function pageBodyInnerWidthPxPure(trimPx, outsidePx, gutterPx, side) {
+        var minInner = 80;
+        trimPx = Math.max(minInner, trimPx || 0);
+        outsidePx = outsidePx || 0;
+        gutterPx = gutterPx || 0;
+        if (side === 'left') {
+            return Math.max(minInner, trimPx - outsidePx - gutterPx);
+        }
+        if (side === 'right') {
+            return Math.max(minInner, trimPx - gutterPx - outsidePx);
+        }
+        return Math.max(minInner, trimPx - outsidePx - outsidePx);
+    }
+
+    /**
+     * True when stacked flow content height fits the body budget above the page footer.
+     */
+    function pageFlowFitsHeight(contentHeightPx, bodyBudgetPx, slackPx) {
+        var budget = Math.max(0, bodyBudgetPx || 0);
+        if (budget < 1) {
+            return (contentHeightPx || 0) < 1;
+        }
+        var slack = slackPx != null ? slackPx : TSL_PAGE_FLOW_SLACK_PX;
+        return (contentHeightPx || 0) <= budget - slack;
+    }
+
+    function pageFlowMinBodyBudgetPx() {
+        return 80;
+    }
 
     function tslCompactPagerHost() {
         if (typeof window === 'undefined' || !window.matchMedia) {
@@ -1857,6 +1892,9 @@
             if (typeof root._tslPagerChangeFn === 'function') {
                 root._tslPagerChangeFn();
             }
+            if (typeof root._tslRulerClearBand === 'function') {
+                root._tslRulerClearBand();
+            }
         }
 
         function clearPagerZoomShells() {
@@ -2479,25 +2517,18 @@
         var pagesEl = document.createElement('div');
         pagesEl.className = 'tsl-pages';
         var measurePage = document.createElement('section');
-        measurePage.className = 'tsl-page';
+        measurePage.className = 'tsl-page tsl-measure-page';
         measurePage.setAttribute('data-tsl-side', 'any');
         measurePage.setAttribute('aria-hidden', 'true');
-        measurePage.style.cssText = 'position:absolute;left:-10000px;top:0;visibility:hidden;pointer-events:none;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;';
         var measureHeaderSlot = document.createElement('div');
         measureHeaderSlot.className = 'tsl-measure-chrome';
         var measureBody = document.createElement('div');
         measureBody.className = 'tsl-body';
-        measureBody.style.flex = '1 1 auto';
-        measureBody.style.minHeight = '0';
-        measureBody.style.overflow = 'visible';
         var measureFooterSlot = document.createElement('div');
         measureFooterSlot.className = 'tsl-measure-chrome';
         measurePage.appendChild(measureHeaderSlot);
         measurePage.appendChild(measureBody);
         measurePage.appendChild(measureFooterSlot);
-        if (tslCompactPagerHost()) {
-            measurePage.classList.add('tsl-measure-page--compact');
-        }
         root.appendChild(measurePage);
         mount.innerHTML = '';
         mount.appendChild(root);
@@ -2678,25 +2709,25 @@
             var innerW = pageBodyInnerWidthPx(s);
             measureBody.style.width = innerW + 'px';
             measureBody.style.maxWidth = innerW + 'px';
-            if (tslCompactPagerHost()) {
-                measureBody.style.overflow = 'hidden';
-            }
+            measureBody.style.overflow = 'hidden';
         }
 
         function measureBodyBudgetPx(side, pg) {
             syncMeasurePageForSide(side, pg);
             measureBody.innerHTML = '';
-            return Math.max(80, measureBody.clientHeight);
+            return Math.max(pageFlowMinBodyBudgetPx(), measureBody.clientHeight);
         }
 
         function prepareMeasureBodyStack(side, pg) {
             syncMeasurePageForSide(side, pg);
             measureBody.innerHTML = '';
-            var budget = Math.max(80, measureBody.clientHeight);
+            var budget = Math.max(pageFlowMinBodyBudgetPx(), measureBody.clientHeight);
             var stack = document.createElement('div');
             stack.className = 'tsl-measure-stack';
             stack.style.width = '100%';
+            stack.style.maxWidth = '100%';
             stack.style.height = 'auto';
+            stack.style.boxSizing = 'border-box';
             measureBody.appendChild(stack);
             return { budget: budget, stack: stack };
         }
@@ -2713,7 +2744,7 @@
             if (extraRow) {
                 shell.stack.appendChild(extraRow.cloneNode(true));
             }
-            return shell.stack.scrollHeight <= shell.budget + 1;
+            return pageFlowFitsHeight(shell.stack.scrollHeight, shell.budget);
         }
 
         function measureRowHeight(row, side, pg) {
@@ -2730,13 +2761,7 @@
             var trim = pageTrimWidthPx();
             var out = parseCssLengthToPx(root, page.marginsMM.outside + 'mm');
             var gut = parseCssLengthToPx(root, page.marginsMM.gutter + 'mm');
-            if (side === 'left') {
-                return Math.max(120, trim - out - gut);
-            }
-            if (side === 'right') {
-                return Math.max(120, trim - gut - out);
-            }
-            return Math.max(120, trim - out - out);
+            return pageBodyInnerWidthPxPure(trim, out, gut, side || 'any');
         }
 
         function measurePageContentWidthPx(side) {
@@ -2957,28 +2982,24 @@
                 while (current.body.childNodes.length && !fitsOnPage(current, null)) {
                     current = startPage();
                 }
-                var colW = flowColInnerWidthPx(rowClass, current.side);
-                var plan = planTableColWidthsMeasured(cells, headerRow, colW, current.side, current);
-                var remain = cells.length - rowIdx;
-                var bestEnd = rowIdx;
-                var n;
-                for (n = 1; n <= remain; n += 1) {
-                    var slice = { start: rowIdx, end: rowIdx + n };
-                    var trial = buildTableFlowRow(b, rowClass, slice, plan);
-                    if (!fitsOnPage(current, trial)) {
-                        break;
-                    }
-                    bestEnd = rowIdx + n;
-                }
-                if (bestEnd <= rowIdx) {
-                    if (current.body.childNodes.length) {
+                var slice = { start: rowIdx, end: rowIdx + 1 };
+                var placed = false;
+                while (!placed) {
+                    var colW = flowColInnerWidthPx(rowClass, current.side);
+                    var plan = planTableColWidthsMeasured(cells, headerRow, colW, current.side, current);
+                    var rowEl = buildTableFlowRow(b, rowClass, slice, plan);
+                    if (fitsOnPage(current, rowEl)) {
+                        current.body.appendChild(rowEl);
+                        placed = true;
+                        rowIdx += 1;
+                    } else if (current.body.childNodes.length) {
                         current = startPage();
-                        continue;
+                    } else {
+                        current.body.appendChild(rowEl);
+                        placed = true;
+                        rowIdx += 1;
                     }
-                    bestEnd = rowIdx + 1;
                 }
-                current.body.appendChild(buildTableFlowRow(b, rowClass, { start: rowIdx, end: bestEnd }, plan));
-                rowIdx = bestEnd;
             }
             if (current) {
                 current.endBlockIndex = bi;
@@ -3011,8 +3032,12 @@
             }
             ensurePage();
             var row = buildFlowRow(blocksInRow, rowClass);
-            while (current.body.childNodes.length && !fitsOnPage(current, row)) {
-                current = startPage();
+            while (!fitsOnPage(current, row)) {
+                if (current.body.childNodes.length) {
+                    current = startPage();
+                } else {
+                    break;
+                }
             }
             if (current) {
                 current.endBlockIndex = bi;
@@ -3071,7 +3096,7 @@
                         tryBy[e.id] = dummyPageBy[e.id];
                     });
                     var h = measureTocNavRowHeight(b, trySlice, tryBy, current.side);
-                    if (h > maxH) {
+                    if (!pageFlowFitsHeight(h, maxH)) {
                         break;
                     }
                     best = entryIdx + n;
@@ -3570,21 +3595,243 @@
         return null;
     }
 
-    function readingRulerTarget(root) {
+    function lineHeightPxFromRange(lineRange, boundary) {
+        if (!lineRange) {
+            return 20;
+        }
+        var node = lineRange.startContainer;
+        if (node && node.nodeType === 3) {
+            node = node.parentElement;
+        }
+        while (node && node !== boundary) {
+            if (node.nodeType === 1 && typeof getComputedStyle === 'function') {
+                var lhRaw = getComputedStyle(node).lineHeight;
+                var lh = parseFloat(lhRaw);
+                if (lh > 0 && isFinite(lh)) {
+                    return lh;
+                }
+            }
+            node = node.parentElement;
+        }
+        var rect = lineRange.getBoundingClientRect();
+        return Math.max(18, rect && rect.height ? rect.height : 20);
+    }
+
+    function readingRulerPagesInView(root) {
         if (!root) {
-            return null;
+            return [];
+        }
+        var spread = root.querySelector('.tsl-spread.is-active');
+        if (spread) {
+            return Array.prototype.filter.call(
+                spread.querySelectorAll('.tsl-page:not([aria-hidden="true"])'),
+                function (p) { return true; }
+            );
         }
         var page = root.querySelector('.tsl-page.is-active:not([aria-hidden="true"])');
-        if (page) {
-            return page.querySelector('.tsl-body') || page;
+        return page ? [page] : [];
+    }
+
+    function readingRulerTargetAt(root, clientX, clientY) {
+        var pages = readingRulerPagesInView(root);
+        var i;
+        for (i = 0; i < pages.length; i += 1) {
+            var r = pages[i].getBoundingClientRect();
+            if (clientX >= r.left && clientX <= r.right && clientY >= r.top && clientY <= r.bottom) {
+                return pages[i].querySelector('.tsl-body') || pages[i];
+            }
+        }
+        if (!pages.length) {
+            return root.querySelector('.document-tsl')
+                || root.querySelector('.tsl-body')
+                || root;
+        }
+        return null;
+    }
+
+    function readingRulerTarget(root) {
+        var pages = readingRulerPagesInView(root);
+        if (pages.length === 1) {
+            return pages[0].querySelector('.tsl-body') || pages[0];
         }
         return root.querySelector('.document-tsl')
             || root.querySelector('.tsl-body')
             || root;
     }
 
-    function lineBandRectAtClient(root, clientX, clientY) {
-        var target = readingRulerTarget(root);
+    function expandRangeToLineSimple(range) {
+        if (!range) {
+            return null;
+        }
+        var r = range.cloneRange();
+        if (r.startContainer.nodeType === 3) {
+            var text = r.startContainer.textContent || '';
+            var start = r.startOffset;
+            var end = r.startOffset;
+            while (start > 0 && text.charAt(start - 1) !== '\n') {
+                start -= 1;
+            }
+            while (end < text.length && text.charAt(end) !== '\n') {
+                end += 1;
+            }
+            r.setStart(r.startContainer, start);
+            r.setEnd(r.startContainer, end);
+            return r;
+        }
+        return r;
+    }
+
+    function lineRangeFromCaret(range, boundary) {
+        if (!range || !boundary || !boundary.contains(range.startContainer)) {
+            return null;
+        }
+        if (typeof window !== 'undefined' && window.getSelection && typeof Selection !== 'undefined'
+            && Selection.prototype.modify) {
+            var sel = window.getSelection();
+            var saved = sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+            sel.removeAllRanges();
+            sel.addRange(range.cloneRange());
+            try {
+                sel.modify('extend', 'backward', 'lineboundary');
+                sel.modify('extend', 'forward', 'lineboundary');
+                var lineR = sel.getRangeAt(0).cloneRange();
+                sel.removeAllRanges();
+                if (saved) {
+                    sel.addRange(saved);
+                }
+                if (boundary.contains(lineR.startContainer)) {
+                    return lineR;
+                }
+            } catch (e) {
+                sel.removeAllRanges();
+                if (saved) {
+                    sel.addRange(saved);
+                }
+            }
+        }
+        return expandRangeToLineSimple(range);
+    }
+
+    var TSL_RULER_HIGHLIGHT_ID = 'tsl-reading-ruler-line';
+    var tslRulerHighlightStyleEl = null;
+
+    function readingRulerHighlightSupported() {
+        return typeof CSS !== 'undefined'
+            && CSS.highlights
+            && typeof Highlight !== 'undefined';
+    }
+
+    function clearReadingRulerHighlight() {
+        if (readingRulerHighlightSupported()) {
+            CSS.highlights.delete(TSL_RULER_HIGHLIGHT_ID);
+        }
+    }
+
+    function setReadingRulerHighlight(lineRange) {
+        if (!readingRulerHighlightSupported() || !lineRange) {
+            return;
+        }
+        try {
+            CSS.highlights.set(TSL_RULER_HIGHLIGHT_ID, new Highlight(lineRange));
+        } catch (e) {
+            CSS.highlights.delete(TSL_RULER_HIGHLIGHT_ID);
+        }
+    }
+
+    function syncReadingRulerHighlightCss(root) {
+        if (!readingRulerHighlightSupported() || !root) {
+            return;
+        }
+        if (!tslRulerHighlightStyleEl) {
+            tslRulerHighlightStyleEl = document.createElement('style');
+            tslRulerHighlightStyleEl.setAttribute('data-tsl-ruler-highlight-style', '');
+            document.head.appendChild(tslRulerHighlightStyleEl);
+        }
+        var theme = root.getAttribute('data-tsl-reader-theme') || 'light';
+        var high = root.getAttribute('data-tsl-reader-contrast') === 'high';
+        var color = '#000000';
+        var shadow = '0 0 1px #fff, 0 0 10px rgba(255,255,255,0.95), 0 1px 2px rgba(255,255,255,0.85)';
+        if (high || theme === 'dark') {
+            color = '#ffffff';
+            shadow = '0 0 2px #000, 0 0 12px rgba(255,255,255,0.7), 0 1px 3px #000';
+        }
+        if (high) {
+            shadow = '0 0 2px #000, 0 0 14px #fff, 0 0 3px #000';
+        }
+        tslRulerHighlightStyleEl.textContent = '::highlight(' + TSL_RULER_HIGHLIGHT_ID + '){'
+            + 'color:' + color + ';'
+            + 'text-shadow:' + shadow + ';'
+            + 'background:transparent;}';
+    }
+
+    function readingRulerLineKey(lineRange) {
+        if (!lineRange) {
+            return '';
+        }
+        return lineRange.startContainer + ':' + lineRange.startOffset + ':'
+            + lineRange.endContainer + ':' + lineRange.endOffset;
+    }
+
+    function clearReadingRulerFocus(scope) {
+        clearReadingRulerHighlight();
+        if (!scope || !scope.querySelectorAll) {
+            return;
+        }
+        scope.querySelectorAll('.tsl-reading-ruler-line').forEach(function (span) {
+            var parent = span.parentNode;
+            if (!parent) {
+                return;
+            }
+            while (span.firstChild) {
+                parent.insertBefore(span.firstChild, span);
+            }
+            parent.removeChild(span);
+            if (parent.normalize) {
+                parent.normalize();
+            }
+        });
+    }
+
+    function applyReadingRulerLineStyle(lineRange, boundary) {
+        if (!lineRange || lineRange.collapsed) {
+            return;
+        }
+        if (readingRulerHighlightSupported()) {
+            setReadingRulerHighlight(lineRange);
+            return;
+        }
+        wrapLineWithReadingRulerFocus(lineRange, boundary);
+    }
+
+    function wrapLineWithReadingRulerFocus(lineRange, boundary) {
+        if (!lineRange || lineRange.collapsed) {
+            return null;
+        }
+        var node = lineRange.startContainer;
+        if (node && node.nodeType === 3) {
+            node = node.parentElement;
+        }
+        while (node && node !== boundary) {
+            if (node.nodeType === 1
+                && (node.closest('pre, code, .tsl-block--code, .studio-lean-code'))) {
+                return null;
+            }
+            node = node.parentElement;
+        }
+        var span = document.createElement('span');
+        span.className = 'tsl-reading-ruler-line';
+        try {
+            lineRange.surroundContents(span);
+        } catch (e) {
+            var frag = lineRange.extractContents();
+            span.appendChild(frag);
+            lineRange.insertNode(span);
+        }
+        return span;
+    }
+
+    function readingRulerAtClient(root, clientX, clientY) {
+        var target = readingRulerTargetAt(root, clientX, clientY);
         if (!target) {
             return null;
         }
@@ -3598,18 +3845,29 @@
         if (!range || !target.contains(range.startContainer)) {
             return null;
         }
-        var lineRect = range.getBoundingClientRect();
+        var lineRange = lineRangeFromCaret(range, target);
+        if (!lineRange) {
+            return null;
+        }
+        var lineRect = lineRange.getBoundingClientRect();
         if (!lineRect.height) {
-            lineRect = range.getClientRects()[0] || lineRect;
+            lineRect = lineRange.getClientRects()[0] || lineRect;
         }
         if (!lineRect || !lineRect.height) {
             return null;
         }
+        var lineH = lineHeightPxFromRange(lineRange, target);
+        var focusTop = lineRect.top + Math.max(0, (lineRect.height - lineH) / 2);
         return {
-            top: lineRect.top,
-            left: box.left,
-            width: box.width,
-            height: Math.max(lineRect.height, 20)
+            lineRange: lineRange,
+            lineH: lineH,
+            boundary: target,
+            frame: {
+                top: focusTop - lineH,
+                left: box.left,
+                width: box.width,
+                height: lineH * 3
+            }
         };
     }
 
@@ -3624,43 +3882,62 @@
         var active = !!getReadingPrefs().readingRuler;
         if (!active) {
             root.removeAttribute('data-tsl-reading-ruler');
+            clearReadingRulerFocus(root);
             return;
         }
         root.setAttribute('data-tsl-reading-ruler', '1');
-        var host = root.querySelector('.tsl-pager-viewport') || root;
+        syncReadingRulerHighlightCss(root);
         var band = document.createElement('div');
         band.className = 'tsl-reading-ruler-band';
         band.hidden = true;
         band.setAttribute('aria-hidden', 'true');
-        host.appendChild(band);
+        document.body.appendChild(band);
+        var lastLineKey = '';
 
-        function placeBand(rect) {
-            if (!rect || rect.width < 8) {
+        function placeBand(hit) {
+            if (!hit || !hit.frame || hit.frame.width < 8) {
+                clearReadingRulerFocus(root);
+                lastLineKey = '';
                 band.hidden = true;
                 return;
             }
+            var lineKey = readingRulerLineKey(hit.lineRange);
+            if (lineKey !== lastLineKey) {
+                clearReadingRulerFocus(root);
+                applyReadingRulerLineStyle(hit.lineRange, hit.boundary);
+                lastLineKey = lineKey;
+            }
             band.hidden = false;
-            band.style.top = Math.round(rect.top) + 'px';
-            band.style.left = Math.round(rect.left) + 'px';
-            band.style.width = Math.round(rect.width) + 'px';
-            band.style.height = Math.round(rect.height) + 'px';
+            band.style.setProperty('--tsl-ruler-line-h', hit.lineH + 'px');
+            band.style.top = Math.round(hit.frame.top) + 'px';
+            band.style.left = Math.round(hit.frame.left) + 'px';
+            band.style.width = Math.round(hit.frame.width) + 'px';
+            band.style.height = Math.round(hit.lineH * 3) + 'px';
         }
 
         function onPointer(ev) {
             if (!getReadingPrefs().readingRuler) {
                 return;
             }
-            placeBand(lineBandRectAtClient(root, ev.clientX, ev.clientY));
+            placeBand(readingRulerAtClient(root, ev.clientX, ev.clientY));
         }
 
-        host.addEventListener('pointermove', onPointer, { passive: true });
-        host.addEventListener('pointerdown', onPointer, { passive: true });
+        var moveHost = root.querySelector('.tsl-pager-viewport') || root;
+        moveHost.addEventListener('pointermove', onPointer, { passive: true });
+        moveHost.addEventListener('pointerdown', onPointer, { passive: true });
+        root._tslRulerClearBand = function () {
+            clearReadingRulerFocus(root);
+            lastLineKey = '';
+            band.hidden = true;
+        };
         root._tslRulerCleanup = function () {
-            host.removeEventListener('pointermove', onPointer);
-            host.removeEventListener('pointerdown', onPointer);
+            moveHost.removeEventListener('pointermove', onPointer);
+            moveHost.removeEventListener('pointerdown', onPointer);
+            clearReadingRulerFocus(root);
             if (band.parentNode) {
                 band.parentNode.removeChild(band);
             }
+            root._tslRulerClearBand = null;
         };
     }
 
@@ -3700,6 +3977,9 @@
         root.setAttribute('data-tsl-layout', layout);
         root.setAttribute('data-tsl-page-fit', tslAuthorPrintLayout() ? 'native' : getPageFit());
         syncReadingRuler(root);
+        if (getReadingPrefs().readingRuler) {
+            syncReadingRulerHighlightCss(root);
+        }
         if (layout === 'pages' && typeof root._tslPagerRefresh === 'function') {
             root._tslPagerRefresh();
         }
@@ -5820,6 +6100,9 @@
         }
         if (layout === 'scroll' && shell) {
             syncReadingRuler(shell);
+            if (getReadingPrefs().readingRuler) {
+                syncReadingRulerHighlightCss(shell);
+            }
             if (typeof requestAnimationFrame === 'function') {
                 requestAnimationFrame(function () {
                     syncScrollTableColumnWidths(shell);
