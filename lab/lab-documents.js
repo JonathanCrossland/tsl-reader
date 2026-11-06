@@ -23,6 +23,7 @@
             { label: 'Rich content blocks', url: '../examples/rich-content.tsl' },
             { label: 'Print layout & pages', url: '../examples/print-layout.tsl' },
             { label: 'Comic Page', url: '../examples/comic.tsl' },
+            { label: 'Daisy Basic', url: '../examples/daisy-basic.tsl' }
         ]
     };
 }(window));

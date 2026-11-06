@@ -47,9 +47,22 @@
         return !header || typeof header !== 'object' || !header.page || !header.typography;
     }
 
+    /** Spec evolution used version 0.1 in some example files; canonical is integer 1. */
+    function normalizeEnvelopeVersion(v) {
+        if (v === 0.1 || v === '0.1') {
+            return 1;
+        }
+        var n = typeof v === 'number' ? v : parseInt(String(v), 10);
+        if (!isFinite(n) || n < 1) {
+            return 1;
+        }
+        return n;
+    }
+
     function parse(text) {
         var data = JSON.parse(text);
         if (data && data.format === 'talesmith-lang' && data.document) {
+            data.version = normalizeEnvelopeVersion(data.version);
             var doc = data.document;
             var blocks = Array.isArray(doc.blocks) ? doc.blocks : [];
             var header = data.header;
@@ -2978,30 +2991,42 @@
                 }
                 return;
             }
+            /* One <table> per page *fragment*, but pack as many rows as fit (not one row per table).
+               Binary search row count like appendSplittableSegments. */
             var rowIdx = dataStart;
             while (rowIdx < cells.length) {
                 ensurePage();
                 while (current.body.childNodes.length && !fitsOnPage(current, null)) {
                     current = startPage();
                 }
-                var slice = { start: rowIdx, end: rowIdx + 1 };
-                var placed = false;
-                while (!placed) {
-                    var colW = flowColInnerWidthPx(rowClass, current.side);
-                    var plan = planTableColWidthsMeasured(cells, headerRow, colW, current.side, current);
-                    var rowEl = buildTableFlowRow(b, rowClass, slice, plan);
-                    if (fitsOnPage(current, rowEl)) {
-                        current.body.appendChild(rowEl);
-                        placed = true;
-                        rowIdx += 1;
-                    } else if (current.body.childNodes.length) {
-                        current = startPage();
+                var colW = flowColInnerWidthPx(rowClass, current.side);
+                var plan = planTableColWidthsMeasured(cells, headerRow, colW, current.side, current);
+                var remain = cells.length - rowIdx;
+                var lo = 1;
+                var hi = remain;
+                var best = 0;
+                while (lo <= hi) {
+                    var mid = Math.floor((lo + hi) / 2);
+                    var trySlice = { start: rowIdx, end: rowIdx + mid };
+                    var trialRow = buildTableFlowRow(b, rowClass, trySlice, plan);
+                    if (fitsOnPage(current, trialRow)) {
+                        best = mid;
+                        lo = mid + 1;
                     } else {
-                        current.body.appendChild(rowEl);
-                        placed = true;
-                        rowIdx += 1;
+                        hi = mid - 1;
                     }
                 }
+                if (best < 1) {
+                    if (current.body.childNodes.length) {
+                        current = startPage();
+                        continue;
+                    }
+                    /* Even a single row overshoots the body budget; place it anyway to avoid looping. */
+                    best = 1;
+                }
+                var slice = { start: rowIdx, end: rowIdx + best };
+                current.body.appendChild(buildTableFlowRow(b, rowClass, slice, plan));
+                rowIdx += best;
             }
             if (current) {
                 current.endBlockIndex = bi;
@@ -5171,7 +5196,13 @@
             return table;
         }
         var headerRow = resolveBlockRules(block).props.header;
-        if (headerRow) {
+        var dataStart = headerRow ? 1 : 0;
+        /* Paginated tables may use multiple body rows per fragment; only the first fragment repeats
+           the header row — not every slice. */
+        var includeHeaderRow = headerRow && cells[0] && (
+            !block._tslTableSlice || block._tslTableSlice.start === dataStart
+        );
+        if (includeHeaderRow) {
             table.setAttribute('data-tsl-table-header', '1');
         }
         table.setAttribute('data-tsl-layout-cols', String(blockLayoutCols(block)));
@@ -5186,7 +5217,7 @@
         applyTableColgroup(table, plan);
         var rowStart = block._tslTableSlice ? block._tslTableSlice.start : (headerRow ? 1 : 0);
         var rowEnd = block._tslTableSlice ? block._tslTableSlice.end : cells.length;
-        if (headerRow && cells[0]) {
+        if (includeHeaderRow) {
             table.appendChild(buildTableTr(cells[0], true));
         }
         var ri;

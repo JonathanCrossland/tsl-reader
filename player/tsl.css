@@ -580,6 +580,16 @@
     align-self: end;
 }
 
+/* Full-bleed pages have no header/footer rows; lone .tsl-body must span the 3-row grid or it stays
+   in the auto-sized first row and the cover image can collapse to zero height. */
+.tsl-root[data-tsl-compact-pager="1"][data-tsl-pager-flow="horizontal"][data-tsl-layout="pages"]
+    .tsl-page[data-tsl-full-bleed="1"]:not([aria-hidden="true"]) .tsl-body {
+    grid-row: 1 / -1;
+    min-height: 0;
+    height: 100%;
+    align-self: stretch;
+}
+
 .tsl-root[data-tsl-compact-pager="1"] .tsl-block--table {
     width: 100%;
     max-width: 100%;

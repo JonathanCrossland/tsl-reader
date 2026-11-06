@@ -1,0 +1,773 @@
+{
+  "format": "talesmith-lang",
+  "version": 0.1,
+  "header": {
+    "page": {
+      "formatId": "web",
+      "kind": "web",
+      "trimMM": { "width": 210, "height": 297 },
+      "marginsMM": { "top": 12, "bottom": 12, "outside": 15, "gutter": 15 },
+      "headerTopMM": 3,
+      "footerBottomMM": 3,
+      "headerRule": true,
+      "footerRule": true,
+      "rowGapMM": 2,
+      "usePrintGutters": true
+    },
+    "typography": {
+      "fontId": "book-serif",
+      "fontFamily": "Georgia, \"Times New Roman\", serif",
+      "sizePt": 11,
+      "lineHeight": 1.45,
+      "paragraphAlign": "left",
+      "paragraphIndentIn": 0,
+      "paragraphSpacingPt": 0,
+      "hyphenation": true
+    },
+    "numbering": {
+      "startPage": 1,
+      "pageOffsetStart": 0,
+      "firstPhysicalPageSide": "left"
+    },
+    "theme": "default",
+    "readMode": false,
+    "metadata": {
+      "title": "Basic Functionality Tests",
+      "fields": [
+        { "name": "Title", "value": "Basic Functionality Tests" }
+      ]
+    }
+  },
+  "document": {
+    "blocks": [
+      {
+    "id": "b0",
+    "type": "front-cover",
+    "align": "center",
+    "theme": null,
+    "expanded": false,
+    "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22600%22%20height%3D%22900%22%20viewBox%3D%220%200%20600%20900%22%3E%3Crect%20width%3D%22100%25%22%20height%3D%22100%25%22%20fill%3D%22%23ffffff%22%2F%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2244%25%22%20text-anchor%3D%22middle%22%20font-family%3D%22Georgia%2Cserif%22%20font-size%3D%2234%22%20fill%3D%22%23333%22%3EBasic%20Functionality%20Tests%3C%2Ftext%3E%3Ctext%20x%3D%2250%25%22%20y%3D%2252%25%22%20text-anchor%3D%22middle%22%20font-family%3D%22Georgia%2Cserif%22%20font-size%3D%2218%22%20fill%3D%22%23555%22%3EDAISY%20EPUB%20test%20book%3C%2Ftext%3E%3C%2Fsvg%3E"
+  },
+  {
+    "id": "b1",
+    "type": "title",
+    "align": "center",
+    "cols": 2,
+    "text": "Basic Functionality Tests"
+  },
+  {
+    "id": "b2",
+    "type": "toc",
+    "maxLevel": 3,
+    "leader": "."
+  },
+      {
+        "id": "b3",
+        "type": "h1",
+        "align": "left",
+        "cols": 2,
+        "text": "Basic Functionality Tests"
+      },
+      {
+        "id": "b4",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "file-010 Operating system/Platform accessibility:"
+      },
+      {
+        "id": "b5",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "If you are using a hardware device, it can be started independently and essential accessibility for starting and exiting applications is available."
+      },
+      {
+        "id": "b6",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b7",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "1"
+      },
+      {
+        "id": "b8",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "file-110 The reading system can be activated independently"
+      },
+      {
+        "id": "b9",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "If you are using a reading app that requires you to create an online account then the complete getting started process should be accessible."
+      },
+      {
+        "id": "b10",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b11",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "2"
+      },
+      {
+        "id": "b12",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "file-210 Open content"
+      },
+      {
+        "id": "b13",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Open the Fundamental Accessibility Test book in the reading system."
+      },
+      {
+        "id": "b14",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "If the test book is not available in the bookshelf, then open any other book that is available."
+      },
+      {
+        "id": "b15",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "If the reading system also supports side loading, then please provide notes about the accessibility of the side loading feature."
+      },
+      {
+        "id": "b16",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b17",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "3"
+      },
+      {
+        "id": "b18",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "file-310 Access list of available content in the reading system"
+      },
+      {
+        "id": "b19",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Check if you can navigate inside the bookshelf."
+      },
+      {
+        "id": "b20",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Open the bookshelf or library in the Reading System"
+      },
+      {
+        "id": "b21",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Navigate the entries in the bookshelf or library view"
+      },
+      {
+        "id": "b22",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b23",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "4"
+      },
+      {
+        "id": "b24",
+        "type": "h1",
+        "align": "left",
+        "cols": 2,
+        "text": "Navigation Tests"
+      },
+      {
+        "id": "b25",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "nav-005 The table of contents in the app presents the content hierarchy"
+      },
+      {
+        "id": "b26",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Check if the table of Contents is accessible and its hierarchy is presented correctly by the reading system"
+      },
+      {
+        "id": "b27",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Access the table of contents (TOC)in the reading system. Note that in most reading systems the TOC can be accessed using the menu or icons in the toolbars."
+      },
+      {
+        "id": "b28",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Check the top ten entries in the table of contents"
+      },
+      {
+        "id": "b29",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Check if the following structure of table of content is presented. It may be presented in tree view, nested list view or any other view, the main objective is to verify if all section names are accessible and the order and level of the sections is correct and accessible."
+      },
+      {
+        "id": "b30",
+        "type": "bullet",
+        "bulletStyle": "disc",
+        "cols": 2,
+        "text": "Cover page - First entry in the TOC, this is at level 1"
+      },
+      {
+        "id": "b31",
+        "type": "bullet",
+        "bulletStyle": "disc",
+        "cols": 2,
+        "text": "Front page - Second entry in the TOC, this is at level 1"
+      },
+      {
+        "id": "b32",
+        "type": "bullet",
+        "bulletStyle": "disc",
+        "cols": 2,
+        "text": "Introduction - Third entry in the TOC, this is at level 1"
+      },
+      {
+        "id": "b33",
+        "type": "bullet",
+        "bulletStyle": "disc",
+        "cols": 2,
+        "text": "Basic Functionality Tests - Fourth entry in the TOC, this is also at level 1"
+      },
+      {
+        "id": "b34",
+        "type": "bullet",
+        "bulletStyle": "circle",
+        "cols": 2,
+        "text": "Operating system accessibility - Fifth entry in the TOC, this is at level 2"
+      },
+      {
+        "id": "b35",
+        "type": "bullet",
+        "bulletStyle": "circle",
+        "cols": 2,
+        "text": "Reading system activation - Sixth entry in the TOC, this is at level 2"
+      },
+      {
+        "id": "b36",
+        "type": "bullet",
+        "bulletStyle": "circle",
+        "cols": 2,
+        "text": "Open content - Seventh entry in the TOC, this is at level 2"
+      },
+      {
+        "id": "b37",
+        "type": "bullet",
+        "bulletStyle": "circle",
+        "cols": 2,
+        "text": "Listing documents - Eighth entry in the TOC, this is also at level 2"
+      },
+      {
+        "id": "b38",
+        "type": "bullet",
+        "bulletStyle": "disc",
+        "cols": 2,
+        "text": "Navigation Tests - Ninth entry in the TOC, this is at level 1"
+      },
+      {
+        "id": "b39",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b40",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "nav-010 Navigate to chapters through the Table of Contents"
+      },
+      {
+        "id": "b41",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Check if you can navigate to a section by using the table of contents."
+      },
+      {
+        "id": "b42",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Access the Table of content (TOC) of this book in the Reading System"
+      },
+      {
+        "id": "b43",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Select the section \"Navigation Test\" inside the Chapter \"Supplemental Content\" in the TOC"
+      },
+      {
+        "id": "b44",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Check if the focus has now moved to the desired section of the book (\"Navigation Test\")."
+      },
+      {
+        "id": "b45",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Use the link available there to return to this point."
+      },
+      {
+        "id": "b46",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b47",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "5"
+      },
+      {
+        "id": "b48",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "nav-110 Navigate content by pages"
+      },
+      {
+        "id": "b49",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Check if you can navigate the content by pages."
+      },
+      {
+        "id": "b50",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Use the \"Next/Previous Page\" or \"Go to Page\" or the \"Page List\" feature in the Reading system and check if you are able to navigate to different pages."
+      },
+      {
+        "id": "b51",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "This EPUB file contains 10 hard coded page breaks. Note that these page breaks are different from the reflowed page numbers. If the total number of pages of this book in the reading app is not exactly 10, then you are looking at the reflowed pages. The app may be having a feature to switch between print page and reflowed pages for navigation. Or the print page list may be appearing in the TOC. If print page navigation feature does not exist or does not work then this test should be marked 'Fail'."
+      },
+      {
+        "id": "b52",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b53",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "6"
+      },
+      {
+        "id": "b54",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "nav-210 Navigate forward and backward through reflowed content"
+      },
+      {
+        "id": "b55",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Use any control or command to navigate forward and backwards in the book content."
+      },
+      {
+        "id": "b56",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Note that some reading systems may be displaying text in a scrolling view and navigation by screen or page may not be available."
+      },
+      {
+        "id": "b57",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "If you can move forwards and backwards in the book content by any means Using the selected Assistive Technology and Input method then this test passes."
+      },
+      {
+        "id": "b58",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b59",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "7"
+      },
+      {
+        "id": "b60",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "nav-310 Read navigation information"
+      },
+      {
+        "id": "b61",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Use the \"Where am I?\" or any other similar command available in the reading system and check if you can get information about your current position in the book."
+      },
+      {
+        "id": "b62",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "The minimum information expected is current section and current page number. Percentage read, book title, author etc. can be additional useful information. It should be possible to resume reading from the last read position after using this command."
+      },
+      {
+        "id": "b63",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b64",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "8"
+      },
+      {
+        "id": "b65",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "nav-410 Perform a search, review the search results"
+      },
+      {
+        "id": "b66",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Perform a search, review the search results and navigate to the selected search result in the content."
+      },
+      {
+        "id": "b67",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Search for the term \"Taj Mahal\" without the quotation marks in this book."
+      },
+      {
+        "id": "b68",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Review the search results. This phrase appears only twice in this book."
+      },
+      {
+        "id": "b69",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Navigate to the second search results. Use the link available there to return to this test."
+      },
+      {
+        "id": "b70",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b71",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "nav-510 Move across chapters without using TOC"
+      },
+      {
+        "id": "b72",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Check if you can move across chapters without having to use the Table of Contents."
+      },
+      {
+        "id": "b73",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Move to the last section in this chapter which is \"Review and navigate Notes\"."
+      },
+      {
+        "id": "b74",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Continue reading and check if you are able to read the last lines of the current chapter and then the beginning lines of the next chapter which are reproduced below for convenience."
+      },
+      {
+        "id": "b75",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "The last line of the current chapter is:"
+      },
+      {
+        "id": "b76",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "This line indicates the end of current chapter"
+      },
+      {
+        "id": "b77",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "If your reading system takes you to the next chapter, you will be able to read the following lines on the next HTML page:"
+      },
+      {
+        "id": "b78",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "Supplemental Content"
+      },
+      {
+        "id": "b79",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b80",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "9"
+      },
+      {
+        "id": "b81",
+        "type": "h1",
+        "align": "left",
+        "cols": 2,
+        "text": "Highlights, Notes and Bookmarks"
+      },
+      {
+        "id": "b82",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "anno-010 Add a Bookmark or Highlight"
+      },
+      {
+        "id": "b83",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Some reading systems may have a Highlight feature in place of Bookmarks. The tests for Bookmarks may then be performed with Highlights."
+      },
+      {
+        "id": "b84",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Navigate to the beginning of this section i.e. Highlights, Notes and Bookmarks."
+      },
+      {
+        "id": "b85",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Place a Bookmark or Highlight the section title."
+      },
+      {
+        "id": "b86",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b87",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "10"
+      },
+      {
+        "id": "b88",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "anno-110 Review and navigate Bookmarks or Highlights"
+      },
+      {
+        "id": "b89",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Check if you can review and navigate Bookmarks or Highlights."
+      },
+      {
+        "id": "b90",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Access and navigate list of Bookmarks or Highlights."
+      },
+      {
+        "id": "b91",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Close the list(s) and resume reading."
+      },
+      {
+        "id": "b92",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Access the list of Bookmarks or Highlights again and select an entry and check if you can move to the position where the Bookmark/Highlight was placed. In Windows environment it is difficult to have precise synchronization of the reading position of screen reader, therefore this test will pass in Windows environment even if you are able to move to the approximate location, for example somewhere in the same paragraph."
+      },
+      {
+        "id": "b93",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b94",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "anno-210 Add a note"
+      },
+      {
+        "id": "b95",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Add a Note at this location in the book. Provide a few lines of text in the Note."
+      },
+      {
+        "id": "b96",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b97",
+        "type": "h2",
+        "align": "left",
+        "cols": 2,
+        "text": "anno-310 Review and navigate Notes"
+      },
+      {
+        "id": "b98",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Check if you can review and navigate Notes."
+      },
+      {
+        "id": "b99",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Access and navigate list of Notes."
+      },
+      {
+        "id": "b100",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Close the list(s) and resume reading."
+      },
+      {
+        "id": "b101",
+        "type": "bullet",
+        "bulletStyle": "number",
+        "cols": 2,
+        "text": "Access the list of Notes again and select a Note and check if you can move to the position where the Note was placed. In Windows environment it is difficult to have precise synchronization of the reading position of screen reader, therefore this test will pass in Windows environment even if you are able to move to the approximate location, for example somewhere in the same paragraph."
+      },
+      {
+        "id": "b102",
+        "type": "paragraph",
+        "align": "left",
+        "cols": 2,
+        "text": "Indicate Pass or Fail."
+      },
+      {
+        "id": "b103",
+        "type": "paragraph",
+        "align": "center",
+        "cols": 2,
+        "text": "This line indicates the end of current chapter"
+      }
+    ]
+  }
+}
