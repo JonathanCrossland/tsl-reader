@@ -16,6 +16,7 @@
     var activeDocumentKey = '';
     var labRestoringProgress = false;
     var LAB_PROGRESS_PREFIX = 'tsl:lab-progress:';
+    var LAB_LAST_DOCUMENT_KEY = 'tsl:lab-last-document';
     var settings = document.querySelector('[data-tsl-settings]');
     var lastUrl = '';
     var lastParsed = null;
@@ -61,6 +62,31 @@
         try {
             localStorage.setItem(key, value);
         } catch (e) { /* private mode */ }
+    }
+
+    function saveLastLabDocumentUrl(url) {
+        if (!url) {
+            return;
+        }
+        try {
+            storageSetItem(LAB_LAST_DOCUMENT_KEY, JSON.stringify({ v: 1, url: String(url) }));
+        } catch (e) { /* private mode */ }
+    }
+
+    function loadLastLabDocumentUrl() {
+        var raw = storageGetItem(LAB_LAST_DOCUMENT_KEY);
+        if (!raw) {
+            return '';
+        }
+        try {
+            var data = JSON.parse(raw);
+            if (data && typeof data.url === 'string' && data.url) {
+                return data.url;
+            }
+        } catch (e) {
+            return '';
+        }
+        return '';
     }
 
     function documentProgressStorageKey(urlOrFileId) {
@@ -551,6 +577,7 @@
     function openUrl(url) {
         saveCurrentReadingProgress();
         url = resolveTslUrl(url);
+        saveLastLabDocumentUrl(url);
         lastUrl = url;
         setActiveDocumentKey(url, '');
         var savedEarly = loadDocumentProgress(activeDocumentKey);
@@ -733,7 +760,12 @@
     var q = params.get('tsl');
     if (q) {
         openUrl(q);
-    } else if (docCfg.defaultUrl) {
-        openUrl(docCfg.defaultUrl);
+    } else {
+        var lastDoc = loadLastLabDocumentUrl();
+        if (lastDoc) {
+            openUrl(lastDoc);
+        } else if (docCfg.defaultUrl) {
+            openUrl(docCfg.defaultUrl);
+        }
     }
 }());

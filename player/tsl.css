@@ -874,6 +874,143 @@
     object-fit: cover;
 }
 
+.tsl-page[data-tsl-full-bleed="1"] .tsl-block--comic-page,
+.tsl-page[data-tsl-full-bleed="1"] .studio-lean-comic-page {
+    flex: 1 1 auto;
+    min-height: 100%;
+    min-height: var(--tsl-page-h);
+    margin: 0;
+    width: 100%;
+}
+
+/* Comic page block (panels + speech; matches Studio lean HTML / studio_publisher). */
+.tsl-block--comic-page,
+.document-tsl .studio-lean-comic-page {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    aspect-ratio: var(--comic-aspect, 2 / 3);
+    background: var(--tsl-paper, #fff);
+    overflow: hidden;
+    margin: 1.5rem 0;
+}
+
+.studio-lean-comic-panel {
+    position: absolute;
+    overflow: hidden;
+}
+
+.studio-lean-comic-panel img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transform-origin: center center;
+}
+
+.studio-lean-comic-frame {
+    position: absolute;
+    overflow: hidden;
+}
+
+.studio-lean-comic-outline {
+    position: absolute;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.studio-lean-comic-vo {
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    z-index: 2;
+    background: #fffdf6;
+    border: 2.5px solid #141414;
+    padding: 8px 11px;
+    font-family: Georgia, "Times New Roman", serif;
+    line-height: 1.18;
+    color: #111;
+    white-space: pre-wrap;
+    overflow: hidden;
+    word-break: break-word;
+    box-shadow: 2px 2px 0 rgba(0, 0, 0, 0.14);
+}
+
+.studio-lean-comic-vo.is-top {
+    top: 14px;
+    bottom: auto;
+}
+
+.studio-lean-comic-vo.is-bottom {
+    top: auto;
+    bottom: 14px;
+}
+
+.studio-lean-comic-overlay {
+    position: absolute;
+    z-index: 3;
+    pointer-events: none;
+    touch-action: none;
+}
+
+.studio-lean-comic-oshape {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.studio-lean-comic-otext {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow: hidden;
+    line-height: 1.14;
+    color: #111;
+    font-family: "Comic Sans MS", "Chalkboard SE", "Segoe Print", cursive, sans-serif;
+    word-break: break-word;
+    padding: 2px;
+}
+
+.studio-lean-comic-overlay-speech .studio-lean-comic-otext,
+.studio-lean-comic-overlay-whisper .studio-lean-comic-otext {
+    inset: 14% 14% 20% 14%;
+}
+
+.studio-lean-comic-overlay-oval .studio-lean-comic-otext {
+    inset: 14% 14%;
+}
+
+.studio-lean-comic-overlay-rect .studio-lean-comic-otext {
+    inset: 12% 10%;
+}
+
+.studio-lean-comic-overlay-cloud .studio-lean-comic-otext {
+    inset: 18% 18%;
+}
+
+.studio-lean-comic-overlay-thought .studio-lean-comic-otext {
+    inset: 8% 16% 38% 16%;
+}
+
+.studio-lean-comic-overlay-shout .studio-lean-comic-otext,
+.studio-lean-comic-overlay-spiky .studio-lean-comic-otext,
+.studio-lean-comic-overlay-emanata-burst .studio-lean-comic-otext {
+    inset: 18% 18%;
+}
+
+.studio-lean-comic-overlay-caption .studio-lean-comic-otext {
+    inset: 8% 8%;
+    justify-content: flex-start;
+    text-align: left;
+    align-items: flex-start;
+    font-family: Georgia, "Iowan Old Style", serif;
+}
+
 .tsl-region {
     flex: 0 0 auto;
     display: grid;

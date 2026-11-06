@@ -16,12 +16,13 @@
 
     g.__TslLabDocuments = {
         placeholder: 'Choose…',
-        defaultUrl: '../spec/tsl-spec.tsl',
+        defaultUrl: '../spec/specification-0.1.tsl',
         documents: [
             { label: '0.1 Specification', url: '../spec/specification-0.1.tsl' },
             { label: 'Format specification', url: '../spec/tsl-spec.tsl', selected: true },
             { label: 'Rich content blocks', url: '../examples/rich-content.tsl' },
-            { label: 'Print layout & pages', url: '../examples/print-layout.tsl' }
+            { label: 'Print layout & pages', url: '../examples/print-layout.tsl' },
+            { label: 'Comic Page', url: '../examples/comic.tsl' },
         ]
     };
 }(window));

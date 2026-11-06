@@ -568,7 +568,7 @@
     var TSL_LAYOUT_BREAK_TYPES = {
         pageheader: 1, pagefooter: 1, newpage: 1, document: 1,
         'manuscript-title': 1, 'image-index': 1, 'full-page': 1, 'front-cover': 1,
-        paywall: 1, toc: 1
+        'comic-page': 1, paywall: 1, toc: 1
     };
 
     /* -----------------------------------------------------------------------
@@ -677,6 +677,8 @@
             // chrome — so it is validated for round-trip but maps to no player class. The
             // full-bleed page itself is pagination (startPage fullBleed), not a block property.
             'front-cover': { expanded: { type: 'boolean', def: true } },
+            // Comic page: layout tree + image map; expanded is editor chrome only (no reader class).
+            'comic-page': { expanded: { type: 'boolean', def: true } },
             // §6.21 Embed another document: documentId / title are references, not presentation;
             // players skip the block (not flattened inside .tsl export).
             document: {},
@@ -3138,8 +3140,8 @@
                 bi += 1;
                 continue;
             }
-            if (type === 'front-cover' || type === 'full-page') {
-                current = startPage({ fullBleed: type === 'front-cover' });
+            if (type === 'front-cover' || type === 'full-page' || type === 'comic-page') {
+                current = startPage({ fullBleed: type === 'front-cover' || type === 'comic-page' });
                 var bleedRow = document.createElement('div');
                 bleedRow.className = 'tsl-row tsl-row--full';
                 var bleedCol = document.createElement('div');
@@ -5245,6 +5247,14 @@
             stampBlockMeta(el, b);
             return el;
         }
+        if (type === 'comic-page') {
+            el = document.createElement('section');
+            el.className = 'tsl-block tsl-block--comic-page studio-lean-comic-page';
+            el.setAttribute('style', comicPageAspectStyle(b));
+            el.innerHTML = comicPageContentHtml(b);
+            stampBlockMeta(el, b);
+            return el;
+        }
         if (type === 'toc') {
             el = buildTocNavElement(b, collectTocEntries(ctx && ctx.allBlocks ? ctx.allBlocks : [], b), null);
             return el;
@@ -5764,6 +5774,473 @@
         return inlineHtml(resolveFields(raw, leanFieldCtx(header)));
     }
 
+    /** Lean / reader: escape attribute and text fragments for comic HTML strings. */
+    function escComicHtml(s) {
+        return String(s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    var COMIC_KEYS = ['t', 'r', 'b', 'l'];
+    var COMIC_NORMALS = { t: [0, 1], r: [-1, 0], b: [0, -1], l: [1, 0] };
+    /** Bubble types that may render a tail (studio comic-page.js). */
+    var COMIC_OVERLAY_TAIL_TYPES = ['speech', 'oval', 'rect', 'whisper', 'cloud', 'shout', 'spiky'];
+
+    function comicClamp(v, a, b) {
+        return Math.min(b, Math.max(a, v));
+    }
+
+    function comicPct(n, total) {
+        var t = Number(total);
+        if (!isFinite(t) || t === 0) {
+            return '0%';
+        }
+        return (Math.round((Number(n) / t) * 100000) / 1000) + '%';
+    }
+
+    function comicImageSrc(images, ref) {
+        var r = String(ref || '');
+        if (!r) {
+            return '';
+        }
+        if (images && typeof images === 'object' && typeof images[r] === 'string') {
+            return images[r];
+        }
+        if (r.indexOf('data:image/') === 0 || /^https?:\/\//i.test(r)) {
+            return r;
+        }
+        return '';
+    }
+
+    function comicImageTransform(view) {
+        var v = view && typeof view === 'object' ? view : {};
+        var x = isFinite(Number(v.x)) ? Number(v.x) : 0;
+        var y = isFinite(Number(v.y)) ? Number(v.y) : 0;
+        var scale = isFinite(Number(v.scale)) ? Number(v.scale) : 1;
+        scale = comicClamp(scale, 0.25, 8);
+        return 'translate(' + x + '%,' + y + '%) scale(' + scale + ')';
+    }
+
+    function comicEdgePoints(S, E, N, cfg) {
+        var dx = E[0] - S[0];
+        var dy = E[1] - S[1];
+        var len = Math.hypot(dx, dy) || 1;
+        var style = cfg.bleed ? 'straight' : (cfg.style || 'straight');
+        var amp = Math.min(cfg.amp || 0, len * 0.32, 90);
+        var dir = cfg.flip ? -1 : 1;
+        var out = [[S[0], S[1]]];
+        var i;
+        if (style === 'straight' || style === 'diagonal' || amp < 1) {
+            return out;
+        }
+        if (style === 'zag') {
+            out.push([S[0] + dx * 0.5 + N[0] * amp * dir, S[1] + dy * 0.5 + N[1] * amp * dir]);
+        } else if (style === 'zig') {
+            out.push([S[0] + dx * 0.5 - N[0] * amp * dir, S[1] + dy * 0.5 - N[1] * amp * dir]);
+        } else if (style === 'zigzag') {
+            var n = Math.max(2, Math.round(len / (amp * 3)));
+            for (i = 1; i < 2 * n; i += 1) {
+                var t = i / (2 * n);
+                var d = (i % 2) ? amp : -amp;
+                d *= dir;
+                out.push([S[0] + dx * t + N[0] * d, S[1] + dy * t + N[1] * d]);
+            }
+        }
+        return out;
+    }
+
+    function comicShiftedCorners(w, h, sides) {
+        var base = [[0, 0], [w, 0], [w, h], [0, h]];
+        var acc = [[0, 0], [0, 0], [0, 0], [0, 0]];
+        var i;
+        for (i = 0; i < 4; i += 1) {
+            var cfg = sides[COMIC_KEYS[i]];
+            if (!cfg || cfg.bleed || cfg.style !== 'diagonal') {
+                continue;
+            }
+            var along = (i % 2 === 0) ? w : h;
+            var amp = Math.min(cfg.amp || 0, along * 0.32, 90);
+            if (amp < 1) {
+                continue;
+            }
+            var n = COMIC_NORMALS[COMIC_KEYS[i]];
+            var corner = cfg.flip ? (i + 1) % 4 : i;
+            acc[corner][0] += n[0] * amp;
+            acc[corner][1] += n[1] * amp;
+        }
+        return base.map(function (p, idx) {
+            return [p[0] + acc[idx][0], p[1] + acc[idx][1]];
+        });
+    }
+
+    function comicBuildOutline(w, h, sides) {
+        var C = comicShiftedCorners(w, h, sides);
+        var edges = {};
+        var poly = [];
+        var i;
+        var j;
+        for (i = 0; i < 4; i += 1) {
+            var k = COMIC_KEYS[i];
+            var pts = comicEdgePoints(C[i], C[(i + 1) % 4], COMIC_NORMALS[k], sides[k]);
+            edges[k] = pts;
+            for (j = 0; j < pts.length; j += 1) {
+                poly.push(pts[j]);
+            }
+        }
+        return { poly: poly, edges: edges };
+    }
+
+    function comicOutlineStrokes(w, h, sides) {
+        var o = comicBuildOutline(w, h, sides);
+        var svg = '';
+        var i;
+        for (i = 0; i < 4; i += 1) {
+            var k = COMIC_KEYS[i];
+            var cfg = sides[k];
+            if (!cfg.border || cfg.bleed) {
+                continue;
+            }
+            var edgeK = o.edges[k];
+            var edgeNext = o.edges[COMIC_KEYS[(i + 1) % 4]];
+            var all = edgeK.concat([edgeNext[0]]);
+            if (all.length < 2) {
+                continue;
+            }
+            svg += '<path d="M' + all.map(function (p) {
+                return p[0].toFixed(2) + ' ' + p[1].toFixed(2);
+            }).join(' L ') + '"/>';
+        }
+        return svg;
+    }
+
+    function comicSideGutter(node, key) {
+        var s = node.sides && node.sides[key];
+        if (!s || s.bleed) {
+            return 0;
+        }
+        return Math.max(0, s.gutter || 0);
+    }
+
+    function comicPanelInsets(panels) {
+        var own = {};
+        panels.forEach(function (entry) {
+            own[entry.node.id] = {
+                t: comicSideGutter(entry.node, 't'),
+                r: comicSideGutter(entry.node, 'r'),
+                b: comicSideGutter(entry.node, 'b'),
+                l: comicSideGutter(entry.node, 'l')
+            };
+        });
+        var map = {};
+        panels.forEach(function (entry) {
+            var g = own[entry.node.id];
+            map[entry.node.id] = { t: g.t, r: g.r, b: g.b, l: g.l };
+        });
+        function overlap(a0, a1, b0, b1) {
+            return Math.min(a1, b1) - Math.max(a0, b0);
+        }
+        var pi;
+        var pj;
+        for (pi = 0; pi < panels.length; pi += 1) {
+            for (pj = pi + 1; pj < panels.length; pj += 1) {
+                var A = panels[pi];
+                var B = panels[pj];
+                var ar = A.rect;
+                var br = B.rect;
+                var oy = overlap(ar.y, ar.y + ar.h, br.y, br.y + br.h);
+                var ox = overlap(ar.x, ar.x + ar.w, br.x, br.x + br.w);
+                var pair = null;
+                if (oy > 2 && Math.abs((ar.x + ar.w) - br.x) <= 1.5) {
+                    pair = ['r', 'l', A, B];
+                } else if (oy > 2 && Math.abs((br.x + br.w) - ar.x) <= 1.5) {
+                    pair = ['r', 'l', B, A];
+                } else if (ox > 2 && Math.abs((ar.y + ar.h) - br.y) <= 1.5) {
+                    pair = ['b', 't', A, B];
+                } else if (ox > 2 && Math.abs((br.y + br.h) - ar.y) <= 1.5) {
+                    pair = ['b', 't', B, A];
+                }
+                if (!pair) {
+                    continue;
+                }
+                var gap = Math.min(own[pair[2].node.id][pair[0]], own[pair[3].node.id][pair[1]]);
+                var first = Math.floor(gap / 2);
+                map[pair[2].node.id][pair[0]] = first;
+                map[pair[3].node.id][pair[1]] = gap - first;
+            }
+        }
+        return map;
+    }
+
+    /**
+     * @param {object|null} node
+     * @param {{x:number,y:number,w:number,h:number}} rect
+     * @param {Array<{node: object, rect: object}>} panels
+     */
+    function comicCollectPanels(node, rect, panels) {
+        if (!node || typeof node !== 'object') {
+            return;
+        }
+        if ((node.type || 'panel') !== 'split') {
+            panels.push({ node: node, rect: rect });
+            return;
+        }
+        var ratio = Number(node.ratio != null ? node.ratio : 0.5);
+        ratio = comicClamp(ratio, 0.04, 0.96);
+        if (node.dir === 'col') {
+            var w = Math.round(rect.w * ratio);
+            comicCollectPanels(node.a, { x: rect.x, y: rect.y, w: w, h: rect.h }, panels);
+            comicCollectPanels(node.b, { x: rect.x + w, y: rect.y, w: rect.w - w, h: rect.h }, panels);
+            return;
+        }
+        var h = Math.round(rect.h * ratio);
+        comicCollectPanels(node.a, { x: rect.x, y: rect.y, w: rect.w, h: h }, panels);
+        comicCollectPanels(node.b, { x: rect.x, y: rect.y + h, w: rect.w, h: rect.h - h }, panels);
+    }
+
+    function comicScallopPath(cx, cy, rx, ry, n, bulge, phase) {
+        phase = phase || 0;
+        var pts = [];
+        var i;
+        for (i = 0; i < n; i += 1) {
+            var a = phase + i / n * Math.PI * 2;
+            pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]);
+        }
+        var d = 'M ' + pts[0][0].toFixed(2) + ' ' + pts[0][1].toFixed(2);
+        for (i = 0; i < n; i += 1) {
+            var p1 = pts[i];
+            var p2 = pts[(i + 1) % n];
+            var mx = (p1[0] + p2[0]) / 2;
+            var my = (p1[1] + p2[1]) / 2;
+            var ang = Math.atan2(my - cy, mx - cx);
+            d += ' Q ' + (mx + Math.cos(ang) * bulge).toFixed(2) + ' ' + (my + Math.sin(ang) * bulge).toFixed(2)
+                + ' ' + p2[0].toFixed(2) + ' ' + p2[1].toFixed(2);
+        }
+        return d + ' Z';
+    }
+
+    function comicBurstPath(cx, cy, rx, ry, spikes, innerFrac) {
+        var d = '';
+        var i;
+        for (i = 0; i < spikes * 2; i += 1) {
+            var a = i / (spikes * 2) * Math.PI * 2 - Math.PI / 2;
+            var r = (i % 2 === 0) ? 1 : innerFrac;
+            d += (i === 0 ? 'M' : 'L') + (cx + Math.cos(a) * rx * r).toFixed(2) + ' ' + (cy + Math.sin(a) * ry * r).toFixed(2) + ' ';
+        }
+        return d + 'Z';
+    }
+
+    function comicStarPath(cx, cy, r1, r2, points) {
+        var d = '';
+        var i;
+        for (i = 0; i < points * 2; i += 1) {
+            var a = i / (points * 2) * Math.PI * 2 - Math.PI / 2;
+            var r = (i % 2 === 0) ? r1 : r2;
+            d += (i === 0 ? 'M' : 'L') + (cx + Math.cos(a) * r).toFixed(2) + ' ' + (cy + Math.sin(a) * r).toFixed(2) + ' ';
+        }
+        return d + 'Z';
+    }
+
+    function comicRadialLines(cx, cy, r1, r2, count) {
+        var d = '';
+        var i;
+        for (i = 0; i < count; i += 1) {
+            var a = i / count * Math.PI * 2;
+            d += 'M ' + (cx + Math.cos(a) * r1).toFixed(2) + ' ' + (cy + Math.sin(a) * r1).toFixed(2)
+                + ' L ' + (cx + Math.cos(a) * r2).toFixed(2) + ' ' + (cy + Math.sin(a) * r2).toFixed(2) + ' ';
+        }
+        return d;
+    }
+
+    function comicSpeechPath(w, h) {
+        return 'M ' + (w * 0.18).toFixed(1) + ' ' + (h * 0.08).toFixed(1)
+            + ' Q ' + (w * 0.50).toFixed(1) + ' ' + (-h * 0.015).toFixed(1) + ' ' + (w * 0.82).toFixed(1) + ' ' + (h * 0.08).toFixed(1)
+            + ' Q ' + (w * 0.99).toFixed(1) + ' ' + (h * 0.50).toFixed(1) + ' ' + (w * 0.82).toFixed(1) + ' ' + (h * 0.92).toFixed(1)
+            + ' Q ' + (w * 0.50).toFixed(1) + ' ' + (h * 1.015).toFixed(1) + ' ' + (w * 0.18).toFixed(1) + ' ' + (h * 0.92).toFixed(1)
+            + ' Q ' + (w * 0.01).toFixed(1) + ' ' + (h * 0.50).toFixed(1) + ' ' + (w * 0.18).toFixed(1) + ' ' + (h * 0.08).toFixed(1)
+            + ' Z';
+    }
+
+    function comicOverlayShapeMarkup(type, w, h) {
+        var fill = 'fill="#fff"';
+        var stroke = 'stroke="#141414" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"';
+        switch (type) {
+            case 'speech':
+                return '<path d="' + comicSpeechPath(w, h) + '" ' + fill + ' ' + stroke + '/>';
+            case 'whisper':
+                return '<path d="' + comicSpeechPath(w, h) + '" fill="#fff" stroke="#141414" stroke-width="1.7" stroke-dasharray="6 4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+            case 'oval':
+                return '<ellipse cx="' + (w / 2).toFixed(1) + '" cy="' + (h / 2).toFixed(1) + '" rx="' + (w / 2 - 1).toFixed(1) + '" ry="' + (h / 2 - 1).toFixed(1) + '" ' + fill + ' ' + stroke + '/>';
+            case 'rect': {
+                var r = Math.min(w, h) * 0.15;
+                return '<rect x="1" y="1" width="' + (w - 2).toFixed(1) + '" height="' + (h - 2).toFixed(1) + '" rx="' + r.toFixed(1) + '" ' + fill + ' ' + stroke + '/>';
+            }
+            case 'cloud':
+                return '<path d="' + comicScallopPath(w / 2, h / 2, w / 2 - 2, h / 2 - 2, 10, Math.min(w, h) * 0.12) + '" ' + fill + ' ' + stroke + '/>';
+            case 'thought': {
+                var main = comicScallopPath(w / 2, h * 0.40, w / 2 - 2, h * 0.33, 9, Math.min(w, h) * 0.10);
+                return '<path d="' + main + '" ' + fill + ' ' + stroke + '/>'
+                    + '<ellipse cx="' + (w * 0.34).toFixed(1) + '" cy="' + (h * 0.82).toFixed(1) + '" rx="' + (w * 0.055).toFixed(1) + '" ry="' + (h * 0.038).toFixed(1) + '" ' + fill + ' ' + stroke + '/>'
+                    + '<ellipse cx="' + (w * 0.17).toFixed(1) + '" cy="' + (h * 0.92).toFixed(1) + '" rx="' + (w * 0.034).toFixed(1) + '" ry="' + (h * 0.024).toFixed(1) + '" ' + fill + ' ' + stroke + '/>';
+            }
+            case 'shout':
+                return '<path d="' + comicBurstPath(w / 2, h / 2, w / 2 - 1, h / 2 - 1, 12, 0.65) + '" ' + fill + ' ' + stroke + '/>';
+            case 'spiky':
+                return '<path d="' + comicBurstPath(w / 2, h / 2, w / 2 - 1, h / 2 - 1, 16, 0.82) + '" ' + fill + ' ' + stroke + '/>';
+            case 'caption':
+                return '<rect x="1" y="1" width="' + (w - 2).toFixed(1) + '" height="' + (h - 2).toFixed(1) + '" ' + fill + ' ' + stroke + '/>';
+            case 'emanata-burst':
+                return '<path d="' + comicBurstPath(w / 2, h / 2, w / 2 - 1, h / 2 - 1, 12, 0.62) + '" ' + fill + ' ' + stroke + '/>';
+            case 'emanata-stars':
+                return '<path d="' + comicStarPath(w / 2, h / 2, w / 2 - 1, Math.min(w, h) * 0.12, 4) + '" ' + fill + ' ' + stroke + '/>';
+            case 'emanata-lines':
+                return '<path d="' + comicRadialLines(w / 2, h / 2, Math.min(w, h) * 0.19, Math.min(w, h) * 0.48, 13) + '" fill="none" stroke="#141414" stroke-width="2.2" stroke-linecap="round" vector-effect="non-scaling-stroke"/>';
+            default:
+                return '';
+        }
+    }
+
+    function comicOverlayTailPath(o) {
+        if (!o.tail) {
+            return '';
+        }
+        var w = o.w;
+        var h = o.h;
+        var cx = w / 2;
+        var cy = h / 2;
+        var rx = w / 2;
+        var ry = h / 2;
+        var tx = o.tail.x - o.x;
+        var ty = o.tail.y - o.y;
+        var dx = tx - cx;
+        var dy = ty - cy;
+        var ed = Math.sqrt((dx * dx) / (rx * rx) + (dy * dy) / (ry * ry));
+        if (ed < 0.55) {
+            return '';
+        }
+        var angle = Math.atan2(dy, dx);
+        var half = 0.14;
+        return 'M ' + (cx + rx * Math.cos(angle - half)).toFixed(1) + ' ' + (cy + ry * Math.sin(angle - half)).toFixed(1)
+            + ' L ' + tx.toFixed(1) + ' ' + ty.toFixed(1)
+            + ' L ' + (cx + rx * Math.cos(angle + half)).toFixed(1) + ' ' + (cy + ry * Math.sin(angle + half)).toFixed(1) + ' Z';
+    }
+
+    function comicOverlayHtmlString(o, pageW, pageH) {
+        if (!o || typeof o !== 'object') {
+            return '';
+        }
+        var typ = String(o.type || 'speech');
+        var ox = Number(o.x) || 0;
+        var oy = Number(o.y) || 0;
+        var ow = Math.max(1, Number(o.w) || 180);
+        var oh = Math.max(1, Number(o.h) || 110);
+        var z = Number(o.z) || 1;
+        var fs = Number(o.fontSize) || 16;
+        var emanata = typ.indexOf('emanata') === 0;
+        var tail = '';
+        if (COMIC_OVERLAY_TAIL_TYPES.indexOf(typ) >= 0 && o.tail && isFinite(o.tail.x) && isFinite(o.tail.y)) {
+            var td = comicOverlayTailPath({
+                w: ow, h: oh, x: ox, y: oy,
+                tail: { x: Number(o.tail.x), y: Number(o.tail.y) }
+            });
+            if (td) {
+                var stroke = typ === 'whisper'
+                    ? 'stroke="#141414" stroke-width="1.7" stroke-dasharray="6 4"'
+                    : 'stroke="#141414" stroke-width="2"';
+                tail = '<path class="studio-lean-comic-tail-path" d="' + td + '" fill="#fff" ' + stroke
+                    + ' stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+            }
+        }
+        var text = emanata ? ''
+            : '<div class="studio-lean-comic-otext" style="font-size:' + fs + 'px">' + escComicHtml(String(o.text || '')) + '</div>';
+        return '<div class="studio-lean-comic-overlay studio-lean-comic-overlay-' + escComicHtml(typ) + '" style="left:'
+            + comicPct(ox, pageW) + ';top:' + comicPct(oy, pageH)
+            + ';width:' + comicPct(ow, pageW) + ';height:' + comicPct(oh, pageH)
+            + ';z-index:' + z + '">'
+            + '<svg class="studio-lean-comic-oshape" viewBox="0 0 ' + ow + ' ' + oh + '" preserveAspectRatio="none">'
+            + tail + comicOverlayShapeMarkup(typ, ow, oh) + '</svg>' + text + '</div>';
+    }
+
+    function comicPanelHtmlString(entry, pageW, pageH, images, insets) {
+        var node = entry.node;
+        var rect = entry.rect;
+        var s = node && typeof node.sides === 'object' ? node.sides : {};
+        var g = (insets && insets[node.id]) || { t: 0, r: 0, b: 0, l: 0 };
+        var l = g.l;
+        var t = g.t;
+        var r = g.r;
+        var b = g.b;
+        var fw = Math.max(4, rect.w - l - r);
+        var fh = Math.max(4, rect.h - t - b);
+        var outline = comicBuildOutline(fw, fh, s);
+        var poly = 'polygon(' + outline.poly.map(function (p) {
+            return comicPct(p[0], fw) + ' ' + comicPct(p[1], fh);
+        }).join(',') + ')';
+        var strokes = comicOutlineStrokes(fw, fh, s);
+        var src = comicImageSrc(images, node.image);
+        var art = src
+            ? '<img src="' + escComicHtml(src) + '" alt="" style="transform:' + escComicHtml(comicImageTransform(node.imageView)) + '">'
+            : '';
+        var voice = node && typeof node.voice === 'object' ? node.voice : {};
+        var vo = '';
+        if (voice.enabled) {
+            var atTop = voice.align === 'top';
+            vo = '<div class="studio-lean-comic-vo ' + (atTop ? 'is-top' : 'is-bottom') + '" style="'
+                + (atTop ? 'top:14px;bottom:auto;' : 'top:auto;bottom:14px;') + '">'
+                + escComicHtml(String(voice.text || '')) + '</div>';
+        }
+        return '<div class="studio-lean-comic-panel" style="left:' + comicPct(rect.x, pageW)
+            + ';top:' + comicPct(rect.y, pageH)
+            + ';width:' + comicPct(rect.w, pageW)
+            + ';height:' + comicPct(rect.h, pageH) + '">'
+            + '<div class="studio-lean-comic-frame" style="left:' + comicPct(l, rect.w)
+            + ';top:' + comicPct(t, rect.h)
+            + ';width:' + comicPct(fw, rect.w)
+            + ';height:' + comicPct(fh, rect.h)
+            + ';clip-path:' + poly + '">'
+            + art + vo + '</div>'
+            + '<svg class="studio-lean-comic-outline" style="left:' + comicPct(l, rect.w)
+            + ';top:' + comicPct(t, rect.h) + '" width="' + comicPct(fw, rect.w)
+            + '" height="' + comicPct(fh, rect.h) + '" viewBox="0 0 ' + fw + ' ' + fh
+            + '"><g fill="none" stroke="#141414" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">'
+            + strokes + '</g></svg></div>';
+    }
+
+    /** Panels + overlays for one comic-page block (matches comic-page.js panelHTML / overlayHTML). */
+    function comicPageContentHtml(block) {
+        var comic = block && block.comic && typeof block.comic === 'object' ? block.comic : null;
+        var images = block && block.images && typeof block.images === 'object' ? block.images : {};
+        var layout = comic && comic.layout;
+        var overlays = comic && Array.isArray(comic.overlays) ? comic.overlays : [];
+        var page = comic && comic.page && typeof comic.page === 'object' ? comic.page : {};
+        var pw = Math.max(1, Number(page.w) || 800);
+        var ph = Math.max(1, Number(page.h) || 1200);
+        var html = '';
+        if (layout) {
+            var panelList = [];
+            comicCollectPanels(layout, { x: 0, y: 0, w: pw, h: ph }, panelList);
+            var insets = comicPanelInsets(panelList);
+            var pi;
+            for (pi = 0; pi < panelList.length; pi += 1) {
+                html += comicPanelHtmlString(panelList[pi], pw, ph, images, insets);
+            }
+        }
+        var oi;
+        for (oi = 0; oi < overlays.length; oi += 1) {
+            html += comicOverlayHtmlString(overlays[oi], pw, ph);
+        }
+        return html;
+    }
+
+    function comicPageAspectStyle(block) {
+        var comic = block && block.comic && typeof block.comic === 'object' ? block.comic : null;
+        var page = comic && comic.page && typeof comic.page === 'object' ? comic.page : {};
+        var pw = Math.max(1, Number(page.w) || 800);
+        var ph = Math.max(1, Number(page.h) || 1200);
+        return '--comic-aspect:' + pw + ' / ' + ph + ';';
+    }
+
     function leanBlockHtml(block, header, readMode, leanOpts) {
         leanOpts = leanOpts || {};
         var type = block.type || 'paragraph';
@@ -5872,6 +6349,11 @@
                 + ' data-halign="' + escapeHtml(fp.hAlign) + '" data-valign="' + escapeHtml(fp.vAlign) + '">'
                 + '<div class="studio-lean-full-page-inner">' + leanInlineHtml(block.text, header, readMode) + '</div></div>';
         }
+        if (type === 'comic-page') {
+            return '<section' + leanRuleAttrs(block, 'studio-lean-comic-page tsl-block--comic-page')
+                + ' style="' + escComicHtml(comicPageAspectStyle(block)) + '">'
+                + comicPageContentHtml(block) + '</section>';
+        }
         if (type === 'manuscript-title') {
             return '<section' + leanRuleAttrs(block, 'studio-lean-manuscript-title') + '><div class="studio-lean-manuscript-page">'
                 + leanInlineHtml(block.title || '[Title]', header, readMode) + '</div></section>';
@@ -5970,7 +6452,7 @@
                 i += 1;
                 continue;
             }
-            if (type === 'front-cover' || type === 'full-page' || type === 'manuscript-title'
+            if (type === 'front-cover' || type === 'full-page' || type === 'comic-page' || type === 'manuscript-title'
                 || type === 'image-index' || type === 'paywall' || type === 'toc') {
                 var solo = leanBlockHtml(block, header, readMode);
                 if (solo) {
