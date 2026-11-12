@@ -60,82 +60,105 @@
                     <button type="button" class="tsl-lab-btn tsl-lab-btn-secondary" data-tsl-print title="Print or save as PDF">Print</button>
                 </div>
                 <p class="tsl-lab-status" data-tsl-status role="status" aria-live="polite"></p>
-                <section class="tsl-lab-read" data-tsl-settings>
-                    <p class="tsl-lab-read-heading">Reading</p>
-                    <div class="tsl-lab-read-row">
-                        <span class="tsl-lab-read-label">Font</span>
-                        <div class="tsl-lab-seg" role="radiogroup" aria-label="Font">
-                            <button type="button" role="radio" data-tsl-pref="font" data-value="serif">Serif</button>
-                            <button type="button" role="radio" data-tsl-pref="font" data-value="sans">Sans</button>
-                            <button type="button" role="radio" data-tsl-pref="font" data-value="mono">Mono</button>
-                        </div>
-                    </div>
-                    <div class="tsl-lab-read-row">
-                        <span class="tsl-lab-read-label">Size</span>
-                        <div class="tsl-lab-sizes">
-                            <button type="button" class="tsl-lab-size-step" data-tsl-size-step="-1" aria-label="Smaller text">A−</button>
-                            <div class="tsl-lab-steps" role="radiogroup" aria-label="Text size">
-                                <button type="button" role="radio" data-tsl-pref="size" data-value="14" aria-label="14 pixels"></button>
-                                <button type="button" role="radio" data-tsl-pref="size" data-value="16" aria-label="16 pixels"></button>
-                                <button type="button" role="radio" data-tsl-pref="size" data-value="18" aria-label="18 pixels"></button>
-                                <button type="button" role="radio" data-tsl-pref="size" data-value="20" aria-label="20 pixels"></button>
-                                <button type="button" role="radio" data-tsl-pref="size" data-value="24" aria-label="24 pixels"></button>
+                <div class="tsl-lab-tabs" role="tablist" aria-label="Lab panels">
+                    <button type="button" class="tsl-lab-tab is-on" role="tab" id="tsl-lab-tab-read" aria-selected="true" aria-controls="tsl-lab-panel-read" data-tsl-lab-tab="read">Style</button>
+                    <button type="button" class="tsl-lab-tab" role="tab" id="tsl-lab-tab-a11y" aria-selected="false" aria-controls="tsl-lab-panel-a11y" data-tsl-lab-tab="a11y" tabindex="-1">Accessibility</button>
+                    <button type="button" class="tsl-lab-tab" role="tab" id="tsl-lab-tab-search" aria-selected="false" aria-controls="tsl-lab-panel-search" data-tsl-lab-tab="search" tabindex="-1">Find</button>
+                    <button type="button" class="tsl-lab-tab" role="tab" id="tsl-lab-tab-bookmarks" aria-selected="false" aria-controls="tsl-lab-panel-bookmarks" data-tsl-lab-tab="bookmarks" tabindex="-1">Bookmarks</button>
+                </div>
+                <div class="tsl-lab-prefs-host" data-tsl-prefs-host data-tsl-settings>
+                    <section class="tsl-lab-read tsl-lab-tab-panel is-on" id="tsl-lab-panel-read" role="tabpanel" aria-labelledby="tsl-lab-tab-read" data-tsl-lab-tab-panel="read">
+                        <div class="tsl-lab-read-row">
+                            <span class="tsl-lab-read-label">Font</span>
+                            <div class="tsl-lab-seg" role="radiogroup" aria-label="Font">
+                                <button type="button" role="radio" data-tsl-pref="font" data-value="serif">Serif</button>
+                                <button type="button" role="radio" data-tsl-pref="font" data-value="sans">Sans</button>
+                                <button type="button" role="radio" data-tsl-pref="font" data-value="mono">Mono</button>
                             </div>
-                            <button type="button" class="tsl-lab-size-step" data-tsl-size-step="1" aria-label="Larger text">A+</button>
                         </div>
-                    </div>
-                    <div class="tsl-lab-read-row">
-                        <span class="tsl-lab-read-label">Page colour</span>
-                        <div class="tsl-lab-seg" role="radiogroup" aria-label="Page colour">
-                            <button type="button" role="radio" data-tsl-pref="theme" data-value="light">Light</button>
-                            <button type="button" role="radio" data-tsl-pref="theme" data-value="sepia">Sepia</button>
-                            <button type="button" role="radio" data-tsl-pref="theme" data-value="dark">Dark</button>
+                        <div class="tsl-lab-read-row">
+                            <span class="tsl-lab-read-label">Size</span>
+                            <div class="tsl-lab-sizes">
+                                <button type="button" class="tsl-lab-size-step" data-tsl-size-step="-1" aria-label="Smaller text">A−</button>
+                                <div class="tsl-lab-steps" role="radiogroup" aria-label="Text size">
+                                    <button type="button" role="radio" data-tsl-pref="size" data-value="14" aria-label="14 pixels"></button>
+                                    <button type="button" role="radio" data-tsl-pref="size" data-value="16" aria-label="16 pixels"></button>
+                                    <button type="button" role="radio" data-tsl-pref="size" data-value="18" aria-label="18 pixels"></button>
+                                    <button type="button" role="radio" data-tsl-pref="size" data-value="20" aria-label="20 pixels"></button>
+                                    <button type="button" role="radio" data-tsl-pref="size" data-value="24" aria-label="24 pixels"></button>
+                                </div>
+                                <button type="button" class="tsl-lab-size-step" data-tsl-size-step="1" aria-label="Larger text">A+</button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="tsl-lab-read-row" data-tsl-pref-row="width">
-                        <span class="tsl-lab-read-label">Line width</span>
-                        <div class="tsl-lab-seg" role="radiogroup" aria-label="Line width">
-                            <button type="button" role="radio" data-tsl-pref="width" data-value="narrow">Narrow</button>
-                            <button type="button" role="radio" data-tsl-pref="width" data-value="medium">Medium</button>
-                            <button type="button" role="radio" data-tsl-pref="width" data-value="wide">Wide</button>
+                        <div class="tsl-lab-read-row">
+                            <span class="tsl-lab-read-label">Page colour</span>
+                            <div class="tsl-lab-seg" role="radiogroup" aria-label="Page colour">
+                                <button type="button" role="radio" data-tsl-pref="theme" data-value="light">Light</button>
+                                <button type="button" role="radio" data-tsl-pref="theme" data-value="sepia">Sepia</button>
+                                <button type="button" role="radio" data-tsl-pref="theme" data-value="dark">Dark</button>
+                            </div>
                         </div>
-                        <span class="tsl-lab-read-note" data-tsl-pref-note hidden>Scroll layout only. Pages keep the document's trim size.</span>
-                    </div>
-                    <div class="tsl-lab-read-row" data-tsl-layout-row>
-                        <span class="tsl-lab-read-label">Layout</span>
-                        <div class="tsl-lab-seg" role="radiogroup" aria-label="Layout">
-                            <button type="button" role="radio" data-tsl-pref="layout" data-value="pages">Pages</button>
-                            <button type="button" role="radio" data-tsl-pref="layout" data-value="scroll">Scroll</button>
+                        <div class="tsl-lab-read-row" data-tsl-pref-row="width">
+                            <span class="tsl-lab-read-label">Line width</span>
+                            <div class="tsl-lab-seg" role="radiogroup" aria-label="Line width">
+                                <button type="button" role="radio" data-tsl-pref="width" data-value="narrow">Narrow</button>
+                                <button type="button" role="radio" data-tsl-pref="width" data-value="medium">Medium</button>
+                                <button type="button" role="radio" data-tsl-pref="width" data-value="wide">Wide</button>
+                            </div>
+                            <span class="tsl-lab-read-note" data-tsl-pref-note hidden>Scroll layout only. Pages keep the document's trim size.</span>
                         </div>
-                    </div>
-                    <div class="tsl-lab-read-row" data-tsl-pagefit-row data-tsl-pref-row="pageFit">
-                        <span class="tsl-lab-read-label">Page size</span>
-                        <div class="tsl-lab-seg" role="radiogroup" aria-label="Page size on screen">
-                            <button type="button" role="radio" data-tsl-pref="pageFit" data-value="fit">Fit width</button>
-                            <button type="button" role="radio" data-tsl-pref="pageFit" data-value="scale">Fit screen</button>
-                            <button type="button" role="radio" data-tsl-pref="pageFit" data-value="native">Actual</button>
+                        <div class="tsl-lab-read-row" data-tsl-layout-row>
+                            <span class="tsl-lab-read-label">Layout</span>
+                            <div class="tsl-lab-seg" role="radiogroup" aria-label="Layout">
+                                <button type="button" role="radio" data-tsl-pref="layout" data-value="pages">Pages</button>
+                                <button type="button" role="radio" data-tsl-pref="layout" data-value="scroll">Scroll</button>
+                            </div>
                         </div>
-                        <span class="tsl-lab-read-note" data-tsl-pref-note hidden>Pages layout only.</span>
-                    </div>
-                    <p class="tsl-lab-read-heading tsl-lab-read-heading--sub">Accessibility</p>
-                    <div class="tsl-lab-read-row tsl-lab-read-row--toggle">
-                        <span class="tsl-lab-read-label">OpenDyslexic</span>
-                        <button type="button" class="tsl-lab-toggle" data-tsl-pref-toggle="dyslexiaFont" aria-pressed="false">Off</button>
-                    </div>
-                    <div class="tsl-lab-read-row tsl-lab-read-row--toggle">
-                        <span class="tsl-lab-read-label">High contrast</span>
-                        <button type="button" class="tsl-lab-toggle" data-tsl-pref-toggle="highContrast" aria-pressed="false">Off</button>
-                    </div>
-                    <div class="tsl-lab-read-row tsl-lab-read-row--toggle">
-                        <span class="tsl-lab-read-label">Reading ruler</span>
-                        <button type="button" class="tsl-lab-toggle" data-tsl-pref-toggle="readingRuler" aria-pressed="false">Off</button>
-                    </div>
-                    <p class="tsl-lab-read-note tsl-lab-read-note--block">Reading ruler: drag a finger down the page to highlight each line. On phones, tap the left or right edge to turn pages.</p>
-                    <div class="tsl-lab-read-foot">
-                        <span>Saved on this device</span>
-                        <button type="button" data-tsl-prefs-reset>Reset</button>
-                    </div>
-                </section>
+                        <div class="tsl-lab-read-row" data-tsl-pagefit-row data-tsl-pref-row="pageFit">
+                            <span class="tsl-lab-read-label">Page size</span>
+                            <div class="tsl-lab-seg" role="radiogroup" aria-label="Page size on screen">
+                                <button type="button" role="radio" data-tsl-pref="pageFit" data-value="fit">Fit width</button>
+                                <button type="button" role="radio" data-tsl-pref="pageFit" data-value="scale">Fit screen</button>
+                                <button type="button" role="radio" data-tsl-pref="pageFit" data-value="native">Actual</button>
+                            </div>
+                            <span class="tsl-lab-read-note" data-tsl-pref-note hidden>Pages layout only.</span>
+                        </div>
+                        <div class="tsl-lab-read-foot">
+                            <span>Saved on this device</span>
+                            <button type="button" data-tsl-prefs-reset>Reset</button>
+                        </div>
+                    </section>
+                    <section class="tsl-lab-read tsl-lab-tab-panel" id="tsl-lab-panel-a11y" role="tabpanel" aria-labelledby="tsl-lab-tab-a11y" data-tsl-lab-tab-panel="a11y" hidden>
+                        <div class="tsl-lab-read-row tsl-lab-read-row--toggle">
+                            <span class="tsl-lab-read-label">OpenDyslexic</span>
+                            <button type="button" class="tsl-lab-toggle" data-tsl-pref-toggle="dyslexiaFont" aria-pressed="false">Off</button>
+                        </div>
+                        <div class="tsl-lab-read-row tsl-lab-read-row--toggle">
+                            <span class="tsl-lab-read-label">High contrast</span>
+                            <button type="button" class="tsl-lab-toggle" data-tsl-pref-toggle="highContrast" aria-pressed="false">Off</button>
+                        </div>
+                        <div class="tsl-lab-read-row tsl-lab-read-row--toggle">
+                            <span class="tsl-lab-read-label">Reading ruler</span>
+                            <button type="button" class="tsl-lab-toggle" data-tsl-pref-toggle="readingRuler" aria-pressed="false">Off</button>
+                        </div>
+                        <p class="tsl-lab-read-note tsl-lab-read-note--block">Reading ruler: drag a finger down the page to highlight each line. On phones, tap the left or right edge to turn pages.</p>
+                    </section>
+                    <section class="tsl-lab-read tsl-lab-tab-panel" id="tsl-lab-panel-search" role="tabpanel" aria-labelledby="tsl-lab-tab-search" data-tsl-lab-tab-panel="search" hidden>
+                        <label class="tsl-lab-search-field">
+                            <span class="visually-hidden">Search in document</span>
+                            <input type="search" class="tsl-lab-search-input" data-tsl-search-input autocomplete="off" enterkeyhint="search" placeholder="Find in document…">
+                        </label>
+                        <button type="button" class="tsl-lab-btn tsl-lab-btn-secondary tsl-lab-search-run" data-tsl-search-run>Find</button>
+                        <p class="tsl-lab-search-status" data-tsl-search-status role="status" aria-live="polite"></p>
+                        <p class="tsl-lab-read-note tsl-lab-read-note--block">Ctrl+F (⌘F) open · F3 or Ctrl+G next · Shift+F3 or Ctrl+Shift+G previous · Ctrl+D toggle bookmark</p>
+                        <ol class="tsl-lab-search-results" data-tsl-search-results></ol>
+                    </section>
+                    <section class="tsl-lab-read tsl-lab-tab-panel" id="tsl-lab-panel-bookmarks" role="tabpanel" aria-labelledby="tsl-lab-tab-bookmarks" data-tsl-lab-tab-panel="bookmarks" hidden>
+                        <button type="button" class="tsl-lab-btn tsl-lab-btn-secondary tsl-lab-bookmark-add" data-tsl-bookmark-add>Add bookmark here</button>
+                        <p class="tsl-lab-bookmark-hint tsl-lab-read-note">Bookmarks the block at your current reading position (Ctrl+D or Ctrl+B toggles).</p>
+                        <ul class="tsl-lab-bookmark-list" data-tsl-bookmark-list aria-label="Bookmarks"></ul>
+                    </section>
+                </div>
             </div>
         </div>
     </div>

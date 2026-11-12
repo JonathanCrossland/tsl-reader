@@ -312,6 +312,234 @@ html[data-tsl-reader-theme="dark"] .tsl-lab-fab-backdrop {
     color: var(--lab-ink);
 }
 
+/* —— Lab panel tabs —— */
+
+.tsl-lab-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin: 0.5rem 0 0.65rem;
+    padding: 0.2rem;
+    border-radius: var(--lab-radius-sm);
+    background: var(--lab-tint);
+}
+
+.tsl-lab-tab {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    padding: 0.4rem 0.45rem;
+    border: 0;
+    border-radius: calc(var(--lab-radius-sm) - 2px);
+    background: transparent;
+    font-family: var(--lab-font-ui);
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.2;
+    color: var(--lab-ink-muted);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tsl-lab-tab:hover {
+    color: var(--lab-ink);
+}
+
+.tsl-lab-tab:focus-visible {
+    outline: 2px solid var(--lab-accent-ring);
+    outline-offset: 1px;
+}
+
+.tsl-lab-tab.is-on {
+    background: var(--lab-surface-elevated);
+    color: var(--lab-ink);
+    box-shadow: var(--lab-shadow-sm);
+}
+
+.tsl-lab-prefs-host {
+    min-height: 0;
+}
+
+.tsl-lab-tab-panel {
+    padding-top: 0.15rem;
+}
+
+.tsl-lab-tab-panel[hidden] {
+    display: none !important;
+}
+
+.tsl-lab-tab-panel .tsl-lab-read-foot {
+    margin-top: 0.75rem;
+}
+
+.tsl-lab-search-field {
+    display: block;
+    margin-bottom: 0.45rem;
+}
+
+.tsl-lab-search-input {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid var(--lab-border-strong);
+    border-radius: var(--lab-radius-sm);
+    font: inherit;
+    font-size: var(--lab-control-font-size);
+    color: var(--lab-ink);
+    background: var(--lab-surface);
+}
+
+.tsl-lab-search-input:focus-visible {
+    outline: 2px solid var(--lab-accent-ring);
+    outline-offset: 1px;
+    border-color: var(--lab-accent);
+}
+
+.tsl-lab-search-run {
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.tsl-lab-search-status {
+    margin: 0 0 0.4rem;
+    font-size: 0.8rem;
+    color: var(--lab-ink-muted);
+}
+
+.tsl-lab-search-results {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tsl-lab-search-results li {
+    margin: 0 0 0.35rem;
+}
+
+.tsl-lab-search-hit {
+    display: block;
+    width: 100%;
+    padding: 0.45rem 0.5rem;
+    border: 1px solid var(--lab-border);
+    border-radius: var(--lab-radius-sm);
+    background: var(--lab-surface);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    text-align: left;
+    color: var(--lab-ink);
+    cursor: pointer;
+}
+
+.tsl-lab-search-hit:hover {
+    border-color: var(--lab-border-strong);
+    background: color-mix(in srgb, var(--lab-accent-soft) 35%, var(--lab-surface));
+}
+
+.tsl-lab-search-hit:focus-visible {
+    outline: 2px solid var(--lab-accent-ring);
+    outline-offset: 1px;
+}
+
+.tsl-lab-search-hit.is-active {
+    border-color: var(--lab-accent);
+    background: color-mix(in srgb, var(--lab-accent-soft) 55%, var(--lab-surface));
+}
+
+.tsl-lab-search-hit mark {
+    padding: 0 0.1em;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--lab-accent-soft) 70%, transparent);
+    font-weight: 600;
+}
+
+.tsl-lab-bookmark-add {
+    width: 100%;
+    margin-bottom: 0.35rem;
+}
+
+.tsl-lab-bookmark-hint {
+    margin: 0 0 0.55rem;
+}
+
+.tsl-lab-bookmark-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.tsl-lab-bookmark-list li {
+    display: flex;
+    align-items: stretch;
+    gap: 0.35rem;
+    margin: 0 0 0.35rem;
+}
+
+.tsl-lab-bookmark-go {
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.45rem 0.5rem;
+    border: 1px solid var(--lab-border);
+    border-radius: var(--lab-radius-sm);
+    background: var(--lab-surface);
+    font: inherit;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    text-align: left;
+    color: var(--lab-ink);
+    cursor: pointer;
+}
+
+.tsl-lab-bookmark-go:hover {
+    border-color: var(--lab-border-strong);
+    background: color-mix(in srgb, var(--lab-accent-soft) 35%, var(--lab-surface));
+}
+
+.tsl-lab-bookmark-remove {
+    flex: 0 0 auto;
+    margin: 0;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--lab-border);
+    border-radius: var(--lab-radius-sm);
+    background: var(--lab-surface);
+    font: inherit;
+    font-size: 0.75rem;
+    color: var(--lab-ink-muted);
+    cursor: pointer;
+}
+
+.tsl-lab-bookmark-remove:hover {
+    color: var(--lab-error);
+    border-color: color-mix(in srgb, var(--lab-error) 40%, var(--lab-border));
+}
+
+.tsl-lab-bookmark-empty {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--lab-ink-faint);
+}
+
+.tsl-root [data-tsl-block-id].tsl-lab-search-flash,
+.studio-lean-tsl [data-tsl-block-id].tsl-lab-search-flash {
+    outline: 2px solid var(--lab-accent);
+    outline-offset: 2px;
+}
+
+.tsl-root mark.tsl-lab-doc-mark--search,
+.studio-lean-tsl mark.tsl-lab-doc-mark--search {
+    padding: 0 0.05em;
+    border-radius: 2px;
+    background: color-mix(in srgb, #e6c200 55%, transparent);
+    color: inherit;
+}
+
+.tsl-root [data-tsl-block-id].tsl-lab-bookmark-target,
+.studio-lean-tsl [data-tsl-block-id].tsl-lab-bookmark-target {
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--lab-read-progress, #2f8f52) 55%, transparent);
+    background: color-mix(in srgb, var(--lab-read-progress, #2f8f52) 12%, transparent);
+}
+
 /* —— Toolbar controls (panel + legacy) —— */
 
 .tsl-lab-bar {
