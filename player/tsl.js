@@ -7053,6 +7053,39 @@
         return !!(wrapHtml && /studio:tsl-settings\s+encoding="b64"/.test(wrapHtml));
     }
 
+    function readerEnvelopeHasComicPayload(blocks) {
+        if (!Array.isArray(blocks)) {
+            return false;
+        }
+        var i;
+        for (i = 0; i < blocks.length; i += 1) {
+            var b = blocks[i];
+            if (b && b.type === 'comic-page' && b.comic && typeof b.comic === 'object') {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Reader shell repaginates via enhancePublishedLean; lean HTML does not round-trip
+     * comic-page layout or image refs — use the stored .tsl envelope when present.
+     */
+    function parsedFromReaderLeanSource(readerArticle, wrap) {
+        var src = readerArticle && readerArticle._tslEnvelopeSource;
+        if (typeof src === 'string' && src.trim() !== '') {
+            try {
+                return parse(src);
+            } catch (e) { /* fall through */ }
+        }
+        var cached = readerArticle && readerArticle._tslParsedEnvelope;
+        if (cached && cached.header && readerEnvelopeHasComicPayload(cached.blocks)) {
+            return cached;
+        }
+        var envelope = leanHtmlToEnvelope('<div class="document-tsl post-lean-html">' + (wrap ? wrap.innerHTML : '') + '</div>');
+        return { header: envelope.header, blocks: envelope.document.blocks };
+    }
+
     function mountReaderEnvelope(host, jsonText) {
         if (!host || !jsonText) {
             return null;
@@ -7078,6 +7111,7 @@
         } catch (e) {
             return null;
         }
+        readerArticle._tslEnvelopeSource = String(jsonText);
         stampTslReadingCapabilities(parsed.header, readerArticle);
         var layout = readerArticle.getAttribute('data-tsl-layout');
         if (layout !== 'scroll' && layout !== 'pages') {
@@ -7193,8 +7227,7 @@
             readerArticle._tslPlayer = { mode: 'scroll' };
             return readerArticle._tslPlayer;
         }
-        var envelope = leanHtmlToEnvelope('<div class="document-tsl post-lean-html">' + wrap.innerHTML + '</div>');
-        var parsed = { header: envelope.header, blocks: envelope.document.blocks };
+        var parsed = parsedFromReaderLeanSource(readerArticle, wrap);
         readerArticle._tslParsedEnvelope = parsed;
         wrap.innerHTML = '';
         wrap.classList.add('tsl-reader-player-mount');
