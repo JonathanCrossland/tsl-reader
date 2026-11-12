@@ -22,7 +22,7 @@
             { label: 'Format specification', url: '../spec/tsl-spec.tsl', selected: true },
             { label: 'Rich content blocks', url: '../examples/rich-content.tsl' },
             { label: 'Print layout & pages', url: '../examples/print-layout.tsl' },
-            { label: 'Comic Page', url: '../examples/comic.tsl' },
+            { label: 'Comic Page', url: '../examples/comic-page.tsl' },
             { label: 'Daisy Basic', url: '../examples/daisy-basic.tsl' }
         ]
     };

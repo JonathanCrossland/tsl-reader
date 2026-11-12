@@ -3,8 +3,8 @@
     "version": 0.1,
     "header": {
         "page": {
-            "formatId": "web",
-            "kind": "web",
+            "formatId": "uk-reference",
+            "kind": "print",
             "trimMM": {
                 "width": 210,
                 "height": 297
