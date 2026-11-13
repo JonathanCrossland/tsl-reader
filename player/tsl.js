@@ -3301,11 +3301,40 @@
         size: 18,
         theme: 'light',
         width: 'medium',
-        pageFit: 'fit',
+        pageFit: 'scale',
         dyslexiaFont: false,
         highContrast: false,
         readingRuler: false
     };
+
+    function readerDefaultLayout() {
+        return tslCompactPagerHost() ? 'scroll' : 'pages';
+    }
+
+    function readerDefaultPrefs() {
+        var prefs = Object.assign({}, READER_DEFAULT_PREFS);
+        delete prefs.pageFit;
+        return prefs;
+    }
+
+    function saveReadingPrefsToStorage(p) {
+        var out = Object.assign({}, p);
+        if (!readingPrefsStoredPageFitChosen()) {
+            delete out.pageFit;
+        }
+        saveStored(READER_PREFS_KEY, out);
+    }
+
+    function loadStoredReadingPrefsObject() {
+        var o = loadStored(READER_PREFS_KEY, null);
+        return o && typeof o === 'object' ? o : null;
+    }
+
+    /** True when the reader has saved an explicit page-size choice (Fit width / Fit screen / Actual). */
+    function readingPrefsStoredPageFitChosen() {
+        var o = loadStoredReadingPrefsObject();
+        return !!(o && Object.prototype.hasOwnProperty.call(o, 'pageFit'));
+    }
     var READER_FONT_STACK = {
         serif: 'Georgia, "Iowan Old Style", "Palatino Linotype", Palatino, "Times New Roman", serif',
         sans: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
@@ -3350,7 +3379,10 @@
     }
 
     function getReadingPrefs() {
-        var p = Object.assign({}, READER_DEFAULT_PREFS, loadStored(READER_PREFS_KEY, {}));
+        var storedPrefs = loadStored(READER_PREFS_KEY, null);
+        var p = storedPrefs == null
+            ? readerDefaultPrefs()
+            : Object.assign({}, READER_DEFAULT_PREFS, storedPrefs);
         if (READER_SIZES.indexOf(p.size) < 0) {
             p.size = 18;
         }
@@ -3361,6 +3393,9 @@
     }
 
     function getPageFit() {
+        if (getTslLayout() === 'pages' && !readingPrefsStoredPageFitChosen()) {
+            return 'scale';
+        }
         var v = getReadingPrefs().pageFit;
         return v === 'native' || v === 'scale' ? v : 'fit';
     }
@@ -3547,7 +3582,10 @@
         if (!getTslReadingCapabilities().allowScrollMode) {
             return 'pages';
         }
-        var stored = loadStored(TSL_LAYOUT_KEY, 'pages') === 'scroll' ? 'scroll' : 'pages';
+        var layoutStored = loadStored(TSL_LAYOUT_KEY, null);
+        var stored = layoutStored == null
+            ? readerDefaultLayout()
+            : (layoutStored === 'scroll' ? 'scroll' : 'pages');
         if (typeof document !== 'undefined' && document.querySelector) {
             var readerArticle = document.querySelector('[data-reader-article][data-tsl-layout]');
             if (readerArticle) {
@@ -4083,7 +4121,7 @@
         } else {
             p[key] = value;
         }
-        saveStored(READER_PREFS_KEY, p);
+        saveReadingPrefsToStorage(p);
         if (getTslLayout() === 'scroll') {
             refreshAllReadingPrefs(false);
             return;
@@ -4103,8 +4141,8 @@
     }
 
     function resetReadingPrefs() {
-        saveStored(READER_PREFS_KEY, READER_DEFAULT_PREFS);
-        saveStored(TSL_LAYOUT_KEY, 'pages');
+        saveStored(READER_PREFS_KEY, readerDefaultPrefs());
+        saveStored(TSL_LAYOUT_KEY, readerDefaultLayout());
         refreshAllReadingPrefs(true);
         notifyReadingPrefs(null);
     }

@@ -660,6 +660,15 @@
                 "cols": 2
             },
             {
+                "id": "b258601",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "text": "The reference lab player applies **layout defaults** when the reader has not yet stored preferences (<code>reader:prefs</code> and <code>tsl:layout</code> in local storage). Viewports **899px wide or narrower** (the same breakpoint as the compact pager) default to **continuous scroll** layout. **Wider** viewports default to **paginated** layout. Whenever layout is **pages**, if the user has **not** stored an explicit page-size choice (no <code>pageFit</code> key in <code>reader:prefs</code>), the player uses **Fit screen** (<code>pageFit: scale</code>)—including when the user switches to pages without opening Page size. **Reset** in the lab uses the same viewport-based layout default. These values are reader chrome, not fields on <code>header.page</code>.",
+                "dropCap": null,
+                "cols": 2
+            },
+            {
                 "id": "b25858",
                 "type": "table",
                 "align": "left",
