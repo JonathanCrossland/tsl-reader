@@ -6093,6 +6093,19 @@
             + ' Z';
     }
 
+    function comicOverlayCssVars(o) {
+        var h = Math.max(1, Number(o.h) || 1);
+        var fs = Math.max(8, Number(o.fontSize) || 16);
+        return '--comic-o-fs:' + fs + ';--comic-o-h:' + h + ';';
+    }
+
+    function comicVoiceCssVars(voice, frameH) {
+        var fh = Math.max(1, Number(frameH) || 1);
+        var lines = voice && parseInt(voice.lines, 10) === 1 ? 1 : 2;
+        var fs = Math.max(8, Number(voice && voice.fontSize) || 14);
+        return '--comic-vo-fs:' + fs + ';--comic-vo-fh:' + fh + ';--comic-vo-lines:' + lines + ';';
+    }
+
     function comicOverlayShapeMarkup(type, w, h) {
         var fill = 'fill="#fff"';
         var stroke = 'stroke="#141414" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"';
@@ -6167,7 +6180,6 @@
         var ow = Math.max(1, Number(o.w) || 180);
         var oh = Math.max(1, Number(o.h) || 110);
         var z = Number(o.z) || 1;
-        var fs = Number(o.fontSize) || 16;
         var emanata = typ.indexOf('emanata') === 0;
         var tail = '';
         if (COMIC_OVERLAY_TAIL_TYPES.indexOf(typ) >= 0 && o.tail && isFinite(o.tail.x) && isFinite(o.tail.y)) {
@@ -6176,17 +6188,13 @@
                 tail: { x: Number(o.tail.x), y: Number(o.tail.y) }
             });
             if (td) {
-                var stroke = typ === 'whisper'
-                    ? 'stroke="#141414" stroke-width="1.7" stroke-dasharray="6 4"'
-                    : 'stroke="#141414" stroke-width="2"';
-                tail = '<path class="studio-lean-comic-tail-path" d="' + td + '" fill="#fff" ' + stroke
-                    + ' stroke-linejoin="round" vector-effect="non-scaling-stroke"/>';
+                tail = '<path class="studio-lean-comic-tail-path" d="' + td + '" fill="#fff" stroke="none"/>';
             }
         }
         var text = emanata ? ''
-            : '<div class="studio-lean-comic-otext" style="font-size:' + fs + 'px">' + escComicHtml(String(o.text || '')) + '</div>';
-        return '<div class="studio-lean-comic-overlay studio-lean-comic-overlay-' + escComicHtml(typ) + '" style="left:'
-            + comicPct(ox, pageW) + ';top:' + comicPct(oy, pageH)
+            : '<div class="studio-lean-comic-otext">' + escComicHtml(String(o.text || '')) + '</div>';
+        return '<div class="studio-lean-comic-overlay studio-lean-comic-overlay-' + escComicHtml(typ) + '" style="'
+            + comicOverlayCssVars(o) + 'left:' + comicPct(ox, pageW) + ';top:' + comicPct(oy, pageH)
             + ';width:' + comicPct(ow, pageW) + ';height:' + comicPct(oh, pageH)
             + ';z-index:' + z + '">'
             + '<svg class="studio-lean-comic-oshape" viewBox="0 0 ' + ow + ' ' + oh + '" preserveAspectRatio="none">'
@@ -6218,7 +6226,8 @@
         if (voice.enabled) {
             var atTop = voice.align === 'top';
             vo = '<div class="studio-lean-comic-vo ' + (atTop ? 'is-top' : 'is-bottom') + '" style="'
-                + (atTop ? 'top:14px;bottom:auto;' : 'top:auto;bottom:14px;') + '">'
+                + (atTop ? 'top:14px;bottom:auto;' : 'top:auto;bottom:14px;')
+                + comicVoiceCssVars(voice, fh) + '">'
                 + escComicHtml(String(voice.text || '')) + '</div>';
         }
         return '<div class="studio-lean-comic-panel" style="left:' + comicPct(rect.x, pageW)

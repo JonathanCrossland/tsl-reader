@@ -921,6 +921,7 @@
 .studio-lean-comic-frame {
     position: absolute;
     overflow: hidden;
+    container-type: size;
 }
 
 .studio-lean-comic-outline {
@@ -934,6 +935,9 @@
     left: 14px;
     right: 14px;
     z-index: 2;
+    box-sizing: border-box;
+    font-size: calc(var(--comic-vo-fs, 14) / var(--comic-vo-fh, 400) * 100cqh);
+    max-height: calc(var(--comic-vo-lines, 2) * 1.18em + 19px);
     background: #fffdf6;
     border: 2.5px solid #141414;
     padding: 8px 11px;
@@ -961,6 +965,8 @@
     z-index: 3;
     pointer-events: none;
     touch-action: none;
+    background: transparent;
+    container-type: size;
 }
 
 .studio-lean-comic-oshape {
@@ -984,6 +990,7 @@
     font-family: "Comic Sans MS", "Chalkboard SE", "Segoe Print", cursive, sans-serif;
     word-break: break-word;
     padding: 2px;
+    font-size: calc(var(--comic-o-fs, 16) / var(--comic-o-h, 100) * 100cqh);
 }
 
 .studio-lean-comic-overlay-speech .studio-lean-comic-otext,
