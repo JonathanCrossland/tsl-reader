@@ -4350,6 +4350,7 @@
 
         var ovl = {
             el: shell,
+            host: host,
             bodyEl: body,
             captionEl: caption,
             toolbar: toolbar,
@@ -4361,14 +4362,33 @@
             scale: 1,
             panX: 0,
             panY: 0,
+            tableScale: 1,
+            tableBaseFontPx: null,
             imageEl: null,
             imagePan: null,
             tableEl: null,
+            tableScroll: null,
             onKeydown: null,
-            unbindImageGestures: null
+            unbindImageGestures: null,
+            unbindTableGestures: null
         };
         root._tslExpandOvl = ovl;
         return ovl;
+    }
+
+    function applyTslExpandTableScale(ovl) {
+        if (!ovl || !ovl.tableEl) {
+            return;
+        }
+        var scale = ovl.tableScale || 1;
+        if (!ovl.tableBaseFontPx) {
+            ovl.tableBaseFontPx = parseFloat(window.getComputedStyle(ovl.tableEl).fontSize) || 16;
+        }
+        if (scale === 1) {
+            ovl.tableEl.style.fontSize = '';
+        } else {
+            ovl.tableEl.style.fontSize = (ovl.tableBaseFontPx * scale) + 'px';
+        }
     }
 
     function applyTslExpandImageTransform(ovl) {
@@ -4383,6 +4403,34 @@
             ovl.unbindImageGestures();
             ovl.unbindImageGestures = null;
         }
+    }
+
+    function unbindTslExpandTableGestures(ovl) {
+        if (ovl && typeof ovl.unbindTableGestures === 'function') {
+            ovl.unbindTableGestures();
+            ovl.unbindTableGestures = null;
+        }
+    }
+
+    function bindTslExpandTableGestures(ovl) {
+        unbindTslExpandTableGestures(ovl);
+        if (!ovl || !ovl.tableScroll) {
+            return;
+        }
+        var scroll = ovl.tableScroll;
+        function onWheel(e) {
+            if (!ovl.open || ovl.mode !== 'table') {
+                return;
+            }
+            e.preventDefault();
+            var factor = e.deltaY < 0 ? 1.08 : 0.92;
+            ovl.tableScale = Math.min(2.5, Math.max(0.65, (ovl.tableScale || 1) * factor));
+            applyTslExpandTableScale(ovl);
+        }
+        scroll.addEventListener('wheel', onWheel, { passive: false });
+        ovl.unbindTableGestures = function () {
+            scroll.removeEventListener('wheel', onWheel);
+        };
     }
 
     function bindTslExpandImageGestures(ovl) {
@@ -4536,6 +4584,7 @@
         ovl.open = false;
         ovl.mode = null;
         unbindTslExpandImageGestures(ovl);
+        unbindTslExpandTableGestures(ovl);
         if (ovl.onKeydown) {
             document.removeEventListener('keydown', ovl.onKeydown);
             ovl.onKeydown = null;
@@ -4551,6 +4600,9 @@
             clearTslExpandTableFocus(ovl.tableEl);
         }
         ovl.tableEl = null;
+        ovl.tableScroll = null;
+        ovl.tableScale = 1;
+        ovl.tableBaseFontPx = null;
         ovl.scale = 1;
         ovl.panX = 0;
         ovl.panY = 0;
@@ -4622,7 +4674,7 @@
         ovl.mode = 'table';
         ovl.previousFocus = document.activeElement;
         ovl.captionEl.hidden = true;
-        ovl.toolbar.hidden = true;
+        ovl.toolbar.hidden = false;
         ovl.hintEl.hidden = false;
 
         var scroll = document.createElement('div');
@@ -4632,6 +4684,11 @@
         scroll.appendChild(table);
         ovl.bodyEl.appendChild(scroll);
         ovl.tableEl = table;
+        ovl.tableScroll = scroll;
+        ovl.tableScale = 1;
+        ovl.tableBaseFontPx = null;
+        applyTslExpandTableScale(ovl);
+        bindTslExpandTableGestures(ovl);
 
         ovl.el.hidden = false;
         ovl.el.setAttribute('aria-hidden', 'false');
@@ -4656,20 +4713,31 @@
         root._tslExpandBound = true;
 
         ovl.adjustZoom = function (factor) {
-            if (!ovl.open || ovl.mode !== 'image') {
+            if (!ovl.open) {
                 return;
             }
-            if (factor === 1) {
-                ovl.scale = 1;
-                ovl.panX = 0;
-                ovl.panY = 0;
-            } else {
-                ovl.scale = Math.min(4, Math.max(1, ovl.scale * factor));
+            if (ovl.mode === 'image') {
+                if (factor === 1) {
+                    ovl.scale = 1;
+                    ovl.panX = 0;
+                    ovl.panY = 0;
+                } else {
+                    ovl.scale = Math.min(4, Math.max(1, ovl.scale * factor));
+                }
+                applyTslExpandImageTransform(ovl);
+                return;
             }
-            applyTslExpandImageTransform(ovl);
+            if (ovl.mode === 'table' && ovl.tableEl) {
+                if (factor === 1) {
+                    ovl.tableScale = 1;
+                } else {
+                    ovl.tableScale = Math.min(2.5, Math.max(0.65, (ovl.tableScale || 1) * factor));
+                }
+                applyTslExpandTableScale(ovl);
+            }
         };
 
-        root.addEventListener('click', function (e) {
+        function handleTslExpandOverlayClick(e) {
             if (e.target.closest('[data-tsl-expand-close]')) {
                 e.preventDefault();
                 closeTslExpand(ovl);
@@ -4681,7 +4749,7 @@
                 return;
             }
             var zoomBtn = e.target.closest('[data-tsl-expand-zoom]');
-            if (zoomBtn && ovl.open && ovl.mode === 'image') {
+            if (zoomBtn && ovl.open && (ovl.mode === 'image' || ovl.mode === 'table')) {
                 e.preventDefault();
                 var kind = zoomBtn.getAttribute('data-tsl-expand-zoom');
                 if (kind === 'in') {
@@ -4698,6 +4766,16 @@
                 e.preventDefault();
                 e.stopPropagation();
                 applyTslExpandTableFocusCol(ovl.tableEl, colHit.cellIndex);
+            }
+        }
+
+        if (!ovl.el._tslExpandPanelBound) {
+            ovl.el._tslExpandPanelBound = true;
+            ovl.el.addEventListener('click', handleTslExpandOverlayClick);
+        }
+
+        root.addEventListener('click', function (e) {
+            if (e.target.closest('.tsl-expand')) {
                 return;
             }
             if (e.target.closest('a')) {
@@ -4710,7 +4788,7 @@
                 return;
             }
             var table = e.target.closest('table[data-tsl-expand-table]');
-            if (table && root.contains(table) && !table.closest('.tsl-expand')) {
+            if (table && root.contains(table)) {
                 e.preventDefault();
                 openTslExpandTable(root, ovl, table);
             }
