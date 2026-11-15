@@ -3287,6 +3287,7 @@
             }
         }
         bindInDocumentAnchorClicks(root);
+        bindTslExpandOverlays(root);
         updateTslPrintPageRule(root);
         bindTslPrintLifecycle();
         syncMountHostLayout(mount);
@@ -4246,6 +4247,488 @@
             history.replaceState(null, '', '#' + target.id);
         }
         return true;
+    }
+
+    function stampTslExpandTargets(root) {
+        if (!root || !root.querySelectorAll) {
+            return;
+        }
+        root.querySelectorAll('figure.tsl-block--image img, figure.studio-lean-figure img').forEach(function (img) {
+            var fig = img.closest('figure');
+            if (!fig || fig.classList.contains('tsl-block--front-cover') || !img.src) {
+                return;
+            }
+            img.setAttribute('data-tsl-expand-image', '1');
+            img.setAttribute('tabindex', '0');
+            img.setAttribute('role', 'button');
+            var label = (fig.querySelector('figcaption') && fig.querySelector('figcaption').textContent) || img.alt || '';
+            img.setAttribute('aria-label', label ? 'Expand image: ' + label.trim() : 'Expand image');
+        });
+        root.querySelectorAll('table.tsl-block--table, table.studio-lean-table').forEach(function (table) {
+            table.setAttribute('data-tsl-expand-table', '1');
+            table.setAttribute('tabindex', '0');
+            table.setAttribute('role', 'button');
+            table.setAttribute('aria-label', 'Expand table');
+        });
+    }
+
+    function ensureTslExpandOverlay(root) {
+        if (!root) {
+            return null;
+        }
+        if (root._tslExpandOvl) {
+            return root._tslExpandOvl;
+        }
+        var shell = document.createElement('div');
+        shell.className = 'tsl-expand';
+        shell.setAttribute('data-tsl-expand', '');
+        shell.hidden = true;
+        shell.setAttribute('role', 'dialog');
+        shell.setAttribute('aria-modal', 'true');
+        shell.setAttribute('aria-label', 'Expanded view');
+        shell.setAttribute('aria-hidden', 'true');
+
+        var backdrop = document.createElement('div');
+        backdrop.className = 'tsl-expand-backdrop';
+        backdrop.setAttribute('data-tsl-expand-close', '1');
+
+        var panel = document.createElement('div');
+        panel.className = 'tsl-expand-panel';
+
+        var closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'tsl-expand-close';
+        closeBtn.setAttribute('data-tsl-expand-close', '1');
+        closeBtn.setAttribute('aria-label', 'Close');
+        closeBtn.textContent = '\u00d7';
+
+        var toolbar = document.createElement('div');
+        toolbar.className = 'tsl-expand-toolbar';
+        toolbar.hidden = true;
+        toolbar.setAttribute('data-tsl-expand-toolbar', '');
+        ['out', 'reset', 'in'].forEach(function (kind) {
+            var zb = document.createElement('button');
+            zb.type = 'button';
+            zb.className = 'tsl-expand-zoom';
+            zb.setAttribute('data-tsl-expand-zoom', kind);
+            zb.textContent = kind === 'in' ? '+' : (kind === 'out' ? '\u2212' : '1\u00d7');
+            if (kind === 'in') {
+                zb.setAttribute('aria-label', 'Zoom in');
+            } else if (kind === 'out') {
+                zb.setAttribute('aria-label', 'Zoom out');
+            } else {
+                zb.setAttribute('aria-label', 'Reset zoom');
+            }
+            toolbar.appendChild(zb);
+        });
+
+        var body = document.createElement('div');
+        body.className = 'tsl-expand-body';
+        body.setAttribute('data-tsl-expand-body', '');
+
+        var caption = document.createElement('div');
+        caption.className = 'tsl-expand-caption';
+        caption.setAttribute('data-tsl-expand-caption', '');
+        caption.hidden = true;
+
+        var hint = document.createElement('p');
+        hint.className = 'tsl-expand-hint';
+        hint.setAttribute('data-tsl-expand-hint', '');
+        hint.hidden = true;
+        hint.textContent = 'Click a column to focus it.';
+
+        panel.appendChild(closeBtn);
+        panel.appendChild(toolbar);
+        panel.appendChild(body);
+        panel.appendChild(caption);
+        panel.appendChild(hint);
+        shell.appendChild(backdrop);
+        shell.appendChild(panel);
+
+        var host = root.closest('.tsl-root') || root.closest('.document-tsl') || root;
+        host.appendChild(shell);
+
+        var ovl = {
+            el: shell,
+            bodyEl: body,
+            captionEl: caption,
+            toolbar: toolbar,
+            hintEl: hint,
+            closeBtn: closeBtn,
+            open: false,
+            mode: null,
+            previousFocus: null,
+            scale: 1,
+            panX: 0,
+            panY: 0,
+            imageEl: null,
+            imagePan: null,
+            tableEl: null,
+            onKeydown: null,
+            unbindImageGestures: null
+        };
+        root._tslExpandOvl = ovl;
+        return ovl;
+    }
+
+    function applyTslExpandImageTransform(ovl) {
+        if (!ovl || !ovl.imageEl) {
+            return;
+        }
+        ovl.imageEl.style.transform = 'translate(' + ovl.panX + 'px, ' + ovl.panY + 'px) scale(' + ovl.scale + ')';
+    }
+
+    function unbindTslExpandImageGestures(ovl) {
+        if (ovl && typeof ovl.unbindImageGestures === 'function') {
+            ovl.unbindImageGestures();
+            ovl.unbindImageGestures = null;
+        }
+    }
+
+    function bindTslExpandImageGestures(ovl) {
+        unbindTslExpandImageGestures(ovl);
+        if (!ovl || !ovl.imagePan || !ovl.imageEl) {
+            return;
+        }
+        var pan = ovl.imagePan;
+        var dragging = false;
+        var lastX = 0;
+        var lastY = 0;
+
+        function onWheel(e) {
+            e.preventDefault();
+            var factor = e.deltaY < 0 ? 1.12 : 0.9;
+            ovl.scale = Math.min(4, Math.max(1, ovl.scale * factor));
+            if (ovl.scale === 1) {
+                ovl.panX = 0;
+                ovl.panY = 0;
+            }
+            applyTslExpandImageTransform(ovl);
+        }
+
+        function onPointerDown(e) {
+            if (ovl.scale <= 1) {
+                return;
+            }
+            dragging = true;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            if (pan.setPointerCapture) {
+                pan.setPointerCapture(e.pointerId);
+            }
+        }
+
+        function onPointerMove(e) {
+            if (!dragging) {
+                return;
+            }
+            ovl.panX += e.clientX - lastX;
+            ovl.panY += e.clientY - lastY;
+            lastX = e.clientX;
+            lastY = e.clientY;
+            applyTslExpandImageTransform(ovl);
+        }
+
+        function onPointerUp() {
+            dragging = false;
+        }
+
+        pan.addEventListener('wheel', onWheel, { passive: false });
+        pan.addEventListener('pointerdown', onPointerDown);
+        pan.addEventListener('pointermove', onPointerMove);
+        pan.addEventListener('pointerup', onPointerUp);
+        pan.addEventListener('pointercancel', onPointerUp);
+
+        ovl.unbindImageGestures = function () {
+            pan.removeEventListener('wheel', onWheel);
+            pan.removeEventListener('pointerdown', onPointerDown);
+            pan.removeEventListener('pointermove', onPointerMove);
+            pan.removeEventListener('pointerup', onPointerUp);
+            pan.removeEventListener('pointercancel', onPointerUp);
+        };
+    }
+
+    function clearTslExpandTableFocus(table) {
+        if (!table) {
+            return;
+        }
+        table.removeAttribute('data-tsl-focus-col');
+        table.querySelectorAll('colgroup col').forEach(function (col) {
+            col.style.width = '';
+        });
+        table.querySelectorAll('.tsl-expand-col-focus').forEach(function (cell) {
+            cell.classList.remove('tsl-expand-col-focus');
+        });
+    }
+
+    function applyTslExpandTableFocusCol(table, colIdx) {
+        if (!table || colIdx == null || colIdx < 0) {
+            return;
+        }
+        var firstRow = table.querySelector('tr');
+        if (!firstRow) {
+            return;
+        }
+        var colCount = firstRow.cells.length;
+        if (!colCount) {
+            return;
+        }
+        table.setAttribute('data-tsl-focus-col', String(colIdx + 1));
+        var focusPct = Math.min(72, Math.max(36, (100 / colCount) * 2.2));
+        var otherPct = colCount > 1 ? (100 - focusPct) / (colCount - 1) : 100;
+        var cg = table.querySelector('colgroup');
+        if (!cg) {
+            cg = document.createElement('colgroup');
+            var ci;
+            for (ci = 0; ci < colCount; ci += 1) {
+                cg.appendChild(document.createElement('col'));
+            }
+            table.insertBefore(cg, table.firstChild);
+        }
+        var cols = cg.querySelectorAll('col');
+        var i;
+        for (i = 0; i < cols.length; i += 1) {
+            cols[i].style.width = (i === colIdx ? focusPct : otherPct) + '%';
+        }
+        table.querySelectorAll('tr').forEach(function (tr) {
+            Array.prototype.forEach.call(tr.cells, function (cell, idx) {
+                cell.classList.toggle('tsl-expand-col-focus', idx === colIdx);
+            });
+        });
+    }
+
+    function mergeTablePartsForExpand(root, sourceTable) {
+        var blockId = sourceTable.getAttribute('data-tsl-block-id');
+        var tables = [sourceTable];
+        if (blockId) {
+            tables = Array.prototype.slice.call(root.querySelectorAll(
+                'table[data-tsl-block-id="' + blockId + '"]'
+            ));
+            tables.sort(function (a, b) {
+                var pos = a.compareDocumentPosition(b);
+                if (pos & Node.DOCUMENT_POSITION_FOLLOWING) {
+                    return -1;
+                }
+                if (pos & Node.DOCUMENT_POSITION_PRECEDING) {
+                    return 1;
+                }
+                return 0;
+            });
+        }
+        var out = document.createElement('table');
+        out.className = 'tsl-block tsl-block--table tsl-expand-table-inner';
+        var cg0 = tables[0].querySelector('colgroup');
+        if (cg0) {
+            out.appendChild(cg0.cloneNode(true));
+        }
+        tables.forEach(function (tbl) {
+            tbl.querySelectorAll('tr').forEach(function (tr) {
+                out.appendChild(tr.cloneNode(true));
+            });
+        });
+        return out;
+    }
+
+    function closeTslExpand(ovl) {
+        if (!ovl || !ovl.open) {
+            return;
+        }
+        ovl.open = false;
+        ovl.mode = null;
+        unbindTslExpandImageGestures(ovl);
+        if (ovl.onKeydown) {
+            document.removeEventListener('keydown', ovl.onKeydown);
+            ovl.onKeydown = null;
+        }
+        ovl.bodyEl.innerHTML = '';
+        ovl.captionEl.innerHTML = '';
+        ovl.captionEl.hidden = true;
+        ovl.toolbar.hidden = true;
+        ovl.hintEl.hidden = true;
+        ovl.imageEl = null;
+        ovl.imagePan = null;
+        if (ovl.tableEl) {
+            clearTslExpandTableFocus(ovl.tableEl);
+        }
+        ovl.tableEl = null;
+        ovl.scale = 1;
+        ovl.panX = 0;
+        ovl.panY = 0;
+        ovl.el.hidden = true;
+        ovl.el.setAttribute('aria-hidden', 'true');
+        if (ovl.previousFocus && typeof ovl.previousFocus.focus === 'function') {
+            ovl.previousFocus.focus();
+        }
+        ovl.previousFocus = null;
+    }
+
+    function openTslExpandImage(ovl, fig) {
+        if (!ovl || !fig) {
+            return;
+        }
+        var img0 = fig.querySelector('img');
+        if (!img0 || !img0.src) {
+            return;
+        }
+        closeTslExpand(ovl);
+        ovl.open = true;
+        ovl.mode = 'image';
+        ovl.previousFocus = document.activeElement;
+        var cap = fig.querySelector('figcaption');
+        if (cap && cap.textContent.trim() !== '') {
+            ovl.captionEl.innerHTML = cap.innerHTML;
+            ovl.captionEl.hidden = false;
+        } else {
+            ovl.captionEl.hidden = true;
+        }
+        ovl.hintEl.hidden = true;
+        ovl.toolbar.hidden = false;
+
+        var pan = document.createElement('div');
+        pan.className = 'tsl-expand-pan';
+        pan.setAttribute('data-tsl-expand-pan', '');
+        var img = document.createElement('img');
+        img.src = img0.src;
+        img.alt = img0.alt || '';
+        img.className = 'tsl-expand-image';
+        img.draggable = false;
+        pan.appendChild(img);
+        ovl.bodyEl.appendChild(pan);
+        ovl.imagePan = pan;
+        ovl.imageEl = img;
+        ovl.scale = 1;
+        ovl.panX = 0;
+        ovl.panY = 0;
+        applyTslExpandImageTransform(ovl);
+        bindTslExpandImageGestures(ovl);
+
+        ovl.el.hidden = false;
+        ovl.el.setAttribute('aria-hidden', 'false');
+        ovl.onKeydown = function (e) {
+            if (e.key === 'Escape') {
+                closeTslExpand(ovl);
+            }
+        };
+        document.addEventListener('keydown', ovl.onKeydown);
+        ovl.closeBtn.focus();
+    }
+
+    function openTslExpandTable(root, ovl, sourceTable) {
+        if (!root || !ovl || !sourceTable) {
+            return;
+        }
+        closeTslExpand(ovl);
+        ovl.open = true;
+        ovl.mode = 'table';
+        ovl.previousFocus = document.activeElement;
+        ovl.captionEl.hidden = true;
+        ovl.toolbar.hidden = true;
+        ovl.hintEl.hidden = false;
+
+        var scroll = document.createElement('div');
+        scroll.className = 'tsl-expand-table-scroll';
+        scroll.setAttribute('data-tsl-expand-table-scroll', '');
+        var table = mergeTablePartsForExpand(root, sourceTable);
+        scroll.appendChild(table);
+        ovl.bodyEl.appendChild(scroll);
+        ovl.tableEl = table;
+
+        ovl.el.hidden = false;
+        ovl.el.setAttribute('aria-hidden', 'false');
+        ovl.onKeydown = function (e) {
+            if (e.key === 'Escape') {
+                closeTslExpand(ovl);
+            }
+        };
+        document.addEventListener('keydown', ovl.onKeydown);
+        ovl.closeBtn.focus();
+    }
+
+    function bindTslExpandOverlays(root) {
+        if (!root) {
+            return;
+        }
+        stampTslExpandTargets(root);
+        var ovl = ensureTslExpandOverlay(root);
+        if (!ovl || root._tslExpandBound) {
+            return;
+        }
+        root._tslExpandBound = true;
+
+        ovl.adjustZoom = function (factor) {
+            if (!ovl.open || ovl.mode !== 'image') {
+                return;
+            }
+            if (factor === 1) {
+                ovl.scale = 1;
+                ovl.panX = 0;
+                ovl.panY = 0;
+            } else {
+                ovl.scale = Math.min(4, Math.max(1, ovl.scale * factor));
+            }
+            applyTslExpandImageTransform(ovl);
+        };
+
+        root.addEventListener('click', function (e) {
+            if (e.target.closest('[data-tsl-expand-close]')) {
+                e.preventDefault();
+                closeTslExpand(ovl);
+                return;
+            }
+            if (ovl.open && e.target.classList.contains('tsl-expand-backdrop')) {
+                e.preventDefault();
+                closeTslExpand(ovl);
+                return;
+            }
+            var zoomBtn = e.target.closest('[data-tsl-expand-zoom]');
+            if (zoomBtn && ovl.open && ovl.mode === 'image') {
+                e.preventDefault();
+                var kind = zoomBtn.getAttribute('data-tsl-expand-zoom');
+                if (kind === 'in') {
+                    ovl.adjustZoom(1.25);
+                } else if (kind === 'out') {
+                    ovl.adjustZoom(0.8);
+                } else {
+                    ovl.adjustZoom(1);
+                }
+                return;
+            }
+            var colHit = e.target.closest('.tsl-expand table th, .tsl-expand table td');
+            if (colHit && ovl.open && ovl.mode === 'table') {
+                e.preventDefault();
+                e.stopPropagation();
+                applyTslExpandTableFocusCol(ovl.tableEl, colHit.cellIndex);
+                return;
+            }
+            if (e.target.closest('a')) {
+                return;
+            }
+            var img = e.target.closest('img[data-tsl-expand-image]');
+            if (img && root.contains(img)) {
+                e.preventDefault();
+                openTslExpandImage(ovl, img.closest('figure'));
+                return;
+            }
+            var table = e.target.closest('table[data-tsl-expand-table]');
+            if (table && root.contains(table) && !table.closest('.tsl-expand')) {
+                e.preventDefault();
+                openTslExpandTable(root, ovl, table);
+            }
+        });
+
+        root.addEventListener('keydown', function (e) {
+            var img = e.target.closest('img[data-tsl-expand-image]');
+            if (img && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                openTslExpandImage(ovl, img.closest('figure'));
+                return;
+            }
+            var table = e.target.closest('table[data-tsl-expand-table]');
+            if (table && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                openTslExpandTable(root, ovl, table);
+            }
+        });
     }
 
     function bindInDocumentAnchorClicks(root) {
@@ -7036,6 +7519,7 @@
            defaults on first load/refresh in scroll layout. */
         applyLeanReadingPrefs(article);
         bindInDocumentAnchorClicks(article);
+        bindTslExpandOverlays(article);
         syncMountHostLayout(mount);
         return article;
     }
@@ -7235,6 +7719,7 @@
             applyTslLayoutVarsToArticle(leanOnly);
             applyLeanReadingPrefs(leanOnly);
             bindInDocumentAnchorClicks(leanOnly);
+            bindTslExpandOverlays(leanOnly);
             readerArticle._tslPlayer = { mode: 'scroll' };
             return readerArticle._tslPlayer;
         }
@@ -7261,6 +7746,7 @@
             applyTslLayoutVarsToArticle(leanScroll);
             applyLeanReadingPrefs(leanScroll);
             bindInDocumentAnchorClicks(leanScroll);
+            bindTslExpandOverlays(leanScroll);
             readerArticle._tslPlayer = { mode: 'scroll' };
             return readerArticle._tslPlayer;
         }
@@ -7398,6 +7884,7 @@
         findInDocumentAnchorTarget: findInDocumentAnchorTarget,
         navigateToInDocumentAnchor: navigateToInDocumentAnchor,
         bindInDocumentAnchorClicks: bindInDocumentAnchorClicks,
+        bindTslExpandOverlays: bindTslExpandOverlays,
         /* Spec ruleset (spec/tsl-spec.tsl §5): validate a block / map it to CSS rule classes. */
         blockRules: TSL_BLOCK_RULES,
         defineBlockRules: defineBlockRules,
