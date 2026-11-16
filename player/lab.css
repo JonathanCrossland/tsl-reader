@@ -280,26 +280,98 @@ html[data-tsl-reader-theme="dark"] .tsl-lab-fab-backdrop {
     box-shadow: var(--lab-shadow-menu);
 }
 
+.tsl-lab-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem 0.5rem;
+    margin-bottom: 0.45rem;
+    min-width: 0;
+}
+
 .tsl-lab-panel-title {
-    margin: 0 0 0.65rem;
+    margin: 0;
     font-family: var(--lab-font-display);
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: -0.02em;
     color: var(--lab-ink);
-}
-
-.tsl-lab-toolbar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.4rem 0.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.tsl-lab-toolbar .tsl-lab-sample-label {
-    flex: 1 1 9rem;
+    flex: 0 1 auto;
     min-width: 0;
+    line-height: 1.25;
+}
+
+.tsl-lab-panel-head .tsl-lab-iconbar {
+    flex: 0 0 auto;
+}
+
+.tsl-lab-docbar {
+    margin-bottom: 0.4rem;
+}
+
+.tsl-lab-docbar .tsl-lab-sample-label {
+    display: block;
+    width: 100%;
+    flex: none;
+}
+
+.tsl-lab-iconbar {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.05rem;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+}
+
+.tsl-lab-iconbar-sep {
+    flex: 0 0 1px;
+    align-self: center;
+    width: 1px;
+    height: 1.1rem;
+    margin: 0 0.1rem;
+    background: var(--lab-border);
+}
+
+.tsl-lab-iconbtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: calc(var(--lab-radius-sm) - 2px);
+    background: transparent;
+    color: var(--lab-ink-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tsl-lab-iconbtn:hover {
+    color: var(--lab-ink);
+    background: var(--lab-surface-elevated);
+    box-shadow: var(--lab-shadow-sm);
+}
+
+.tsl-lab-iconbtn:focus-visible {
+    outline: 2px solid var(--lab-accent-ring);
+    outline-offset: 1px;
+}
+
+.tsl-lab-iconbtn[hidden] {
+    display: none;
+}
+
+.tsl-lab-iconbtn .tsl-lab-icon {
+    display: block;
+    width: 1.125rem;
+    height: 1.125rem;
 }
 
 .tsl-lab-read-heading {
@@ -725,13 +797,8 @@ html[data-tsl-reader-theme="dark"] .tsl-lab-fab-backdrop {
     background: var(--lab-accent-soft);
 }
 
-.tsl-lab-file-label {
+label.tsl-lab-iconbtn {
     cursor: pointer;
-    margin: 0;
-}
-
-.tsl-lab-file-label .tsl-lab-btn {
-    pointer-events: none;
 }
 
 .tsl-lab-read {

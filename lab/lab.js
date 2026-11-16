@@ -5,6 +5,7 @@
     var status = document.querySelector('[data-tsl-status]');
     var fileInput = document.querySelector('[data-tsl-file]');
     var downloadBtn = document.querySelector('[data-tsl-download]');
+    var reloadBtn = document.querySelector('[data-tsl-reload]');
     var sampleSelect = document.querySelector('[data-tsl-sample-select]');
     var fabRoot = document.querySelector('[data-tsl-lab-fab]');
     var fabToggle = document.querySelector('[data-tsl-lab-fab-toggle]');
@@ -1272,14 +1273,33 @@
         return /<\s*article\b/i.test(text) || /studio:tsl-settings/i.test(text) || /studio-lean-tsl/i.test(text);
     }
 
+    function setDocActionButtonsVisible(visible) {
+        if (downloadBtn) {
+            downloadBtn.hidden = !visible;
+        }
+        if (reloadBtn) {
+            reloadBtn.hidden = !visible;
+        }
+    }
+
+    function reloadCurrentDocument() {
+        if (lastUrl) {
+            openUrl(lastUrl);
+            return;
+        }
+        if (lastEnvelope && lastParsed) {
+            showText(TalesmithTsl.envelopeToText(lastEnvelope), '');
+            return;
+        }
+        setStatus('Nothing to reload.', true);
+    }
+
     function showText(text, label) {
         var parsed;
         if (isLeanHtml(text)) {
             lastEnvelope = TalesmithTsl.leanHtmlToEnvelope(text);
             parsed = TalesmithTsl.parse(TalesmithTsl.envelopeToText(lastEnvelope));
-            if (downloadBtn) {
-                downloadBtn.hidden = false;
-            }
+            setDocActionButtonsVisible(true);
         } else {
             parsed = TalesmithTsl.parse(text);
             lastEnvelope = {
@@ -1288,9 +1308,7 @@
                 header: parsed.header,
                 document: { blocks: parsed.blocks }
             };
-            if (downloadBtn) {
-                downloadBtn.hidden = false;
-            }
+            setDocActionButtonsVisible(true);
         }
         lastParsed = parsed;
         clearLabDocHighlights();
@@ -1459,6 +1477,12 @@
             a.download = 'document.tsl';
             a.click();
             URL.revokeObjectURL(a.href);
+        });
+    }
+
+    if (reloadBtn) {
+        reloadBtn.addEventListener('click', function () {
+            reloadCurrentDocument();
         });
     }
 
