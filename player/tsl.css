@@ -27,6 +27,7 @@
     --tsl-ink: #1a1a1a;
     --tsl-muted: #555;
     --tsl-rule: #ccc;
+    --tsl-link: #1d4ed8;
     --tsl-row-gap: 0.35rem;
     box-sizing: border-box;
     min-height: 100vh;
@@ -51,6 +52,7 @@
     --tsl-ink: #f2f2f7;
     --tsl-muted: #aeaeb2;
     --tsl-rule: #48484a;
+    --tsl-link: #93c5fd;
 }
 
 .tsl-root[data-tsl-reader-theme="light"] {
@@ -1385,13 +1387,92 @@
     color: var(--tsl-muted);
 }
 
+/* Inline markup (studio markdown + allowed HTML in text fields) */
+.tsl-root :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .tsl-full-page-inner, .tsl-block--aside) :is(strong, b),
+.document-tsl :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .studio-lean-aside) :is(strong, b) {
+    font-weight: 700;
+}
+
+.tsl-root :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .tsl-full-page-inner, .tsl-block--aside) :is(em, i),
+.document-tsl :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .studio-lean-aside) :is(em, i) {
+    font-style: italic;
+}
+
+.tsl-root :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .tsl-full-page-inner, .tsl-block--aside) u,
+.document-tsl :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .studio-lean-aside) u {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.14em;
+}
+
+.tsl-root :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .tsl-full-page-inner, .tsl-block--aside) :is(sup, sub),
+.document-tsl :where(p, li, td, th, figcaption, h1, h2, h3, blockquote) :is(sup, sub) {
+    font-size: 0.78em;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+}
+
+.tsl-root :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .tsl-full-page-inner, .tsl-block--aside) sup,
+.document-tsl :where(p, li, td, th, figcaption, h1, h2, h3, blockquote) sup {
+    top: -0.45em;
+}
+
+.tsl-root :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .tsl-full-page-inner, .tsl-block--aside) sub,
+.document-tsl :where(p, li, td, th, figcaption, h1, h2, h3, blockquote) sub {
+    top: 0.2em;
+}
+
+.tsl-root :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .tsl-full-page-inner, .tsl-block--aside) a[href]:not(.studio-lean-toc-link),
+.document-tsl :where(p, li, td, th, figcaption, h1, h2, h3, blockquote) a[href]:not(.studio-lean-toc-link) {
+    color: var(--tsl-link);
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 0.15em;
+}
+
+.tsl-root :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .tsl-full-page-inner, .tsl-block--aside) a[href]:not(.studio-lean-toc-link):hover,
+.document-tsl :where(p, li, td, th, figcaption, h1, h2, h3, blockquote) a[href]:not(.studio-lean-toc-link):hover {
+    text-decoration-thickness: 2px;
+}
+
+.tsl-root :where(p, li, td, th, figcaption, h1, h2, h3, blockquote, .tsl-full-page-inner, .tsl-block--aside) code,
+.document-tsl :where(p, li, td, th, figcaption, h1, h2, h3, blockquote) code:not(.studio-lean-mathml-source) {
+    font-family: var(--tsl-font-mono);
+    font-size: 0.9em;
+    font-weight: 500;
+    font-style: normal;
+    padding: 0.1em 0.38em;
+    border-radius: 0.28em;
+    background: color-mix(in srgb, var(--tsl-rule) 36%, transparent);
+    border: 1px solid color-mix(in srgb, var(--tsl-rule) 52%, transparent);
+    white-space: pre-wrap;
+    word-break: break-word;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+}
+
+.tsl-block--quote :is(em, i) {
+    font-style: normal;
+}
+
+.tsl-block--quote :is(em, i) :is(em, i) {
+    font-style: italic;
+}
+
 .tsl-md-strike {
     text-decoration: line-through;
+    text-decoration-thickness: 1px;
+    color: color-mix(in srgb, var(--tsl-ink) 72%, var(--tsl-muted));
 }
 
 .tsl-figure {
     margin: 1em 0;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 100%;
 }
 
 .tsl-figure img {
@@ -1399,10 +1480,21 @@
     height: auto;
 }
 
+.tsl-figure img[data-tsl-image-fit="page"] {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    object-fit: contain;
+}
+
 .tsl-figure figcaption {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
     font-size: 0.85em;
     color: var(--tsl-muted);
     margin-top: 0.35em;
+    box-sizing: border-box;
 }
 
 img[data-tsl-expand-image] {
@@ -1871,6 +1963,7 @@ img[data-tsl-expand-image]:focus-visible {
     --tsl-paper: #fffef9;
     --tsl-ink: #1a1a1a;
     --tsl-rule: #ccc;
+    --tsl-link: #1d4ed8;
 }
 
 .document-tsl .studio-lean-tsl[data-tsl-reader-theme="sepia"] {
@@ -1878,6 +1971,7 @@ img[data-tsl-expand-image]:focus-visible {
     --tsl-paper: #f4ecdd;
     --tsl-ink: #433a2e;
     --tsl-rule: #e3d7c2;
+    --tsl-link: #7c3aed;
 }
 
 .document-tsl .studio-lean-tsl[data-tsl-reader-theme="dark"] {
@@ -1885,6 +1979,7 @@ img[data-tsl-expand-image]:focus-visible {
     --tsl-paper: #1e1c19;
     --tsl-ink: #d2cdc4;
     --tsl-rule: #34312c;
+    --tsl-link: #7dd3fc;
 }
 
 .document-tsl[data-tsl-reader-theme="light"] {
@@ -1892,6 +1987,7 @@ img[data-tsl-expand-image]:focus-visible {
     --tsl-ink: #1a1a1a;
     --tsl-muted: #555;
     --tsl-rule: #ccc;
+    --tsl-link: #1d4ed8;
 }
 
 .document-tsl[data-tsl-reader-theme="sepia"] {
@@ -1899,6 +1995,7 @@ img[data-tsl-expand-image]:focus-visible {
     --tsl-ink: #433a2e;
     --tsl-muted: #7a6552;
     --tsl-rule: #e3d7c2;
+    --tsl-link: #7c3aed;
 }
 
 .document-tsl[data-tsl-reader-theme="dark"] {
@@ -1906,6 +2003,7 @@ img[data-tsl-expand-image]:focus-visible {
     --tsl-ink: #d2cdc4;
     --tsl-muted: #aeaeb2;
     --tsl-rule: #34312c;
+    --tsl-link: #7dd3fc;
 }
 
 .document-tsl[data-tsl-reader-width="narrow"] { --tsl-reader-measure: 58ch; }

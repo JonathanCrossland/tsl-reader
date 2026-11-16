@@ -442,7 +442,7 @@
         if (!s || s.indexOf('<') === -1) {
             return false;
         }
-        return /<(strong|b|em|i|u|code|br)\b/i.test(s);
+        return /<(strong|b|em|i|u|code|br|a|span|sup|sub)\b/i.test(s);
     }
 
     function markdownInlineHasMarkup(value) {
@@ -483,7 +483,7 @@
         var codeSlots = [];
         s = s.replace(/`([^`\n]+)`/g, function (_, inner) {
             var key = '\x01TSL_CODE' + codeSlots.length + '\x01';
-            codeSlots.push('<code>' + (hasHtml ? inner.replace(/</g, '&lt;').replace(/>/g, '&gt;') : escapeHtml(inner)) + '</code>');
+            codeSlots.push('<code class="tsl-md-code">' + (hasHtml ? inner.replace(/</g, '&lt;').replace(/>/g, '&gt;') : escapeHtml(inner)) + '</code>');
             return key;
         });
         var out = hasHtml ? s : s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -3045,6 +3045,121 @@
             return row;
         }
 
+        function layoutMeasureImages(container) {
+            if (!container || !container.querySelectorAll) {
+                return;
+            }
+            container.querySelectorAll('img').forEach(function (im) {
+                if (im.src) {
+                    void im.offsetHeight;
+                }
+            });
+        }
+
+        function clearImageMaxHeightPx(img) {
+            if (!img) {
+                return;
+            }
+            img.style.maxHeight = '';
+            img.style.objectFit = '';
+            img.removeAttribute('data-tsl-image-fit');
+        }
+
+        function applyImageMaxHeightPx(img, px) {
+            if (!img || px < 1) {
+                return;
+            }
+            img.style.maxHeight = px + 'px';
+            img.style.width = 'auto';
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.objectFit = 'contain';
+            img.setAttribute('data-tsl-image-fit', 'page');
+        }
+
+        function clearImageRowPageFit(row) {
+            if (!row) {
+                return;
+            }
+            row.querySelectorAll('figure.tsl-block--image img').forEach(clearImageMaxHeightPx);
+        }
+
+        function measureFlowStackHeight(pg, extraRow, imageMaxHeights) {
+            var shell = prepareMeasureBodyStack(pg.side, pg);
+            Array.prototype.forEach.call(pg.body.childNodes, function (node) {
+                shell.stack.appendChild(node.cloneNode(true));
+            });
+            if (extraRow) {
+                var row = extraRow.cloneNode(true);
+                if (imageMaxHeights && imageMaxHeights.length) {
+                    var figs = row.querySelectorAll('figure.tsl-block--image');
+                    imageMaxHeights.forEach(function (mh, i) {
+                        if (!mh || mh < 1) {
+                            return;
+                        }
+                        var img = figs[i] && figs[i].querySelector('img');
+                        if (img) {
+                            applyImageMaxHeightPx(img, mh);
+                        }
+                    });
+                }
+                shell.stack.appendChild(row);
+            }
+            layoutMeasureImages(shell.stack);
+            return { height: shell.stack.scrollHeight, budget: shell.budget };
+        }
+
+        function constrainImageRowToPage(pg, row) {
+            if (!pg || !row) {
+                return;
+            }
+            var figs = row.querySelectorAll('figure.tsl-block--image');
+            if (!figs.length) {
+                return;
+            }
+            clearImageRowPageFit(row);
+            var n = figs.length;
+            var limits = [];
+            var fi;
+            for (fi = 0; fi < n; fi += 1) {
+                limits[fi] = 0;
+            }
+            var probe = measureFlowStackHeight(pg, row, limits);
+            if (pageFlowFitsHeight(probe.height, probe.budget)) {
+                return;
+            }
+            for (fi = 0; fi < n; fi += 1) {
+                var lo = 32;
+                var hi = 8000;
+                var best = lo;
+                var capTry = limits.slice();
+                capTry[fi] = hi;
+                var fitsLoose = measureFlowStackHeight(pg, row, capTry);
+                if (pageFlowFitsHeight(fitsLoose.height, fitsLoose.budget)) {
+                    limits[fi] = 0;
+                    continue;
+                }
+                while (lo <= hi) {
+                    var mid = Math.floor((lo + hi) / 2);
+                    var trialCaps = limits.slice();
+                    trialCaps[fi] = mid;
+                    var measured = measureFlowStackHeight(pg, row, trialCaps);
+                    if (pageFlowFitsHeight(measured.height, measured.budget)) {
+                        best = mid;
+                        lo = mid + 1;
+                    } else {
+                        hi = mid - 1;
+                    }
+                }
+                limits[fi] = best;
+            }
+            for (fi = 0; fi < n; fi += 1) {
+                if (limits[fi] > 0) {
+                    applyImageMaxHeightPx(figs[fi].querySelector('img'), limits[fi]);
+                }
+            }
+        }
+
         function appendFlowRow(blocksInRow, rowClass) {
             if (blocksInRow.length === 1 && blocksInRow[0].type === 'table') {
                 appendPaginatedTableBlock(blocksInRow[0], rowClass);
@@ -3059,10 +3174,23 @@
             }
             ensurePage();
             var row = buildFlowRow(blocksInRow, rowClass);
+            var hasImage = blocksInRow.some(function (b) { return b && b.type === 'image'; });
+
+            function prepareImageRowForPage() {
+                if (!hasImage) {
+                    return;
+                }
+                clearImageRowPageFit(row);
+                constrainImageRowToPage(current, row);
+            }
+
+            prepareImageRowForPage();
             while (!fitsOnPage(current, row)) {
                 if (current.body.childNodes.length) {
                     current = startPage();
+                    prepareImageRowForPage();
                 } else {
+                    prepareImageRowForPage();
                     break;
                 }
             }
