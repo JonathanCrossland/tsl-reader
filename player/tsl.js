@@ -666,6 +666,12 @@
             todo: { checked: { type: 'boolean', def: false } },
             table: { header: { type: 'boolean', def: true } },
             image: { width: { type: 'int', min: 10, max: 100, clamp: true, def: 100, cssVar: '--tsl-image-width', unit: '%' } },
+            // Colophon: ornamental author/printer mark (image or SVG). Defaults to
+            // centre at 40% of the column; not a layout break and not an image-index entry.
+            colophon: {
+                align: { values: TSL_ALIGN_VALUES, def: 'center', cls: 'align', emitDefault: true },
+                width: { type: 'int', min: 10, max: 100, clamp: true, def: 40, cssVar: '--tsl-colophon-width', unit: '%' }
+            },
             pageheader: { side: { values: ['any', 'left', 'right'], def: 'any' } },
             pagefooter: { side: { values: ['any', 'left', 'right'], def: 'any' } },
             toc: {
@@ -3081,7 +3087,7 @@
             if (!row) {
                 return;
             }
-            row.querySelectorAll('figure.tsl-block--image img').forEach(clearImageMaxHeightPx);
+            row.querySelectorAll('figure.tsl-block--image img, figure.tsl-block--colophon img').forEach(clearImageMaxHeightPx);
         }
 
         function measureFlowStackHeight(pg, extraRow, imageMaxHeights) {
@@ -3092,7 +3098,7 @@
             if (extraRow) {
                 var row = extraRow.cloneNode(true);
                 if (imageMaxHeights && imageMaxHeights.length) {
-                    var figs = row.querySelectorAll('figure.tsl-block--image');
+                    var figs = row.querySelectorAll('figure.tsl-block--image, figure.tsl-block--colophon');
                     imageMaxHeights.forEach(function (mh, i) {
                         if (!mh || mh < 1) {
                             return;
@@ -3113,7 +3119,7 @@
             if (!pg || !row) {
                 return;
             }
-            var figs = row.querySelectorAll('figure.tsl-block--image');
+            var figs = row.querySelectorAll('figure.tsl-block--image, figure.tsl-block--colophon');
             if (!figs.length) {
                 return;
             }
@@ -3174,7 +3180,7 @@
             }
             ensurePage();
             var row = buildFlowRow(blocksInRow, rowClass);
-            var hasImage = blocksInRow.some(function (b) { return b && b.type === 'image'; });
+            var hasImage = blocksInRow.some(function (b) { return b && (b.type === 'image' || b.type === 'colophon'); });
 
             function prepareImageRowForPage() {
                 if (!hasImage) {
@@ -6049,6 +6055,18 @@
             stampBlockMeta(fig, b);
             return fig;
         }
+        if (type === 'colophon') {
+            var coloFig = document.createElement('figure');
+            coloFig.className = 'tsl-block tsl-block--colophon';
+            if (b.src) {
+                var coloImg = document.createElement('img');
+                coloImg.src = b.src;
+                coloImg.alt = '';
+                coloFig.appendChild(coloImg);
+            }
+            stampBlockMeta(coloFig, b);
+            return coloFig;
+        }
         if (type === 'paywall') {
             el = document.createElement('aside');
             el.className = 'tsl-block tsl-block--paywall studio-lean-paywall';
@@ -7102,6 +7120,10 @@
             }
             return fig + '</figure>';
         }
+        if (type === 'colophon' && block.src) {
+            return '<figure' + leanRuleAttrs(block, 'studio-lean-colophon tsl-block--colophon')
+                + '><img src="' + escapeHtml(block.src) + '" alt=""></figure>';
+        }
         if (type === 'front-cover') {
             if (!block.src) {
                 return '';
@@ -7504,6 +7526,24 @@
             block.src = srcMatch ? srcMatch[1] : '';
             block.expanded = resolveBlockRules({ id: block.id, type: 'front-cover', expanded: block.expanded }).props.expanded;
         }
+        if (type === 'colophon') {
+            var coloSrc = innerHtml.match(/<img[^>]+src=["']([^"']+)["']/i);
+            block.src = coloSrc ? coloSrc[1] : '';
+            var coloEl = meta.el || null;
+            if (!coloEl && typeof document !== 'undefined') {
+                var coloHost = document.createElement('div');
+                coloHost.innerHTML = innerHtml;
+                coloEl = coloHost.querySelector('figure');
+            }
+            var coloProps = resolveBlockRules({
+                id: block.id,
+                type: 'colophon',
+                align: meta.align || blockPropFromMarkup(coloEl, 'colophon', 'align'),
+                width: blockPropFromMarkup(coloEl, 'colophon', 'width')
+            }).props;
+            block.align = coloProps.align;
+            block.width = coloProps.width;
+        }
         if (type === 'bullet') {
             // Read bulletStyle back from the list's rule class; text is the item, not the list markup.
             var listEl = meta.el && /^(UL|OL)$/.test(meta.el.tagName) ? meta.el : null;
@@ -7658,6 +7698,8 @@
                     type = 'aside';
                 } else if (!type && cls.indexOf(' studio-lean-front-cover ') >= 0) {
                     type = 'front-cover';
+                } else if (!type && (cls.indexOf(' studio-lean-colophon ') >= 0 || cls.indexOf(' tsl-block--colophon ') >= 0)) {
+                    type = 'colophon';
                 } else if (!type && cls.indexOf(' studio-lean-full-page ') >= 0) {
                     type = 'full-page';
                 } else if (!type && cls.indexOf(' studio-lean-manuscript-title ') >= 0) {

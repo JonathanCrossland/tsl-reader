@@ -1,0 +1,1154 @@
+{
+    "format": "talesmith-lang",
+    "version": 1,
+    "header": {
+        "page": {
+            "formatId": "web",
+            "kind": "web",
+            "trimMM": {
+                "width": 210,
+                "height": 297
+            },
+            "marginsMM": {
+                "top": 12,
+                "bottom": 12,
+                "outside": 15,
+                "gutter": 15
+            },
+            "headerTopMM": 3,
+            "footerBottomMM": 3,
+            "headerRule": true,
+            "footerRule": true,
+            "rowGapMM": 2,
+            "usePrintGutters": true
+        },
+        "typography": {
+            "fontId": "book-serif",
+            "fontFamily": "Georgia, \"Times New Roman\", serif",
+            "sizePt": 12,
+            "lineHeight": 1.5,
+            "paragraphAlign": "left",
+            "paragraphIndentIn": 0,
+            "paragraphSpacingPt": 0,
+            "hyphenation": true
+        },
+        "numbering": {
+            "startPage": 1,
+            "pageOffsetStart": 0,
+            "firstPhysicalPageSide": "left"
+        },
+        "theme": "default",
+        "readMode": false,
+        "metadata": {
+            "title": "TSL block type reference",
+            "fields": [
+                {
+                    "name": "Author",
+                    "value": "Talesmith"
+                },
+                {
+                    "name": "Title",
+                    "value": "TSL block type reference"
+                }
+            ]
+        },
+        "mergeFields": {
+            "version": 1,
+            "fields": [],
+            "values": {
+                "title": "TSL block type reference"
+            }
+        }
+    },
+    "document": {
+        "blocks": [
+            {
+                "id": "ref1",
+                "type": "title",
+                "align": "center",
+                "theme": null,
+                "cols": 2,
+                "text": "TSL block type reference"
+            },
+            {
+                "id": "ref2",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "This document lists every block type supported by the Talesmith Studio block editor. Each section names the block, explains what it is for, shows the JSON <code>type</code> value, and renders a live example. Load it in tsl-reader lab to verify parsing and CSS."
+            },
+            {
+                "id": "ref3",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Basic blocks"
+            },
+            {
+                "id": "ref4",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Everyday writing blocks: headings, lists, figures, and tables."
+            },
+            {
+                "id": "ref5",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Title"
+            },
+            {
+                "id": "ref6",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "The document title — maps to merge field [Title] and running headers. Block type: <code>title</code>."
+            },
+            {
+                "id": "ref7",
+                "type": "title",
+                "align": "center",
+                "theme": null,
+                "cols": 2,
+                "text": "TSL block type reference"
+            },
+            {
+                "id": "ref8",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Text"
+            },
+            {
+                "id": "ref9",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Plain body paragraph; supports inline emphasis in HTML. Block type: <code>paragraph</code>."
+            },
+            {
+                "id": "ref10",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Example paragraph with <strong>bold</strong> and <em>emphasis</em>."
+            },
+            {
+                "id": "ref11",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Heading 1"
+            },
+            {
+                "id": "ref12",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Top-level section title; appears in table of contents and outline. Block type: <code>h1</code>."
+            },
+            {
+                "id": "ref13",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Chapter heading (h1)"
+            },
+            {
+                "id": "ref14",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Heading 2"
+            },
+            {
+                "id": "ref15",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Mid-level section title. Block type: <code>h2</code>."
+            },
+            {
+                "id": "ref16",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Section heading (h2)"
+            },
+            {
+                "id": "ref17",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Heading 3"
+            },
+            {
+                "id": "ref18",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Subsection title. Block type: <code>h3</code>."
+            },
+            {
+                "id": "ref19",
+                "type": "h3",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Subsection heading (h3)"
+            },
+            {
+                "id": "ref20",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Quote"
+            },
+            {
+                "id": "ref21",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Block quotation or pull quote. Block type: <code>quote</code>."
+            },
+            {
+                "id": "ref22",
+                "type": "quote",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Block quotation — use for citations and pull quotes."
+            },
+            {
+                "id": "ref23",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Bulleted list"
+            },
+            {
+                "id": "ref24",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "List item; <code>bulletStyle</code> selects disc, number, letters, and other markers. Block type: <code>bullet</code>."
+            },
+            {
+                "id": "ref25",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Bulleted list item (disc style)",
+                "bulletStyle": "disc"
+            },
+            {
+                "id": "ref26",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Bulleted list (numbered)"
+            },
+            {
+                "id": "ref27",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Same block type with <code>bulletStyle: \"number\"</code> for ordered lists. Block type: <code>bullet</code>."
+            },
+            {
+                "id": "ref28",
+                "type": "bullet",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Numbered list item",
+                "bulletStyle": "number"
+            },
+            {
+                "id": "ref29",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "To-do"
+            },
+            {
+                "id": "ref30",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Checkbox task; set <code>checked</code> true when complete. Block type: <code>todo</code>."
+            },
+            {
+                "id": "ref31",
+                "type": "todo",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Unchecked task",
+                "checked": false
+            },
+            {
+                "id": "ref32",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "To-do (completed)"
+            },
+            {
+                "id": "ref33",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Completed task example. Block type: <code>todo</code>."
+            },
+            {
+                "id": "ref34",
+                "type": "todo",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Completed task",
+                "checked": true
+            },
+            {
+                "id": "ref35",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Code"
+            },
+            {
+                "id": "ref36",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Monospace code block with optional caption; plain text preserves spaces and line breaks. Block type: <code>code</code>."
+            },
+            {
+                "id": "ref37",
+                "type": "code",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "function hello() {\n  return 'plain text only';\n}",
+                "caption": "Example listing"
+            },
+            {
+                "id": "ref38",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Aside / callout"
+            },
+            {
+                "id": "ref39",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Highlighted note with optional leading icon. Block type: <code>aside</code>."
+            },
+            {
+                "id": "ref40",
+                "type": "aside",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Callout body text.",
+                "icon": "💡"
+            },
+            {
+                "id": "ref41",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Divider"
+            },
+            {
+                "id": "ref42",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Horizontal rule between sections. Block type: <code>divider</code>."
+            },
+            {
+                "id": "ref43",
+                "type": "divider",
+                "align": "left",
+                "theme": null,
+                "cols": 2
+            },
+            {
+                "id": "ref44",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Image + caption"
+            },
+            {
+                "id": "ref45",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Picture with caption and width as a percentage of the column. Block type: <code>image</code>."
+            },
+            {
+                "id": "ref46",
+                "type": "image",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20480%20320%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%236366f1%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23a855f7%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22320%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Ctext%20x%3D%22240%22%20y%3D%22168%22%20font-family%3D%22ui-sans-serif%2Csans-serif%22%20font-size%3D%2222%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EReference%20image%3C%2Ftext%3E%3C%2Fsvg%3E",
+                "caption": "Image block with caption and width percent",
+                "width": 85
+            },
+            {
+                "id": "ref47",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Table"
+            },
+            {
+                "id": "ref48",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Grid of cells; optional header row via <code>header: true</code>. Block type: <code>table</code>."
+            },
+            {
+                "id": "ref49",
+                "type": "table",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "header": true,
+                "cells": [
+                    [
+                        "Block",
+                        "Category"
+                    ],
+                    [
+                        "paragraph",
+                        "basic"
+                    ],
+                    [
+                        "script-scene",
+                        "screenplay"
+                    ]
+                ]
+            },
+            {
+                "id": "ref50",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Document layout blocks"
+            },
+            {
+                "id": "ref51",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Pagination, running heads, covers, indexes, embeds, and access control."
+            },
+            {
+                "id": "ref52",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Page header"
+            },
+            {
+                "id": "ref53",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Running header on recto/verso pages; supports merge tokens such as [Title] and [PageNo]. Block type: <code>pageheader</code>."
+            },
+            {
+                "id": "ref54",
+                "type": "pageheader",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "side": "any",
+                "expanded": true,
+                "textLeft": "[Title]",
+                "textCenter": "",
+                "textRight": "[PageNo]"
+            },
+            {
+                "id": "ref55",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Page footer"
+            },
+            {
+                "id": "ref56",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Running footer; same fields as page header. Block type: <code>pagefooter</code>."
+            },
+            {
+                "id": "ref57",
+                "type": "pagefooter",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "side": "any",
+                "expanded": true,
+                "textLeft": "",
+                "textCenter": "[PageNo]",
+                "textRight": ""
+            },
+            {
+                "id": "ref58",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "New page"
+            },
+            {
+                "id": "ref59",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Force the following content onto a fresh printed page. Block type: <code>newpage</code>."
+            },
+            {
+                "id": "ref60",
+                "type": "newpage",
+                "align": "left",
+                "theme": null,
+                "cols": 2
+            },
+            {
+                "id": "ref61",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Front cover"
+            },
+            {
+                "id": "ref62",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Full-bleed cover image for print layouts. Block type: <code>front-cover</code>."
+            },
+            {
+                "id": "ref63",
+                "type": "front-cover",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "expanded": true,
+                "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20480%20320%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%236366f1%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23a855f7%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%22480%22%20height%3D%22320%22%20fill%3D%22url%28%23g%29%22%2F%3E%3Ctext%20x%3D%22240%22%20y%3D%22168%22%20font-family%3D%22ui-sans-serif%2Csans-serif%22%20font-size%3D%2222%22%20fill%3D%22%23fff%22%20text-anchor%3D%22middle%22%3EReference%20image%3C%2Ftext%3E%3C%2Fsvg%3E"
+            },
+            {
+                "id": "ref64",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Colophon"
+            },
+            {
+                "id": "ref65",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Author or printer mark (image or SVG), centred by default; width is a percent of the column. Not listed in the image index. Block type: <code>colophon</code>."
+            },
+            {
+                "id": "ref66",
+                "type": "colophon",
+                "align": "center",
+                "theme": null,
+                "cols": 2,
+                "src": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20120%20120%22%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%2260%22%20r%3D%2246%22%20fill%3D%22none%22%20stroke%3D%22%231f2937%22%20stroke-width%3D%222%22%2F%3E%3Cpath%20d%3D%22M60%2028c10%2014%2010%2026%200%2040-10-14-10-26%200-40z%22%20fill%3D%22%231f2937%22%2F%3E%3Ccircle%20cx%3D%2260%22%20cy%3D%2260%22%20r%3D%226%22%20fill%3D%22%231f2937%22%2F%3E%3C%2Fsvg%3E",
+                "width": 40,
+                "alignOverride": true
+            },
+            {
+                "id": "ref67",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Full page"
+            },
+            {
+                "id": "ref68",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Single block occupying a page with horizontal and vertical alignment. Block type: <code>full-page</code>."
+            },
+            {
+                "id": "ref69",
+                "type": "full-page",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "expanded": true,
+                "text": "Full-page centred text",
+                "hAlign": "center",
+                "vAlign": "center"
+            },
+            {
+                "id": "ref70",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Table of contents"
+            },
+            {
+                "id": "ref71",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Auto-generated outline with leaders and page numbers; <code>maxLevel</code> limits depth. Block type: <code>toc</code>."
+            },
+            {
+                "id": "ref72",
+                "type": "toc",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "expanded": true,
+                "maxLevel": 3,
+                "leader": "."
+            },
+            {
+                "id": "ref73",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Image index"
+            },
+            {
+                "id": "ref74",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "List of figures with captions and page numbers. Block type: <code>image-index</code>."
+            },
+            {
+                "id": "ref75",
+                "type": "image-index",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "expanded": true,
+                "leader": ".",
+                "title": "List of figures"
+            },
+            {
+                "id": "ref76",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Document embed"
+            },
+            {
+                "id": "ref77",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Reference another Studio document by 16-character hex <code>documentId</code>. Block type: <code>document</code>."
+            },
+            {
+                "id": "ref78",
+                "type": "document",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "documentId": "a1b2c3d4e5f67890",
+                "title": "Embedded document (reference only)",
+                "expanded": false
+            },
+            {
+                "id": "ref79",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Paywall"
+            },
+            {
+                "id": "ref80",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Hide content after this point unless the reader has a selected role. Block type: <code>paywall</code>."
+            },
+            {
+                "id": "ref81",
+                "type": "paywall",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "expanded": true,
+                "text": "The rest of this content is available to paid subscribers",
+                "roles": []
+            },
+            {
+                "id": "ref82",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Manuscript"
+            },
+            {
+                "id": "ref83",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Submission and front-matter blocks for novels, short stories, and poems."
+            },
+            {
+                "id": "ref84",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Manuscript title page"
+            },
+            {
+                "id": "ref85",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Standard submission title page; <code>kind</code> is novel, short-story, or poem. Block type: <code>manuscript-title</code>."
+            },
+            {
+                "id": "ref86",
+                "type": "manuscript-title",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "kind": "novel",
+                "expanded": true,
+                "title": "[Title]",
+                "byline": "By [Author]",
+                "authorInfo": "[Author]\n[Address]\n[Email]",
+                "wordCount": "Approximately [WordCount] words",
+                "linesCount": "[Lines] lines",
+                "contact": ""
+            },
+            {
+                "id": "ref87",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Screenplay (script) blocks"
+            },
+            {
+                "id": "ref88",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Standard screenplay formatting registered by the script editor module."
+            },
+            {
+                "id": "ref89",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Script — Scene heading"
+            },
+            {
+                "id": "ref90",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Slugline: INT./EXT. LOCATION — TIME; optional scene numbers. Block type: <code>script-scene</code>."
+            },
+            {
+                "id": "ref91",
+                "type": "script-scene",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "INT. LAB - DAY",
+                "showSceneNumbers": true,
+                "sceneNumberLeft": "1",
+                "sceneNumberRight": "1"
+            },
+            {
+                "id": "ref92",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Script — Action"
+            },
+            {
+                "id": "ref93",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Action lines and stage direction in the script. Block type: <code>script-action</code>."
+            },
+            {
+                "id": "ref94",
+                "type": "script-action",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "A reader loads this file in the browser."
+            },
+            {
+                "id": "ref95",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Script — Character"
+            },
+            {
+                "id": "ref96",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Speaker name; displayed uppercased and centred. Block type: <code>script-character</code>."
+            },
+            {
+                "id": "ref97",
+                "type": "script-character",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "NARRATOR"
+            },
+            {
+                "id": "ref98",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Script — Dialogue"
+            },
+            {
+                "id": "ref99",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Spoken lines for the current character. Block type: <code>script-dialogue</code>."
+            },
+            {
+                "id": "ref100",
+                "type": "script-dialogue",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Every block type should appear on screen."
+            },
+            {
+                "id": "ref101",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Script — Parenthetical"
+            },
+            {
+                "id": "ref102",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Brief direction inside dialogue, e.g. (whispering). Block type: <code>script-parenthetical</code>."
+            },
+            {
+                "id": "ref103",
+                "type": "script-parenthetical",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "(beat)"
+            },
+            {
+                "id": "ref104",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Script — Transition"
+            },
+            {
+                "id": "ref105",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "CUT TO: / FADE OUT. — typically right-aligned. Block type: <code>script-transition</code>."
+            },
+            {
+                "id": "ref106",
+                "type": "script-transition",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "CUT TO:"
+            },
+            {
+                "id": "ref107",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Script — Shot"
+            },
+            {
+                "id": "ref108",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "CLOSE ON / WIDE SHOT — uppercase shot lines. Block type: <code>script-shot</code>."
+            },
+            {
+                "id": "ref109",
+                "type": "script-shot",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "CLOSE ON monitor"
+            },
+            {
+                "id": "ref110",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Stage blocks"
+            },
+            {
+                "id": "ref111",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Theatre script formatting: acts, action, directions, and speech."
+            },
+            {
+                "id": "ref112",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Stage — Act / scene"
+            },
+            {
+                "id": "ref113",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Act and scene heading against the left margin. Block type: <code>stage-scene</code>."
+            },
+            {
+                "id": "ref114",
+                "type": "stage-scene",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "ACT I SCENE 1"
+            },
+            {
+                "id": "ref115",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Stage — Action"
+            },
+            {
+                "id": "ref116",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Set and stage action, usually in capitals. Block type: <code>stage-action</code>."
+            },
+            {
+                "id": "ref117",
+                "type": "stage-action",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "THE STAGE IS LIT."
+            },
+            {
+                "id": "ref118",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Stage — Direction"
+            },
+            {
+                "id": "ref119",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Technical directions such as BLACKOUT or CURTAIN. Block type: <code>stage-direction</code>."
+            },
+            {
+                "id": "ref120",
+                "type": "stage-direction",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "CURTAIN"
+            },
+            {
+                "id": "ref121",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Stage — Speech"
+            },
+            {
+                "id": "ref122",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Character name plus dialogue on one line (<code>character</code> and <code>text</code>). Block type: <code>stage-speech</code>."
+            },
+            {
+                "id": "ref123",
+                "type": "stage-speech",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "character": "ALICE",
+                "text": "Hello, stage speech block."
+            },
+            {
+                "id": "ref124",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Math"
+            },
+            {
+                "id": "ref125",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Equations using MathML source stored on the block."
+            },
+            {
+                "id": "ref126",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Math (MathML)"
+            },
+            {
+                "id": "ref127",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Equations and formulas; <code>source</code> holds MathML, <code>display</code> toggles block layout. Block type: <code>mathml</code>."
+            },
+            {
+                "id": "ref128",
+                "type": "mathml",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "source": "<math xmlns=\"http://www.w3.org/1998/Math/MathML\">\n  <mrow>\n    <mi>E</mi>\n    <mo>=</mo>\n    <mi>m</mi>\n    <msup><mi>c</mi><mn>2</mn></msup>\n  </mrow>\n</math>",
+                "display": true,
+                "sourceExpanded": false
+            },
+            {
+                "id": "ref129",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "End of block type reference. Regenerate with: <code>php tooling/generate_tsl_block_reference.php</code> in the ientra repo."
+            }
+        ]
+    }
+}

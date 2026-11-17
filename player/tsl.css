@@ -1810,6 +1810,41 @@ img[data-tsl-expand-image]:focus-visible {
     width: var(--tsl-image-width, auto);
 }
 
+/* Colophon: centred ornamental mark. Width is percent of the column; align-*
+   on the figure overrides the default centre. Not full-bleed. */
+.tsl-root .tsl-block--colophon,
+.studio-lean-tsl .studio-lean-colophon,
+.document-tsl .studio-lean-colophon {
+    display: block;
+    margin: 1.5em 0;
+    padding: 0;
+    text-align: center;
+    text-indent: 0;
+    max-width: 100%;
+}
+
+.tsl-root .tsl-block--colophon.align-left,
+.studio-lean-tsl .studio-lean-colophon.align-left,
+.document-tsl .studio-lean-colophon.align-left {
+    text-align: left;
+}
+
+.tsl-root .tsl-block--colophon.align-right,
+.studio-lean-tsl .studio-lean-colophon.align-right,
+.document-tsl .studio-lean-colophon.align-right {
+    text-align: right;
+}
+
+.tsl-root .tsl-block--colophon img,
+.studio-lean-tsl .studio-lean-colophon img,
+.document-tsl .studio-lean-colophon img {
+    width: var(--tsl-colophon-width, 40%);
+    max-width: 100%;
+    height: auto;
+    display: inline-block;
+    vertical-align: middle;
+}
+
 /* bulletStyle → list marker. number / lower-alpha / upper-alpha render as <ol> (lean lists
  * continue the count with start=); disc / circle / square / dash render as <ul>. */
 .tsl-list.bullet-disc, .studio-lean-tsl .bullet-disc { list-style-type: disc; }
