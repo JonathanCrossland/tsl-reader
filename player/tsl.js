@@ -83,11 +83,12 @@
             if (header.allowScrollMode === undefined) {
                 header.allowScrollMode = true;
             }
-            return { header: header, blocks: blocks };
+            return { header: header, blocks: blocks, footnotes: doc.footnotes || data.footnotes || [] };
         }
         return {
             header: resolveHeader(data),
-            blocks: Array.isArray(data.blocks) ? data.blocks : []
+            blocks: Array.isArray(data.blocks) ? data.blocks : [],
+            footnotes: data.footnotes || (data.document && data.document.footnotes) || []
         };
     }
 
@@ -453,7 +454,408 @@
         if (looksLikeLegacyInlineHtml(s)) {
             return true;
         }
-        return /(\*\*|__|\*(?!\*)|_(?!_)|~~[^~\n]+~~|\+\+[^+\n]+\+\+|`[^`\n]+`|\[[^\]]+\]\([^)]+\)|\\[\[(]|\\\(|\n)/.test(s);
+        return /(\*\*|__|\*(?!\*)|_(?!_)|~~[^~\n]+~~|\+\+[^+\n]+\+\+|`[^`\n]+`|\[\^\d+\]|\[[^\]]+\]\([^)]+\)|\\[\[(]|\\\(|\n)/.test(s);
+    }
+
+    var tslFnCtx = {
+        items: [],
+        blocks: [],
+        occMap: { occs: [], byKey: {} },
+        currentBlock: null,
+        occIndex: 0
+    };
+    var FN_MARK_RE = /\[\^(\d+|\*)\]/g;
+
+    function tslCssEscape(s) {
+        if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+            return CSS.escape(String(s));
+        }
+        return String(s).replace(/[^a-zA-Z0-9_-]/g, '\\$&');
+    }
+
+    function pickFootnotesFromParsed(parsed) {
+        if (!parsed) {
+            return [];
+        }
+        if (parsed.footnotes) {
+            return parsed.footnotes;
+        }
+        if (parsed.document && parsed.document.footnotes) {
+            return parsed.document.footnotes;
+        }
+        return [];
+    }
+
+    function normalizeFootnoteItems(raw) {
+        var list = [];
+        if (!raw) {
+            return list;
+        }
+        if (Array.isArray(raw)) {
+            list = raw;
+        } else if (Array.isArray(raw.items)) {
+            list = raw.items;
+        }
+        var out = [];
+        list.forEach(function (it) {
+            if (!it || typeof it !== 'object') {
+                return;
+            }
+            var id = String(it.id || '').trim();
+            if (!id) {
+                return;
+            }
+            out.push({
+                id: id,
+                mark: it.mark != null ? String(it.mark) : '',
+                blockId: it.blockId != null ? String(it.blockId) : '',
+                index: it.index == null ? -1 : Number(it.index),
+                text: it.text != null ? String(it.text) : ''
+            });
+        });
+        return out;
+    }
+
+    function footnoteFieldsOf(block) {
+        var fields = [];
+        if (!block || typeof block !== 'object') {
+            return fields;
+        }
+        var type = block.type || '';
+        if (type === 'code' || type === 'footnotes' || type === 'newpage' || type === 'divider'
+            || type === 'pageheader' || type === 'pagefooter' || type === 'document'
+            || type === 'toc' || type === 'image-index' || type === 'front-cover'
+            || type === 'colophon' || type === 'comic-page') {
+            return fields;
+        }
+        if (block.text) {
+            fields.push({ key: 'text', value: String(block.text) });
+        }
+        if (block.caption) {
+            fields.push({ key: 'caption', value: String(block.caption) });
+        }
+        if (block.title) {
+            fields.push({ key: 'title', value: String(block.title) });
+        }
+        if (type === 'table' && Array.isArray(block.cells)) {
+            block.cells.forEach(function (row, ri) {
+                if (!Array.isArray(row)) {
+                    return;
+                }
+                row.forEach(function (cell, ci) {
+                    fields.push({
+                        key: 'cells.' + ri + '.' + ci,
+                        value: String(cell != null ? cell : '')
+                    });
+                });
+            });
+        }
+        return fields;
+    }
+
+    function collectFootnoteOccurrences(blocks) {
+        var occs = [];
+        (blocks || []).forEach(function (block) {
+            if (!block) {
+                return;
+            }
+            var index = 0;
+            footnoteFieldsOf(block).forEach(function (field) {
+                String(field.value || '').replace(FN_MARK_RE, function (full, mark, offset) {
+                    if (mark === '*') {
+                        return full;
+                    }
+                    occs.push({
+                        blockId: block.id || '',
+                        block: block,
+                        field: field.key,
+                        index: index,
+                        mark: String(mark),
+                        offset: offset,
+                        length: full.length
+                    });
+                    index += 1;
+                    return full;
+                });
+            });
+        });
+        return occs;
+    }
+
+    function buildFootnoteOccMap(blocks, items) {
+        var occs = collectFootnoteOccurrences(blocks);
+        var used = {};
+        var byKey = {};
+        occs.forEach(function (occ, i) {
+            var item = null;
+            (items || []).forEach(function (it) {
+                if (item || used[it.id]) {
+                    return;
+                }
+                if (it.blockId === occ.blockId && Number(it.index) === occ.index) {
+                    item = it;
+                }
+            });
+            if (!item) {
+                (items || []).forEach(function (it) {
+                    if (item || used[it.id]) {
+                        return;
+                    }
+                    if (String(it.mark) === String(occ.mark)) {
+                        item = it;
+                    }
+                });
+            }
+            if (!item && items && items[i] && !used[items[i].id]) {
+                item = items[i];
+            }
+            occ.id = (item && item.id) || '';
+            occ.text = (item && item.text) || '';
+            if (occ.id) {
+                used[occ.id] = true;
+            }
+            byKey[(occ.blockId || '') + ':' + occ.index] = occ;
+        });
+        return { occs: occs, byKey: byKey };
+    }
+
+    function beginFootnoteRender(blocks, footnotes) {
+        tslFnCtx.blocks = blocks || [];
+        tslFnCtx.items = normalizeFootnoteItems(footnotes);
+        tslFnCtx.occMap = buildFootnoteOccMap(tslFnCtx.blocks, tslFnCtx.items);
+        tslFnCtx.currentBlock = null;
+        tslFnCtx.occIndex = 0;
+    }
+
+    function withFootnoteBlock(block, fn) {
+        var prevBlock = tslFnCtx.currentBlock;
+        var prevIdx = tslFnCtx.occIndex;
+        tslFnCtx.currentBlock = block || null;
+        tslFnCtx.occIndex = 0;
+        var result = fn();
+        tslFnCtx.currentBlock = prevBlock;
+        tslFnCtx.occIndex = prevIdx;
+        return result;
+    }
+
+    function lookupFootnoteId(block, index, mark) {
+        var map = tslFnCtx.occMap;
+        if (!map || !block) {
+            return '';
+        }
+        var bid = block.id || '';
+        if (map.byKey) {
+            var keyed = map.byKey[bid + ':' + index];
+            if (keyed && keyed.id) {
+                return keyed.id;
+            }
+        }
+        if (!map.occs) {
+            return '';
+        }
+        var fallback = '';
+        var i;
+        for (i = 0; i < map.occs.length; i++) {
+            var occ = map.occs[i];
+            if ((occ.blockId || '') !== bid) {
+                continue;
+            }
+            if (Number(occ.index) === index && occ.id) {
+                return occ.id;
+            }
+            if (!fallback && String(occ.mark) === String(mark) && occ.id) {
+                fallback = occ.id;
+            }
+        }
+        return fallback;
+    }
+
+    function footnoteRefHtml(mark, id) {
+        var m = escapeHtml(String(mark));
+        return '<sup class="tsl-fn" data-tsl-fn="' + m + '"'
+            + (id ? ' data-tsl-fn-id="' + escapeHtml(id) + '"' : '')
+            + ' data-tsl-fn-role="ref" role="doc-noteref" tabindex="0">' + m + '</sup>';
+    }
+
+    function replaceFootnoteMarks(out) {
+        if (!/\[\^/.test(out)) {
+            return out;
+        }
+        var block = tslFnCtx.currentBlock;
+        var index = tslFnCtx.occIndex || 0;
+        var result = out.replace(/\[\^(\d+)\]/g, function (_, n) {
+            var id = lookupFootnoteId(block, index, n);
+            index += 1;
+            return footnoteRefHtml(n, id);
+        });
+        tslFnCtx.occIndex = index;
+        return result;
+    }
+
+    function footnoteBlockKind(block) {
+        return block && block.kind === 'endnotes' ? 'endnotes' : 'footnotes';
+    }
+
+    function collectFootnotesForBlock(block, allBlocks) {
+        var kind = footnoteBlockKind(block);
+        var occs = (tslFnCtx.occMap && tslFnCtx.occMap.occs)
+            ? tslFnCtx.occMap.occs
+            : collectFootnoteOccurrences(allBlocks);
+        var start = 0;
+        var i;
+        if (kind === 'footnotes') {
+            for (i = 0; i < (allBlocks || []).length; i++) {
+                var b = allBlocks[i];
+                if (!b) {
+                    continue;
+                }
+                if (block.id && b.id === block.id) {
+                    break;
+                }
+                if (b.type === 'footnotes') {
+                    start = i + 1;
+                }
+            }
+        }
+        var allowed = {};
+        for (i = start; i < (allBlocks || []).length; i++) {
+            var cur = allBlocks[i];
+            if (!cur) {
+                continue;
+            }
+            if (block.id && cur.id === block.id) {
+                break;
+            }
+            if (cur.id) {
+                allowed[cur.id] = true;
+            }
+        }
+        var out = [];
+        occs.forEach(function (occ) {
+            if (occ.blockId && allowed[occ.blockId]) {
+                out.push(occ);
+            }
+        });
+        return out;
+    }
+
+    function footnotesListInnerHtml(entries, header, readMode) {
+        if (!entries.length) {
+            return '<p class="tsl-footnotes-empty">No footnotes.</p>';
+        }
+        var html = '<ol class="tsl-footnotes">';
+        entries.forEach(function (occ) {
+            var mark = escapeHtml(String(occ.mark));
+            var idAttr = occ.id ? ' data-tsl-fn-id="' + escapeHtml(occ.id) + '"' : '';
+            var savedBlock = tslFnCtx.currentBlock;
+            var savedIdx = tslFnCtx.occIndex;
+            tslFnCtx.currentBlock = null;
+            tslFnCtx.occIndex = 0;
+            var body = header
+                ? leanInlineHtml(occ.text || '', header, readMode)
+                : inlineHtml(occ.text || '');
+            tslFnCtx.currentBlock = savedBlock;
+            tslFnCtx.occIndex = savedIdx;
+            html += '<li class="tsl-footnotes-item" data-tsl-fn="' + mark + '"' + idAttr
+                + ' data-tsl-fn-role="note">'
+                + '<span class="tsl-footnotes-mark" data-tsl-fn="' + mark + '"' + idAttr
+                + ' data-tsl-fn-role="note" role="doc-backlink" tabindex="0">[' + mark + ']</span>'
+                + '<div class="tsl-footnotes-text">' + body + '</div></li>';
+        });
+        return html + '</ol>';
+    }
+
+    function renderFootnotesElement(block, ctx) {
+        var allBlocks = ctx && ctx.allBlocks ? ctx.allBlocks : tslFnCtx.blocks;
+        var entries = collectFootnotesForBlock(block, allBlocks);
+        var kind = footnoteBlockKind(block);
+        var el = document.createElement('section');
+        el.className = 'tsl-block tsl-block--footnotes studio-lean-footnotes';
+        el.setAttribute('data-tsl-fn-kind', kind);
+        el.setAttribute('role', kind === 'endnotes' ? 'doc-endnotes' : 'doc-footnote');
+        el.innerHTML = footnotesListInnerHtml(entries, null, false);
+        stampBlockMeta(el, block);
+        return el;
+    }
+
+    function leanFootnotesBlockHtml(block, allBlocks, header, readMode) {
+        var entries = collectFootnotesForBlock(block, allBlocks || tslFnCtx.blocks);
+        var kind = footnoteBlockKind(block);
+        return '<section' + leanRuleAttrs(block, 'studio-lean-footnotes tsl-block--footnotes')
+            + ' data-tsl-fn-kind="' + escapeHtml(kind) + '" role="'
+            + (kind === 'endnotes' ? 'doc-endnotes' : 'doc-footnote') + '">'
+            + footnotesListInnerHtml(entries, header, readMode)
+            + '</section>';
+    }
+
+    function findFootnotePeer(root, el) {
+        if (!root || !el) {
+            return null;
+        }
+        var id = el.getAttribute('data-tsl-fn-id') || '';
+        var mark = el.getAttribute('data-tsl-fn') || '';
+        var role = el.getAttribute('data-tsl-fn-role');
+        var want = role === 'ref' ? 'note' : 'ref';
+        var nodes = root.querySelectorAll('[data-tsl-fn-role="' + want + '"]');
+        var i;
+        var n;
+        var matchId = null;
+        var matchMark = null;
+        for (i = 0; i < nodes.length; i++) {
+            n = nodes[i];
+            if (n === el) {
+                continue;
+            }
+            if (id && n.getAttribute('data-tsl-fn-id') === id) {
+                if (want === 'note') {
+                    if (el.compareDocumentPosition(n) & Node.DOCUMENT_POSITION_FOLLOWING) {
+                        return n;
+                    }
+                    if (!matchId) {
+                        matchId = n;
+                    }
+                } else {
+                    return n;
+                }
+            }
+            if (!matchMark && mark && n.getAttribute('data-tsl-fn') === mark) {
+                matchMark = n;
+            }
+        }
+        return matchId || matchMark;
+    }
+
+    function bindFootnoteClicks(root) {
+        if (!root || root._tslFnClickBound) {
+            return;
+        }
+        root._tslFnClickBound = true;
+        function go(el) {
+            var target = findFootnotePeer(root, el);
+            if (!target) {
+                return;
+            }
+            navigateToInDocumentAnchor(target, root);
+        }
+        root.addEventListener('click', function (e) {
+            var el = e.target.closest && e.target.closest('[data-tsl-fn-role]');
+            if (!el || !root.contains(el)) {
+                return;
+            }
+            e.preventDefault();
+            go(el);
+        });
+        root.addEventListener('keydown', function (e) {
+            if (e.key !== 'Enter' && e.key !== ' ') {
+                return;
+            }
+            var el = e.target.closest && e.target.closest('[data-tsl-fn-role]');
+            if (!el || !root.contains(el)) {
+                return;
+            }
+            e.preventDefault();
+            go(el);
+        });
     }
 
     /** Matches one HTML tag (or comment) in block text; `<code>…</code>` is taken whole so markdown never applies inside it. */
@@ -487,6 +889,7 @@
             return key;
         });
         var out = hasHtml ? s : s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        out = replaceFootnoteMarks(out);
         out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, function (_, label, href) {
             return '<a href="' + escapeHtml(href) + '">' + label + '</a>';
         });
@@ -679,6 +1082,9 @@
                 leader: { type: 'string', maxLength: 4, def: '.' }
             },
             'image-index': { leader: { type: 'string', maxLength: 4, def: '.' } },
+            footnotes: {
+                kind: { values: ['footnotes', 'endnotes'], def: 'footnotes', cls: 'kind' }
+            },
             'manuscript-title': { kind: { values: ['novel', 'short-story', 'poem'], def: 'novel', cls: 'kind' } },
             // §6.6 Block quotation: common rules + .tsl-block--quote (tsl.css).
             quote: {},
@@ -2484,11 +2890,13 @@
         if (!parsed || !parsed.header) {
             return null;
         }
+        var footnotes = pickFootnotesFromParsed(parsed);
         if (parsed.blocks) {
+            parsed.footnotes = footnotes;
             return parsed;
         }
         if (parsed.document && parsed.document.blocks) {
-            return { header: parsed.header, blocks: parsed.document.blocks };
+            return { header: parsed.header, blocks: parsed.document.blocks, footnotes: footnotes };
         }
         return null;
     }
@@ -2500,6 +2908,7 @@
         }
         var header = parsed.header;
         var blocks = parsed.blocks;
+        beginFootnoteRender(blocks, parsed.footnotes);
         ensureHeadingNumbers(blocks, header);
         var page = header.page;
         var ty = header.typography;
@@ -3421,6 +3830,7 @@
             }
         }
         bindInDocumentAnchorClicks(root);
+        bindFootnoteClicks(root);
         bindTslExpandOverlays(root);
         updateTslPrintPageRule(root);
         bindTslPrintLifecycle();
@@ -5038,9 +5448,11 @@
     }
 
     function plainText(html) {
-        var d = document.createElement('div');
-        d.innerHTML = inlineHtml(html);
-        return (d.textContent || '').trim();
+        return withFootnoteBlock(null, function () {
+            var d = document.createElement('div');
+            d.innerHTML = inlineHtml(html);
+            return (d.textContent || '').trim();
+        });
     }
 
     /** Code block source: preserve line breaks; do not run markdown/HTML (plainText turns \\n into &lt;br&gt; then textContent drops them). */
@@ -5060,7 +5472,9 @@
         if (b && b._tslInlineHtml) {
             return sanitizeInlineHtmlFragment(String(b.text || ''));
         }
-        return inlineHtml(b && b.text);
+        return withFootnoteBlock(b, function () {
+            return inlineHtml(b && b.text);
+        });
     }
 
     function blockPlainText(b) {
@@ -5142,13 +5556,13 @@
             cb.checked = todoChecked;
             li.appendChild(cb);
             var span = document.createElement('span');
-            span.innerHTML = inlineHtml(b.text);
+            span.innerHTML = blockInlineHtml(b);
             if (todoChecked) {
                 span.className = 'tsl-done';
             }
             li.appendChild(span);
         } else {
-            li.innerHTML = inlineHtml(b.text);
+            li.innerHTML = blockInlineHtml(b);
         }
         return li;
     }
@@ -5983,6 +6397,8 @@
     }
 
     function renderBlockElement(b, ctx) {
+        tslFnCtx.currentBlock = b;
+        tslFnCtx.occIndex = 0;
         var type = b.type;
         var el;
         if (type === 'divider') {
@@ -6027,6 +6443,9 @@
             el = renderImageIndexNav(b, ctx && ctx.allBlocks ? ctx.allBlocks : [], null);
             stampBlockMeta(el, b);
             return el;
+        }
+        if (type === 'footnotes') {
+            return renderFootnotesElement(b, ctx);
         }
         if (type === 'manuscript-title') {
             el = document.createElement('section');
@@ -7028,6 +7447,8 @@
 
     function leanBlockHtml(block, header, readMode, leanOpts) {
         leanOpts = leanOpts || {};
+        tslFnCtx.currentBlock = block;
+        tslFnCtx.occIndex = 0;
         var type = block.type || 'paragraph';
         if (type === 'title') {
             var t = leanInlineHtml(block.text, header, readMode);
@@ -7152,6 +7573,9 @@
         }
         if (type === 'image-index') {
             return leanImageIndexBlockHtml(block, header._leanAllBlocks || [], header, readMode, null);
+        }
+        if (type === 'footnotes') {
+            return leanFootnotesBlockHtml(block, header._leanAllBlocks || [], header, readMode);
         }
         if (TSL_EXT_TYPE_RE.test(type)) {
             // §6.23: was dropped (''); now paragraph-like with the per-type class + rule flags.
@@ -7413,10 +7837,15 @@
     function toLeanHtml(parsed) {
         var header = parsed.header;
         var blocks = parsed.blocks;
+        beginFootnoteRender(blocks, parsed.footnotes);
         ensureHeadingNumbers(blocks, header);
         var readMode = header.readMode !== false;
         var attrs = articleAttrsFromHeader(header);
         Object.assign(attrs, headerB64Attr(header));
+        var fnItems = normalizeFootnoteItems(parsed.footnotes);
+        if (fnItems.length) {
+            attrs['data-tsl-footnotes-b64'] = utf8ToB64(JSON.stringify(fnItems));
+        }
         return {
             bodyHtml: tslSettingsComment(header) + blocksToLeanHtml(blocks, header, readMode, true),
             attrs: attrs
@@ -7543,6 +7972,17 @@
             }).props;
             block.align = coloProps.align;
             block.width = coloProps.width;
+        }
+        if (type === 'footnotes') {
+            var fnKind = 'footnotes';
+            if (meta.el && meta.el.getAttribute) {
+                fnKind = meta.el.getAttribute('data-tsl-fn-kind') || fnKind;
+            } else if (/data-tsl-fn-kind=["']endnotes["']/.test(innerHtml)) {
+                fnKind = 'endnotes';
+            }
+            block.kind = fnKind === 'endnotes' ? 'endnotes' : 'footnotes';
+            block.expanded = true;
+            delete block.text;
         }
         if (type === 'bullet') {
             // Read bulletStyle back from the list's rule class; text is the item, not the list markup.
@@ -7700,6 +8140,8 @@
                     type = 'front-cover';
                 } else if (!type && (cls.indexOf(' studio-lean-colophon ') >= 0 || cls.indexOf(' tsl-block--colophon ') >= 0)) {
                     type = 'colophon';
+                } else if (!type && (cls.indexOf(' studio-lean-footnotes ') >= 0 || cls.indexOf(' tsl-block--footnotes ') >= 0)) {
+                    type = 'footnotes';
                 } else if (!type && cls.indexOf(' studio-lean-full-page ') >= 0) {
                     type = 'full-page';
                 } else if (!type && cls.indexOf(' studio-lean-manuscript-title ') >= 0) {
@@ -7728,11 +8170,23 @@
                 }
             }
         }
+        var footnotes = [];
+        var fnB64 = article.getAttribute('data-tsl-footnotes-b64');
+        if (fnB64) {
+            try {
+                footnotes = normalizeFootnoteItems(JSON.parse(b64ToUtf8(fnB64)));
+            } catch (eFn) { /* ignore */ }
+        }
+        var document = { blocks: blocks };
+        if (footnotes.length) {
+            document.footnotes = footnotes;
+        }
         return {
             format: 'talesmith-lang',
             version: 0.1,
             header: header,
-            document: { blocks: blocks }
+            document: document,
+            footnotes: footnotes
         };
     }
 
@@ -7767,6 +8221,7 @@
            defaults on first load/refresh in scroll layout. */
         applyLeanReadingPrefs(article);
         bindInDocumentAnchorClicks(article);
+        bindFootnoteClicks(article);
         bindTslExpandOverlays(article);
         syncMountHostLayout(mount);
         return article;
@@ -7967,6 +8422,7 @@
             applyTslLayoutVarsToArticle(leanOnly);
             applyLeanReadingPrefs(leanOnly);
             bindInDocumentAnchorClicks(leanOnly);
+            bindFootnoteClicks(leanOnly);
             bindTslExpandOverlays(leanOnly);
             readerArticle._tslPlayer = { mode: 'scroll' };
             return readerArticle._tslPlayer;
@@ -7994,6 +8450,7 @@
             applyTslLayoutVarsToArticle(leanScroll);
             applyLeanReadingPrefs(leanScroll);
             bindInDocumentAnchorClicks(leanScroll);
+            bindFootnoteClicks(leanScroll);
             bindTslExpandOverlays(leanScroll);
             readerArticle._tslPlayer = { mode: 'scroll' };
             return readerArticle._tslPlayer;
@@ -8132,6 +8589,7 @@
         findInDocumentAnchorTarget: findInDocumentAnchorTarget,
         navigateToInDocumentAnchor: navigateToInDocumentAnchor,
         bindInDocumentAnchorClicks: bindInDocumentAnchorClicks,
+        bindFootnoteClicks: bindFootnoteClicks,
         bindTslExpandOverlays: bindTslExpandOverlays,
         /* Spec ruleset (spec/tsl-spec.tsl §5): validate a block / map it to CSS rule classes. */
         blockRules: TSL_BLOCK_RULES,

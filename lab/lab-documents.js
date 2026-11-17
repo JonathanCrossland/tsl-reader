@@ -20,6 +20,7 @@
         documents: [
             { label: '0.1 Specification', url: '../spec/specification-0.1.tsl' },
             { label: 'Format specification', url: '../spec/tsl-spec.tsl', selected: true },
+            { label: 'Block types', url: '../examples/block-type-reference.tsl' },
             { label: 'Rich content blocks', url: '../examples/rich-content.tsl' },
             { label: 'Print layout & pages', url: '../examples/print-layout.tsl' },
             { label: 'Comic Page', url: '../examples/comic-page.tsl' },

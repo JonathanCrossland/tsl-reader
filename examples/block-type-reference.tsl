@@ -680,7 +680,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Image index"
+                "text": "Footnotes"
             },
             {
                 "id": "ref74",
@@ -688,10 +688,35 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "List of figures with captions and page numbers. Block type: <code>image-index</code>."
+                "text": "Lists <code>[^n]</code> marks from the text above, since the previous notes block. Kind is footnotes (slice) or endnotes (all). A mark sits in this paragraph.[^1] Block type: <code>footnotes</code>."
             },
             {
                 "id": "ref75",
+                "type": "footnotes",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "expanded": true,
+                "kind": "footnotes"
+            },
+            {
+                "id": "ref76",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Image index"
+            },
+            {
+                "id": "ref77",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "List of figures with captions and page numbers. Block type: <code>image-index</code>."
+            },
+            {
+                "id": "ref78",
                 "type": "image-index",
                 "align": "left",
                 "theme": null,
@@ -701,7 +726,7 @@
                 "title": "List of figures"
             },
             {
-                "id": "ref76",
+                "id": "ref79",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -709,7 +734,7 @@
                 "text": "Document embed"
             },
             {
-                "id": "ref77",
+                "id": "ref80",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -717,7 +742,7 @@
                 "text": "Reference another Studio document by 16-character hex <code>documentId</code>. Block type: <code>document</code>."
             },
             {
-                "id": "ref78",
+                "id": "ref81",
                 "type": "document",
                 "align": "left",
                 "theme": null,
@@ -727,7 +752,7 @@
                 "expanded": false
             },
             {
-                "id": "ref79",
+                "id": "ref82",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -735,7 +760,7 @@
                 "text": "Paywall"
             },
             {
-                "id": "ref80",
+                "id": "ref83",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -743,7 +768,7 @@
                 "text": "Hide content after this point unless the reader has a selected role. Block type: <code>paywall</code>."
             },
             {
-                "id": "ref81",
+                "id": "ref84",
                 "type": "paywall",
                 "align": "left",
                 "theme": null,
@@ -753,7 +778,7 @@
                 "roles": []
             },
             {
-                "id": "ref82",
+                "id": "ref85",
                 "type": "h1",
                 "align": "left",
                 "theme": null,
@@ -761,7 +786,7 @@
                 "text": "Manuscript"
             },
             {
-                "id": "ref83",
+                "id": "ref86",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -769,7 +794,7 @@
                 "text": "Submission and front-matter blocks for novels, short stories, and poems."
             },
             {
-                "id": "ref84",
+                "id": "ref87",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -777,7 +802,7 @@
                 "text": "Manuscript title page"
             },
             {
-                "id": "ref85",
+                "id": "ref88",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -785,7 +810,7 @@
                 "text": "Standard submission title page; <code>kind</code> is novel, short-story, or poem. Block type: <code>manuscript-title</code>."
             },
             {
-                "id": "ref86",
+                "id": "ref89",
                 "type": "manuscript-title",
                 "align": "left",
                 "theme": null,
@@ -800,7 +825,7 @@
                 "contact": ""
             },
             {
-                "id": "ref87",
+                "id": "ref90",
                 "type": "h1",
                 "align": "left",
                 "theme": null,
@@ -808,7 +833,7 @@
                 "text": "Screenplay (script) blocks"
             },
             {
-                "id": "ref88",
+                "id": "ref91",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -816,7 +841,7 @@
                 "text": "Standard screenplay formatting registered by the script editor module."
             },
             {
-                "id": "ref89",
+                "id": "ref92",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -824,7 +849,7 @@
                 "text": "Script — Scene heading"
             },
             {
-                "id": "ref90",
+                "id": "ref93",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -832,7 +857,7 @@
                 "text": "Slugline: INT./EXT. LOCATION — TIME; optional scene numbers. Block type: <code>script-scene</code>."
             },
             {
-                "id": "ref91",
+                "id": "ref94",
                 "type": "script-scene",
                 "align": "left",
                 "theme": null,
@@ -843,7 +868,7 @@
                 "sceneNumberRight": "1"
             },
             {
-                "id": "ref92",
+                "id": "ref95",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -851,7 +876,7 @@
                 "text": "Script — Action"
             },
             {
-                "id": "ref93",
+                "id": "ref96",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -859,7 +884,7 @@
                 "text": "Action lines and stage direction in the script. Block type: <code>script-action</code>."
             },
             {
-                "id": "ref94",
+                "id": "ref97",
                 "type": "script-action",
                 "align": "left",
                 "theme": null,
@@ -867,7 +892,7 @@
                 "text": "A reader loads this file in the browser."
             },
             {
-                "id": "ref95",
+                "id": "ref98",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -875,7 +900,7 @@
                 "text": "Script — Character"
             },
             {
-                "id": "ref96",
+                "id": "ref99",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -883,7 +908,7 @@
                 "text": "Speaker name; displayed uppercased and centred. Block type: <code>script-character</code>."
             },
             {
-                "id": "ref97",
+                "id": "ref100",
                 "type": "script-character",
                 "align": "left",
                 "theme": null,
@@ -891,7 +916,7 @@
                 "text": "NARRATOR"
             },
             {
-                "id": "ref98",
+                "id": "ref101",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -899,7 +924,7 @@
                 "text": "Script — Dialogue"
             },
             {
-                "id": "ref99",
+                "id": "ref102",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -907,7 +932,7 @@
                 "text": "Spoken lines for the current character. Block type: <code>script-dialogue</code>."
             },
             {
-                "id": "ref100",
+                "id": "ref103",
                 "type": "script-dialogue",
                 "align": "left",
                 "theme": null,
@@ -915,7 +940,7 @@
                 "text": "Every block type should appear on screen."
             },
             {
-                "id": "ref101",
+                "id": "ref104",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -923,7 +948,7 @@
                 "text": "Script — Parenthetical"
             },
             {
-                "id": "ref102",
+                "id": "ref105",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -931,7 +956,7 @@
                 "text": "Brief direction inside dialogue, e.g. (whispering). Block type: <code>script-parenthetical</code>."
             },
             {
-                "id": "ref103",
+                "id": "ref106",
                 "type": "script-parenthetical",
                 "align": "left",
                 "theme": null,
@@ -939,7 +964,7 @@
                 "text": "(beat)"
             },
             {
-                "id": "ref104",
+                "id": "ref107",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -947,7 +972,7 @@
                 "text": "Script — Transition"
             },
             {
-                "id": "ref105",
+                "id": "ref108",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -955,7 +980,7 @@
                 "text": "CUT TO: / FADE OUT. — typically right-aligned. Block type: <code>script-transition</code>."
             },
             {
-                "id": "ref106",
+                "id": "ref109",
                 "type": "script-transition",
                 "align": "left",
                 "theme": null,
@@ -963,7 +988,7 @@
                 "text": "CUT TO:"
             },
             {
-                "id": "ref107",
+                "id": "ref110",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -971,7 +996,7 @@
                 "text": "Script — Shot"
             },
             {
-                "id": "ref108",
+                "id": "ref111",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -979,7 +1004,7 @@
                 "text": "CLOSE ON / WIDE SHOT — uppercase shot lines. Block type: <code>script-shot</code>."
             },
             {
-                "id": "ref109",
+                "id": "ref112",
                 "type": "script-shot",
                 "align": "left",
                 "theme": null,
@@ -987,7 +1012,7 @@
                 "text": "CLOSE ON monitor"
             },
             {
-                "id": "ref110",
+                "id": "ref113",
                 "type": "h1",
                 "align": "left",
                 "theme": null,
@@ -995,7 +1020,7 @@
                 "text": "Stage blocks"
             },
             {
-                "id": "ref111",
+                "id": "ref114",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -1003,7 +1028,7 @@
                 "text": "Theatre script formatting: acts, action, directions, and speech."
             },
             {
-                "id": "ref112",
+                "id": "ref115",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -1011,7 +1036,7 @@
                 "text": "Stage — Act / scene"
             },
             {
-                "id": "ref113",
+                "id": "ref116",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -1019,7 +1044,7 @@
                 "text": "Act and scene heading against the left margin. Block type: <code>stage-scene</code>."
             },
             {
-                "id": "ref114",
+                "id": "ref117",
                 "type": "stage-scene",
                 "align": "left",
                 "theme": null,
@@ -1027,7 +1052,7 @@
                 "text": "ACT I SCENE 1"
             },
             {
-                "id": "ref115",
+                "id": "ref118",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -1035,7 +1060,7 @@
                 "text": "Stage — Action"
             },
             {
-                "id": "ref116",
+                "id": "ref119",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -1043,7 +1068,7 @@
                 "text": "Set and stage action, usually in capitals. Block type: <code>stage-action</code>."
             },
             {
-                "id": "ref117",
+                "id": "ref120",
                 "type": "stage-action",
                 "align": "left",
                 "theme": null,
@@ -1051,7 +1076,7 @@
                 "text": "THE STAGE IS LIT."
             },
             {
-                "id": "ref118",
+                "id": "ref121",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -1059,7 +1084,7 @@
                 "text": "Stage — Direction"
             },
             {
-                "id": "ref119",
+                "id": "ref122",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -1067,7 +1092,7 @@
                 "text": "Technical directions such as BLACKOUT or CURTAIN. Block type: <code>stage-direction</code>."
             },
             {
-                "id": "ref120",
+                "id": "ref123",
                 "type": "stage-direction",
                 "align": "left",
                 "theme": null,
@@ -1075,7 +1100,7 @@
                 "text": "CURTAIN"
             },
             {
-                "id": "ref121",
+                "id": "ref124",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -1083,7 +1108,7 @@
                 "text": "Stage — Speech"
             },
             {
-                "id": "ref122",
+                "id": "ref125",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -1091,7 +1116,7 @@
                 "text": "Character name plus dialogue on one line (<code>character</code> and <code>text</code>). Block type: <code>stage-speech</code>."
             },
             {
-                "id": "ref123",
+                "id": "ref126",
                 "type": "stage-speech",
                 "align": "left",
                 "theme": null,
@@ -1100,7 +1125,7 @@
                 "text": "Hello, stage speech block."
             },
             {
-                "id": "ref124",
+                "id": "ref127",
                 "type": "h1",
                 "align": "left",
                 "theme": null,
@@ -1108,7 +1133,7 @@
                 "text": "Math"
             },
             {
-                "id": "ref125",
+                "id": "ref128",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -1116,7 +1141,7 @@
                 "text": "Equations using MathML source stored on the block."
             },
             {
-                "id": "ref126",
+                "id": "ref129",
                 "type": "h2",
                 "align": "left",
                 "theme": null,
@@ -1124,7 +1149,7 @@
                 "text": "Math (MathML)"
             },
             {
-                "id": "ref127",
+                "id": "ref130",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
@@ -1132,7 +1157,7 @@
                 "text": "Equations and formulas; <code>source</code> holds MathML, <code>display</code> toggles block layout. Block type: <code>mathml</code>."
             },
             {
-                "id": "ref128",
+                "id": "ref131",
                 "type": "mathml",
                 "align": "left",
                 "theme": null,
@@ -1142,13 +1167,24 @@
                 "sourceExpanded": false
             },
             {
-                "id": "ref129",
+                "id": "ref132",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,
                 "cols": 2,
                 "text": "End of block type reference. Regenerate with: <code>php tooling/generate_tsl_block_reference.php</code> in the ientra repo."
             }
-        ]
+        ],
+        "footnotes": {
+            "items": [
+                {
+                    "id": "fn_refdemo1",
+                    "mark": "1",
+                    "blockId": "ref74",
+                    "index": 0,
+                    "text": "A sample footnote bound to this mark."
+                }
+            ]
+        }
     }
 }
