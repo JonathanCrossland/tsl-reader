@@ -323,7 +323,7 @@
                         "header",
                         "object",
                         "yes*",
-                        "Resolved settings (section 4). *Omit only in legacy editor JSON (section 3.1)."
+                        "Resolved settings (section 4). *Omit only in Studio editor JSON (section 3.1)."
                     ],
                     [
                         "document",
@@ -340,7 +340,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Canonical detection: if format is talesmith-lang and header is a non-null object with page and typography, treat the file as canonical. The player uses header as-is (after optional mergeFields synthesis). Legacy detection: if format and header are absent but a blocks array exists at the root or under document, call resolveHeader() on the editor-shaped object (blocks plus sibling keys such as pageFormat). If both a canonical header and legacy sibling keys appear (for example header.page and top-level pageFormat), header wins; legacy keys are ignored for layout."
+                "text": "Envelope detection: if format is talesmith-lang and header is a non-null object with page and typography, treat the file as a full .tsl envelope. The player uses header as-is (after optional mergeFields synthesis). Editor detection: if format and header are absent but a blocks array exists at the root or under document, call resolveHeader() on the editor-shaped object (blocks plus sibling keys such as pageFormat). If both a resolved header and editor sibling keys appear (for example header.page and top-level pageFormat), header wins; editor sibling keys are ignored for layout."
             },
             {
                 "id": "spec29",
@@ -356,7 +356,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "3.1 Legacy editor JSON"
+                "text": "3.1 Studio editor JSON"
             },
             {
                 "id": "spec31",
@@ -364,7 +364,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Studio Source tab and older saves use a single JSON object: a blocks array plus sibling setting keys (pageFormat, typography, customFormat, theme, startPage, and so on). There is no format, version, header, or document wrapper; the blocks array sits at the top level next to pageFormat. Players and the lab pass this object to resolveHeader() and treat the result like header plus document.blocks."
+                "text": "The Studio Source tab uses a single JSON object: a blocks array plus sibling setting keys (pageFormat, typography, customFormat, theme, startPage, and so on). There is no format, version, header, or document wrapper; the blocks array sits at the top level next to pageFormat. Players and the lab pass this object to resolveHeader() and treat the result like header plus document.blocks."
             },
             {
                 "id": "spec32",
@@ -598,7 +598,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "When format and header are missing, players build an effective header from legacy editor JSON. The reference algorithm matches Studio block-editor.js buildTslHeader() / getPageFormatSpec()."
+                "text": "When format and header are missing, players build an effective header from Studio editor JSON. The reference algorithm matches Studio block-editor.js buildTslHeader() / getPageFormatSpec()."
             },
             {
                 "id": "spec46",
@@ -701,7 +701,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Legacy input: blocks with one paragraph, pageFormat us-novel, startPage 1, pageOffsetStart 0. Output header.page.formatId us-novel, kind print, trimMM from 5.5×8.5 in preset, marginsMM from preset inches converted to mm, usePrintGutters true, rowGapMM 2. document.blocks is unchanged. Envelope format talesmith-lang version 1 is added only when serializing a full .tsl file, not when resolving in memory."
+                "text": "Editor input: blocks with one paragraph, pageFormat us-novel, startPage 1, pageOffsetStart 0. Output header.page.formatId us-novel, kind print, trimMM from 5.5×8.5 in preset, marginsMM from preset inches converted to mm, usePrintGutters true, rowGapMM 2. document.blocks is unchanged. Envelope format talesmith-lang version 1 is added only when serializing a full .tsl file, not when resolving in memory."
             },
             {
                 "id": "spec58",
@@ -2028,7 +2028,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Declare metadata.fields (canonical) or editor customFields (legacy). Reference them in text with [FieldName] matching the field name. On publish, Studio writes header.mergeFields with version 1, a fields audit list, and values: an object whose keys are lower-case names and whose values are strings frozen at publish time (title, custom fields, publisheddate when set). At render time with readMode true, lookup uses the lower-case form of the token name against mergeFields.values before other sources (section 7.3)."
+                "text": "Declare metadata.fields (envelope) or editor customFields. Reference them in text with [FieldName] matching the field name. On publish, Studio writes header.mergeFields with version 1, a fields audit list, and values: an object whose keys are lower-case names and whose values are strings frozen at publish time (title, custom fields, publisheddate when set). At render time with readMode true, lookup uses the lower-case form of the token name against mergeFields.values before other sources (section 7.3)."
             },
             {
                 "id": "spec185",
@@ -2094,7 +2094,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Players walk each [Token] in a string in this order: (1) header.mergeFields.values using a lower-case key—publish-time strings win, including over computed names such as Title when both apply; (2) metadata.fields and legacy custom field definitions on the document; (3) built-in computed tokens evaluated at render time (page numbers, running header, client [Date]/[Time]/[DateTime], word counts, and similar); (4) if still unmatched, leave the original [Token] text in place. When readMode is false, no substitution runs (this specification file keeps readMode false so examples stay literal). Publish freezes custom and title strings in mergeFields.values; layout tokens remain computed on each read."
+                "text": "Players walk each [Token] in a string in this order: (1) header.mergeFields.values using a lower-case key—publish-time strings win, including over computed names such as Title when both apply; (2) metadata.fields and editor customFields on the document; (3) built-in computed tokens evaluated at render time (page numbers, running header, client [Date]/[Time]/[DateTime], word counts, and similar); (4) if still unmatched, leave the original [Token] text in place. When readMode is false, no substitution runs (this specification file keeps readMode false so examples stay literal). Publish freezes custom and title strings in mergeFields.values; layout tokens remain computed on each read."
             },
             {
                 "id": "spec189",
@@ -2164,7 +2164,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Legacy editor JSON uses pageFormat (string id) and, when pageFormat is custom, customFormat with trimIn and marginsIn in inches: trimIn.width, trimIn.height, marginsIn.top, bottom, outside, gutter. Export expands these into header.page: formatId custom, trimIn and marginsIn plus trimMM and marginsMM (millimetres are what players use for layout). When a preset other than custom is active, header.page may still carry unusedCustomFormat with the saved inch values for round-trip. Do not mix ad hoc mm fields on the legacy root object—only customFormat inches and header.page mm/in pairs are defined."
+                "text": "Studio editor JSON uses pageFormat (string id) and, when pageFormat is custom, customFormat with trimIn and marginsIn in inches: trimIn.width, trimIn.height, marginsIn.top, bottom, outside, gutter. Export expands these into header.page: formatId custom, trimIn and marginsIn plus trimMM and marginsMM (millimetres are what players use for layout). When a preset other than custom is active, header.page may still carry unusedCustomFormat with the saved inch values for round-trip. Do not mix ad hoc mm fields on the editor root object—only customFormat inches and header.page mm/in pairs are defined."
             },
             {
                 "id": "spec194",
@@ -2211,7 +2211,7 @@
                     ],
                     [
                         "custom",
-                        "Uses customFormat (legacy) or header.page trimIn/marginsIn and trimMM/marginsMM (canonical)."
+                        "Uses customFormat (editor) or header.page trimIn/marginsIn and trimMM/marginsMM (envelope)."
                     ]
                 ],
                 "header": true
@@ -2350,7 +2350,7 @@
                 "cols": 2,
                 "cells": [
                     [
-                        "Document key (legacy root)",
+                        "Document key (editor root)",
                         "Becomes"
                     ],
                     [
@@ -2574,7 +2574,7 @@
                         "Reject with error; do not partial render."
                     ],
                     [
-                        "format not talesmith-lang (and not legacy blocks-only object)",
+                        "format not talesmith-lang (and not editor blocks-only object)",
                         "Reject; Studio parseTsl throws Not a Talesmith Lang file."
                     ],
                     [
@@ -2582,7 +2582,7 @@
                         "Treat as empty blocks []."
                     ],
                     [
-                        "version missing on legacy JSON",
+                        "version missing on editor JSON",
                         "Assume version 1 when wrapping to envelope."
                     ],
                     [
