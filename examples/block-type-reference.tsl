@@ -1130,7 +1130,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Math"
+                "text": "Poetry"
             },
             {
                 "id": "ref128",
@@ -1138,7 +1138,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Equations using MathML source stored on the block."
+                "text": "Verse using laydown source: spacing commands and a break command for lineation."
             },
             {
                 "id": "ref129",
@@ -1146,7 +1146,7 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Math (MathML)"
+                "text": "Poetry"
             },
             {
                 "id": "ref130",
@@ -1154,10 +1154,51 @@
                 "align": "left",
                 "theme": null,
                 "cols": 2,
-                "text": "Equations and formulas; <code>source</code> holds MathML, <code>display</code> toggles block layout. Block type: <code>mathml</code>."
+                "text": "Laydown in <code>source</code>. Commands keep the count inside the brackets: space-count for indent, hyphen, dot, underscore, tilde, pipe, equals; backslash-count for a new line (<code>[\\1]</code>) or stanza (<code>[\\3]</code>). Enter in Studio inserts <code>[\\1]</code>. Markdown bold and italic apply per line. Block type: <code>poetry</code>."
             },
             {
                 "id": "ref131",
+                "type": "poetry",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "source": "***The sea*** *does not* *remember*[\\1]\nmy name, though it repeats[\\1]\nit every night[\\1]\nlike a tide",
+                "sourceExpanded": false
+            },
+            {
+                "id": "ref132",
+                "type": "h1",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Math"
+            },
+            {
+                "id": "ref133",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Equations using MathML source stored on the block."
+            },
+            {
+                "id": "ref134",
+                "type": "h2",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Math (MathML)"
+            },
+            {
+                "id": "ref135",
+                "type": "paragraph",
+                "align": "left",
+                "theme": null,
+                "cols": 2,
+                "text": "Equations and formulas; <code>source</code> holds MathML, <code>display</code> toggles block layout. Block type: <code>mathml</code>."
+            },
+            {
+                "id": "ref136",
                 "type": "mathml",
                 "align": "left",
                 "theme": null,
@@ -1167,7 +1208,7 @@
                 "sourceExpanded": false
             },
             {
-                "id": "ref132",
+                "id": "ref137",
                 "type": "paragraph",
                 "align": "left",
                 "theme": null,

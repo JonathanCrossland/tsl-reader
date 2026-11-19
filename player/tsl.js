@@ -525,7 +525,7 @@
         if (type === 'code' || type === 'footnotes' || type === 'newpage' || type === 'divider'
             || type === 'pageheader' || type === 'pagefooter' || type === 'document'
             || type === 'toc' || type === 'image-index' || type === 'front-cover'
-            || type === 'colophon' || type === 'comic-page') {
+            || type === 'colophon' || type === 'comic-page' || type === 'poetry') {
             return fields;
         }
         if (block.text) {
@@ -858,6 +858,158 @@
         });
     }
 
+    var LAYDOWN_LB = '\uE000';
+    var LAYDOWN_MAX_REPEAT = 200;
+    var LAYDOWN_UNITS = ' -._~|=';
+
+    function parseLaydownCommand(rest) {
+        if (!rest || rest.charAt(0) !== '[' || rest.length < 3) {
+            return null;
+        }
+        var unit = rest.charAt(1);
+        if (LAYDOWN_UNITS.indexOf(unit) < 0) {
+            return null;
+        }
+        var j = 2;
+        while (j < rest.length) {
+            var code = rest.charCodeAt(j);
+            if (code < 48 || code > 57) {
+                break;
+            }
+            j += 1;
+        }
+        if (j === 2 || rest.charAt(j) !== ']') {
+            return null;
+        }
+        return { unit: unit, count: parseInt(rest.slice(2, j), 10), length: j + 1 };
+    }
+
+    function parseLaydownLines(src) {
+        var text = String(src == null ? '' : src).replace(/\r\n?/g, ' ').replace(/\n/g, ' ').replace(/^\s+/, '');
+        var lines = [];
+        var current = '';
+        var i = 0;
+        while (i < text.length) {
+            var ch = text.charAt(i);
+            if (ch === '\\' && text.charAt(i + 1) === '[') {
+                current += LAYDOWN_LB;
+                i += 2;
+                continue;
+            }
+            if (ch === '[') {
+                var rest = text.slice(i);
+                var br = rest.match(/^\[\\(\d*)\]/);
+                if (br) {
+                    lines.push(current.replace(/\s+$/, ''));
+                    current = '';
+                    var n = br[1] === '' ? 1 : Math.max(1, Math.min(parseInt(br[1], 10), 20));
+                    var k;
+                    for (k = 1; k < n; k++) {
+                        lines.push('');
+                    }
+                    i += br[0].length;
+                    while (i < text.length && text.charAt(i) === ' ') {
+                        i += 1;
+                    }
+                    continue;
+                }
+                var sp = rest.match(/^\[sp(\d+)\]/i);
+                if (sp) {
+                    current += (new Array(Math.min(parseInt(sp[1], 10), LAYDOWN_MAX_REPEAT) + 1)).join(' ');
+                    i += sp[0].length;
+                    continue;
+                }
+                var cmd = parseLaydownCommand(rest);
+                if (cmd && cmd.count <= LAYDOWN_MAX_REPEAT) {
+                    current += (new Array(cmd.count + 1)).join(cmd.unit);
+                    i += cmd.length;
+                    continue;
+                }
+                current += '[';
+                i += 1;
+                continue;
+            }
+            current += ch;
+            i += 1;
+        }
+        if (current !== '') {
+            lines.push(current.replace(/\s+$/, ''));
+        }
+        return lines;
+    }
+
+    function laydownPlainText(src) {
+        var s = String(src == null ? '' : src).replace(/\[[^\]]*\]/g, ' ').replace(/\*+/g, '');
+        return s.replace(/\s+/g, ' ').trim();
+    }
+
+    function laydownLineHtml(line) {
+        if (line === '') {
+            return '<span class="tsl-poetry-line"></span>';
+        }
+        var s = String(line).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        s = s.replace(new RegExp(LAYDOWN_LB, 'g'), '[');
+        s = s.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+        s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        s = s.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        return '<span class="tsl-poetry-line">' + s + '</span>';
+    }
+
+    function laydownInnerHtml(src) {
+        return parseLaydownLines(src).map(laydownLineHtml).join('');
+    }
+
+    function poetrySourceB64(src) {
+        var s = String(src == null ? '' : src);
+        if (!s) {
+            return '';
+        }
+        try {
+            return utf8ToB64(s);
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function poetrySourceFromB64(b64) {
+        if (!b64) {
+            return '';
+        }
+        try {
+            return b64ToUtf8(b64);
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function renderPoetryElement(block) {
+        var el = document.createElement('section');
+        var src = String(block && block.source != null ? block.source : '');
+        el.className = 'tsl-block tsl-block--poetry studio-lean-poetry';
+        el.setAttribute('role', 'doc-poem');
+        var b64 = poetrySourceB64(src);
+        if (b64) {
+            el.setAttribute('data-tsl-laydown-b64', b64);
+        }
+        el.innerHTML = laydownInnerHtml(src);
+        var label = parseLaydownLines(src).join('\n').replace(/\s+$/, '');
+        if (label) {
+            el.setAttribute('aria-label', label);
+        }
+        stampBlockMeta(el, block);
+        return el;
+    }
+
+    function leanPoetryBlockHtml(block) {
+        var src = String(block && block.source != null ? block.source : '');
+        var b64 = poetrySourceB64(src);
+        var b64Attr = b64 ? ' data-tsl-laydown-b64="' + escapeHtml(b64) + '"' : '';
+        var label = parseLaydownLines(src).join('\n').replace(/\s+$/, '');
+        var labelAttr = label ? ' aria-label="' + escapeHtml(label) + '"' : '';
+        return '<section' + leanRuleAttrs(block, 'studio-lean-poetry tsl-block--poetry')
+            + b64Attr + labelAttr + ' role="doc-poem">' + laydownInnerHtml(src) + '</section>';
+    }
+
     /** Matches one HTML tag (or comment) in block text; `<code>…</code>` is taken whole so markdown never applies inside it. */
     var INLINE_HTML_TOKEN_RE = /<code\b[^>]*>[\s\S]*?<\/code\s*>|<!--[\s\S]*?-->|<\/?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*)?\/?>/g;
 
@@ -1133,6 +1285,10 @@
                 display: { type: 'boolean', def: true, flag: 'tsl-math-display' },
                 // Editor state only (source panel open); validated for round-trip, no class.
                 sourceExpanded: { type: 'boolean', def: false }
+            },
+            // Poetry: laydown source is content; sourceExpanded is Studio editor chrome only.
+            poetry: {
+                sourceExpanded: { type: 'boolean', def: true }
             }
         }
     };
@@ -6447,6 +6603,9 @@
         if (type === 'footnotes') {
             return renderFootnotesElement(b, ctx);
         }
+        if (type === 'poetry') {
+            return renderPoetryElement(b);
+        }
         if (type === 'manuscript-title') {
             el = document.createElement('section');
             el.className = 'tsl-block tsl-block--manuscript-title studio-lean-manuscript-title';
@@ -7577,6 +7736,9 @@
         if (type === 'footnotes') {
             return leanFootnotesBlockHtml(block, header._leanAllBlocks || [], header, readMode);
         }
+        if (type === 'poetry') {
+            return leanPoetryBlockHtml(block);
+        }
         if (TSL_EXT_TYPE_RE.test(type)) {
             // §6.23: was dropped (''); now paragraph-like with the per-type class + rule flags.
             var extTag = extBlockTag(type);
@@ -7984,6 +8146,24 @@
             block.expanded = true;
             delete block.text;
         }
+        if (type === 'poetry') {
+            var poemEl = meta.el || null;
+            if (!poemEl && typeof document !== 'undefined') {
+                var poemHost = document.createElement('div');
+                poemHost.innerHTML = innerHtml;
+                poemEl = poemHost.querySelector('[data-tsl-laydown-b64], .studio-lean-poetry, .tsl-block--poetry');
+            }
+            var poemB64 = '';
+            if (poemEl && poemEl.getAttribute) {
+                poemB64 = poemEl.getAttribute('data-tsl-laydown-b64') || '';
+            } else {
+                var poemAttr = innerHtml.match(/data-tsl-laydown-b64=["']([^"']+)["']/);
+                poemB64 = poemAttr ? poemAttr[1] : '';
+            }
+            block.source = poetrySourceFromB64(poemB64);
+            block.sourceExpanded = true;
+            delete block.text;
+        }
         if (type === 'bullet') {
             // Read bulletStyle back from the list's rule class; text is the item, not the list markup.
             var listEl = meta.el && /^(UL|OL)$/.test(meta.el.tagName) ? meta.el : null;
@@ -8142,6 +8322,8 @@
                     type = 'colophon';
                 } else if (!type && (cls.indexOf(' studio-lean-footnotes ') >= 0 || cls.indexOf(' tsl-block--footnotes ') >= 0)) {
                     type = 'footnotes';
+                } else if (!type && (cls.indexOf(' studio-lean-poetry ') >= 0 || cls.indexOf(' tsl-block--poetry ') >= 0)) {
+                    type = 'poetry';
                 } else if (!type && cls.indexOf(' studio-lean-full-page ') >= 0) {
                     type = 'full-page';
                 } else if (!type && cls.indexOf(' studio-lean-manuscript-title ') >= 0) {

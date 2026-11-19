@@ -23,12 +23,12 @@
       "usePrintGutters": false,
       "sidesMM": {
         "left": {
-          "left": 19.049999999999997,
-          "right": 19.049999999999997
+          "left": 19.0499999999999971578290569595992565155029296875,
+          "right": 19.0499999999999971578290569595992565155029296875
         },
         "right": {
-          "left": 19.049999999999997,
-          "right": 19.049999999999997
+          "left": 19.0499999999999971578290569595992565155029296875,
+          "right": 19.0499999999999971578290569595992565155029296875
         }
       },
       "bleed": null,
@@ -38,9 +38,9 @@
           "h": 9
         },
         "marginsIn": {
-          "top": 0.88,
-          "bottom": 0.88,
-          "outside": 0.63,
+          "top": 0.88000000000000000444089209850062616169452667236328125,
+          "bottom": 0.88000000000000000444089209850062616169452667236328125,
+          "outside": 0.63000000000000000444089209850062616169452667236328125,
           "gutter": 1
         }
       }
@@ -373,7 +373,7 @@
           "style": "normal",
           "characters": 1,
           "includeLeadingPunctuation": true,
-          "spacingEm": 0.08,
+          "spacingEm": 0.08000000000000000166533453693773481063544750213623046875,
           "opticalMargin": true,
           "alignBaseline": true,
           "uppercase": false,
@@ -1216,9 +1216,368 @@
           [
             "`mathml`",
             "`source` `string` (MathML or LaTeX); `display` `boolean` — block vs inline; `sourceExpanded` `boolean` (editor UI)"
+          ],
+          [
+            "`poetry`",
+            "`source` `string` (laydown, §3); `sourceExpanded` `boolean` (editor UI)"
           ]
         ],
         "header": false
+      },
+      {
+        "id": "b25900",
+        "type": "h1",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Laydown",
+        "number": "3"
+      },
+      {
+        "id": "b25901",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Laydown is the verse source language stored in a `poetry` block. It lays the line down: spacing, leaders, and lineation are commands inside the source string. It is not markdown, not HTML, and not a stored shape. Players expand commands; editors may rewrite source, but the document always stores laydown.",
+        "dropCap": null
+      },
+      {
+        "id": "b25902",
+        "type": "aside",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Specification 0.1 names this language **laydown**. The `poetry` block is the TSL container; laydown is the markup inside `source`.",
+        "icon": "📖"
+      },
+      {
+        "id": "b25903",
+        "type": "h2",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Purpose",
+        "number": "3.1"
+      },
+      {
+        "id": "b25904",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Verse needs indent, leaders, and lineation that survive round-trip, print, and web. Source newlines are for the author wrapping the file; they must not become printed lines. Laydown therefore collapses source newlines to spaces and uses one command family — open bracket, unit, count, close bracket — for both spacing and breaks. The count always sits inside the brackets, including the line-break unit.",
+        "dropCap": null
+      },
+      {
+        "id": "b25905",
+        "type": "h2",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Grammar",
+        "number": "3.2"
+      },
+      {
+        "id": "b25906",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Source is a `string`. Carriage returns and newlines collapse to a single space. Leading whitespace is stripped before parse. Scan left to right. A backslash immediately before an open bracket yields a literal open bracket and is not a command. Otherwise a command is `[` unit digits `]`.",
+        "dropCap": null
+      },
+      {
+        "id": "b25907",
+        "type": "table",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "cells": [
+          [
+            "`unit`",
+            "one character: space, `-`, `.`, `_`, `~`, `|`, `=`, or `\\`"
+          ],
+          [
+            "`count`",
+            "one or more ASCII digits"
+          ],
+          [
+            "spacing count",
+            "1–200 inclusive; larger values are not commands (the `[` is literal)"
+          ],
+          [
+            "break count",
+            "1–20 inclusive; values above 20 clamp to 20"
+          ],
+          [
+            "omitted count",
+            "allowed only on the backslash unit; `[\\]` equals `[\\1]`"
+          ],
+          [
+            "`[spn]`",
+            "alias for `n` spaces; `sp` is case-insensitive"
+          ],
+          [
+            "unknown `[…]`",
+            "not a command; the `[` is emitted and scanning continues after it"
+          ]
+        ],
+        "header": false
+      },
+      {
+        "id": "b25908",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Every other unit requires a count. There is no `[\\]3` form: digits after the closing bracket are ordinary text. The canonical break is `[\\1]`; a stanza gap is `[\\3]` (or any count 2–20).",
+        "dropCap": null
+      },
+      {
+        "id": "b25909",
+        "type": "h2",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Commands",
+        "number": "3.3"
+      },
+      {
+        "id": "b25910",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "The count is always inside the brackets.",
+        "dropCap": null
+      },
+      {
+        "id": "b25911",
+        "type": "table",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "cells": [
+          [
+            "`[  n]`",
+            "`n` spaces (indent). The unit is one space after `[`."
+          ],
+          [
+            "`[-n]`",
+            "`n` hyphens"
+          ],
+          [
+            "`[.n]`",
+            "`n` dots (leader)"
+          ],
+          [
+            "`[_n]`",
+            "`n` underscores"
+          ],
+          [
+            "`[~n]`",
+            "`n` tildes"
+          ],
+          [
+            "`[|n]`",
+            "`n` pipes"
+          ],
+          [
+            "`[=n]`",
+            "`n` equals signs"
+          ],
+          [
+            "`[\\n]`",
+            "`n` line breaks; `n` is 1–20"
+          ],
+          [
+            "`[\\1]`",
+            "end the current line"
+          ],
+          [
+            "`[\\3]`",
+            "end the current line and insert two empty lines"
+          ],
+          [
+            "`[\\]`",
+            "same as `[\\1]` (count omitted)"
+          ],
+          [
+            "`[spn]`",
+            "`n` spaces (alias)"
+          ],
+          [
+            "`\\[`",
+            "literal `[` (not a command)"
+          ]
+        ],
+        "header": false
+      },
+      {
+        "id": "b25912",
+        "type": "h2",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Lineation",
+        "number": "3.4"
+      },
+      {
+        "id": "b25913",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Source newlines are not line breaks. Only the backslash-unit command lineates. `[\\1]` ends the current line. `[\\n]` ends the current line and then inserts `n−1` empty lines. Trailing spaces on a line are trimmed. Spaces immediately after a break command are skipped so wrapping source for readability does not indent the next line. A break at the start of source yields an empty first line.",
+        "dropCap": null
+      },
+      {
+        "id": "b25914",
+        "type": "h2",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Inline markdown",
+        "number": "3.5"
+      },
+      {
+        "id": "b25915",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "After expansion, each visual line may use markdown emphasis. HTML specials are escaped first. Then, in order: `***…***` bold italic, `**…**` bold, `*…*` italic. Emphasis does not span visual lines. Other markdown (links, images, headings) is not laydown.",
+        "dropCap": null
+      },
+      {
+        "id": "b25916",
+        "type": "h2",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Poetry block",
+        "number": "3.6"
+      },
+      {
+        "id": "b25917",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "TSL stores verse as a `poetry` block. Extra keys are preserved for round-trip. Players that do not implement poetry should skip the block rather than treat `source` as a paragraph.",
+        "dropCap": null
+      },
+      {
+        "id": "b25918",
+        "type": "table",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "cells": [
+          [
+            "`type`",
+            "`poetry`"
+          ],
+          [
+            "`source`",
+            "`string` — laydown markup (§3.2–§3.5)"
+          ],
+          [
+            "`sourceExpanded`",
+            "`boolean` — Studio source panel; default `true`; no player class"
+          ],
+          [
+            "Lean HTML",
+            "`<section class=\"tsl-block tsl-block--poetry studio-lean-poetry\" role=\"doc-poem\">`"
+          ],
+          [
+            "round-trip",
+            "`data-tsl-laydown-b64` on that section (base64 of `source`); not an HTML id"
+          ],
+          [
+            "lines",
+            "each visual line is a `<span class=\"tsl-poetry-line\">`; empty lines still emit a span"
+          ],
+          [
+            "`aria-label`",
+            "joined expanded lines, trailing whitespace stripped"
+          ],
+          [
+            "CSS",
+            "`white-space: pre`; monospace stack; `.tsl-poetry-line { display: block }`"
+          ],
+          [
+            "markdown fence",
+            "`poetry` or `laydown` imports as this block"
+          ],
+          [
+            "word count",
+            "strip commands and stars, then count whitespace-separated words"
+          ],
+          [
+            "line count",
+            "number of non-empty expanded lines"
+          ],
+          [
+            "footnotes",
+            "caret-number marks are not parsed inside `source`"
+          ]
+        ],
+        "header": false
+      },
+      {
+        "id": "b25919",
+        "type": "h2",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Studio",
+        "number": "3.7"
+      },
+      {
+        "id": "b25920",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Enter inserts `[\\1]` and a source newline. The newline is for the author; the player ignores it. Pasted plain text converts each newline to `[\\1]` unless the clipboard already contains a backslash-unit command. Shape helpers (heart, raindrop, diamond) rewrite `source` with space-count indents and `[\\1]` at the end of each shaped line. Shape is not a stored property.",
+        "dropCap": null
+      },
+      {
+        "id": "b25921",
+        "type": "h2",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Example",
+        "number": "3.8"
+      },
+      {
+        "id": "b25922",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "Laydown source (author newlines are optional):",
+        "dropCap": null
+      },
+      {
+        "id": "b25923",
+        "type": "code",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "***The sea*** *does not* *remember*[\\1]\n[ 4]my name, though it repeats[\\1]\nit every night[\\3]\nlike a tide"
+      },
+      {
+        "id": "b25924",
+        "type": "paragraph",
+        "align": "left",
+        "theme": null,
+        "cols": 2,
+        "text": "That source yields four text lines and a stanza gap: “The sea” is bold italic; “does not” and “remember” are italic; the second line is indented four spaces; “it every night” is followed by two empty lines from `[\\3]`; then “like a tide”.",
+        "dropCap": null
       }
     ]
   }

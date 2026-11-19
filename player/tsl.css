@@ -2683,6 +2683,21 @@ img[data-tsl-expand-image]:focus-visible {
     text-align: center;
 }
 
+.tsl-root .tsl-block--poetry,
+.studio-lean-tsl .studio-lean-poetry {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.98em;
+    line-height: 1.6;
+    white-space: pre;
+    margin: 1em 0;
+}
+
+.tsl-root .tsl-poetry-line,
+.studio-lean-tsl .tsl-poetry-line {
+    display: block;
+    min-height: 1.6em;
+}
+
 /* Pages: a drop-cap paragraph contains its floated cap, so a short first fragment is
    measured (and paginated) at the cap's full height instead of overflowing the page. */
 .tsl-root .tsl-block--paragraph.studio-has-dropcap {
